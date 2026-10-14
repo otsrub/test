@@ -149,8 +149,8 @@ jobs:
         SHARD: startup
         REA_GHIDRA_STARTUP_TIMEOUT_MS: '1800000'
         GHIDRA_HEADLESS_MAXMEM: 4G
-        FOCUS_PATHS: '["Frameworks/MAMobileAppCore.framework/MAMobileAppCore"]'
-        FUNCTION_FILTER: MAAppWorkflowController|MABootstrapper|MABasicDfLgCoreBootstrapper|MABootstrapAssertionCollection|MABootstrapBasicPreferences
+        FOCUS_PATHS: '["Frameworks/MAMobileAppCore.framework/MAMobileAppCore","Frameworks/MobileLogicAppFramework.framework/MobileLogicAppFramework"]'
+        FUNCTION_FILTER: MAAppWorkflowController|MABootstrapper|FUN_00022|AppWorkflowControllerDelegate|NCLaunchViewController|LaunchViewController|SubscriptionStoreController|Bootstrap|appRootViewController
       run: |
         mkdir -p recovery
         cat > recovery/recover.mjs <<'SOURCE'
