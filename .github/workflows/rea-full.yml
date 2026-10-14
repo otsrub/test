@@ -217,7 +217,9 @@ jobs:
           async function evidence(value) {
             if (!gzip.write(JSON.stringify(value) + '\n')) await once(gzip, 'drain');
           }
-          const transport = new StdioClientTransport({ command: process.execPath, args: [path.resolve('rea-tool/node_modules/rea-agents/scripts/rea.mjs'), '--mcp'], env: { ...process.env, REA_MCP_MAX_RESPONSE_BYTES: '67108864', NODE_OPTIONS: '--max-old-space-size=4096' }, maxBufferSize: 67108864, stderr: createWriteStream(path.join(dest, 'server.log')) });
+          const serverLog = createWriteStream(path.join(dest, 'server.log'));
+          await once(serverLog, 'open');
+          const transport = new StdioClientTransport({ command: process.execPath, args: [path.resolve('rea-tool/node_modules/rea-agents/scripts/rea.mjs'), '--mcp'], env: { ...process.env, REA_MCP_MAX_RESPONSE_BYTES: '67108864', NODE_OPTIONS: '--max-old-space-size=4096' }, maxBufferSize: 67108864, stderr: serverLog });
           try {
             client = new Client({ name: 'mobilelogic-full-recovery', version: '1.0.0' });
             await client.connect(transport);
@@ -295,6 +297,7 @@ jobs:
               catch (e) { record.limitations.push('close_binary: ' + e.message); }
             }
             if (client) await client.close().catch(() => {});
+            serverLog.end();
             gzip.end();
             await gzipCompletion;
             await fs.writeFile(path.join(dest, 'coverage.json'), JSON.stringify(record, null, 2));
