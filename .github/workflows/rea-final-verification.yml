@@ -142,16 +142,16 @@ jobs:
         \ throw new Error('Invalid partition');\nconst inventoryOnly = process.env.INVENTORY_ONLY === '1';\nconst filter =\
         \ process.env.FUNCTION_FILTER ? new RegExp(process.env.FUNCTION_FILTER, 'i') : null;\nif (!selected) throw new Error('Unknown\
         \ shard');\nconst baseline = JSON.parse(await fs.readFile('baseline/coverage.json', 'utf8'));\nconst targetPlan=JSON.parse(await\
-        \ fs.readFile('targets.json','utf8'));\nconst normalized=a=>BigInt(a).toString(16); \nconst summary = { shard, partition:\
-        \ {count: partitionCount, index: partitionIndex}, selection_filter: process.env.FUNCTION_FILTER ?? null, archive_sha256:\
-        \ manifest.archive_sha256, images: [], complete: false, status: 'running', fidelity: 'Ghidra static pseudocode, not\
-        \ original source or a verified buildable reconstruction' };\nawait fs.mkdir('evidence/recovered', { recursive: true\
-        \ });\nconst saveSummary = () => fs.writeFile('evidence/coverage.json', JSON.stringify(summary, null, 2));\nawait\
-        \ saveSummary();\n\nfunction unwrap(result) {\n  if (result.structuredContent !== undefined) return result.structuredContent;\n\
-        \  const text = result.content?.filter(x => x.type === 'text').map(x => x.text).join('');\n  if (!text) throw new\
-        \ Error('MCP result has no machine-readable content');\n  return JSON.parse(text);\n}\nasync function recover(image)\
-        \ {\n  const expected=targetPlan[image.path];\n  if (!expected || expected.sha256!==image.sha256) throw new Error('Target\
-        \ manifest image SHA mismatch');\n  const imageBytes=await fs.readFile(path.resolve('MobileLogic.app',image.path));\n\
+        \ fs.readFile('targets.json','utf8'));\nconst normalized=a=>/^0x[0-9a-f]+$/i.test(a) ? BigInt(a).toString(16) : a;\
+        \ \nconst summary = { shard, partition: {count: partitionCount, index: partitionIndex}, selection_filter: process.env.FUNCTION_FILTER\
+        \ ?? null, archive_sha256: manifest.archive_sha256, images: [], complete: false, status: 'running', fidelity: 'Ghidra\
+        \ static pseudocode, not original source or a verified buildable reconstruction' };\nawait fs.mkdir('evidence/recovered',\
+        \ { recursive: true });\nconst saveSummary = () => fs.writeFile('evidence/coverage.json', JSON.stringify(summary,\
+        \ null, 2));\nawait saveSummary();\n\nfunction unwrap(result) {\n  if (result.structuredContent !== undefined) return\
+        \ result.structuredContent;\n  const text = result.content?.filter(x => x.type === 'text').map(x => x.text).join('');\n\
+        \  if (!text) throw new Error('MCP result has no machine-readable content');\n  return JSON.parse(text);\n}\nasync\
+        \ function recover(image) {\n  const expected=targetPlan[image.path];\n  if (!expected || expected.sha256!==image.sha256)\
+        \ throw new Error('Target manifest image SHA mismatch');\n  const imageBytes=await fs.readFile(path.resolve('MobileLogic.app',image.path));\n\
         \  if(createHash('sha256').update(imageBytes).digest('hex')!==expected.sha256) throw new Error('Original binary SHA\
         \ mismatch');\n  const imageIndex = manifest.images.findIndex(x => x.path === image.path);\n  const dest = path.resolve('evidence/recovered',\
         \ String(imageIndex).padStart(3, '0'));\n  await fs.mkdir(dest, { recursive: true });\n  const prior = baseline.images.find(i\
@@ -199,9 +199,9 @@ jobs:
         \ = await fs.open(path.join(dest, 'recovered-pseudocode.c'), 'w');\n    const asmFile = await fs.open(path.join(dest,\
         \ 'recovered-assembly.txt'), 'w');\n    try {\n      await pseudoFile.write('/* Static Ghidra pseudocode recovered\
         \ via REA. NOT original source or verified compilable C. */\\n');\n      const planned = new Set(expected.addresses.map(normalized));\n\
-        \      const targets = procedures.filter((p,i) => planned.has(normalized(p.address)) && !done.has(p.address) && !inventoryOnly\
-        \ && i % partitionCount === partitionIndex && (!filter || filter.test(p.value))).sort((a,b) => Number(deferred.has(a.address))-Number(deferred.has(b.address)));\n\
-        \      await fs.writeFile(path.join(dest,'target-addresses.json'),JSON.stringify({image_sha256:image.sha256,partitionIndex,partitionCount,addresses:targets.map(p=>p.address)},null,2));\n\
+        \      const targets = procedures.filter((p,i) => p.procedure?.external !== true && planned.has(normalized(p.address))\
+        \ && !done.has(p.address) && !inventoryOnly && i % partitionCount === partitionIndex && (!filter || filter.test(p.value))).sort((a,b)\
+        \ => Number(deferred.has(a.address))-Number(deferred.has(b.address)));\n      await fs.writeFile(path.join(dest,'target-addresses.json'),JSON.stringify({image_sha256:image.sha256,partitionIndex,partitionCount,addresses:targets.map(p=>p.address)},null,2));\n\
         \      const known=new Set(procedures.map(p=>normalized(p.address)));\n      record.targets_absent_from_inventory=expected.addresses.filter(a=>!known.has(normalized(a)));\n\
         \      record.target_count=targets.length;\n      await saveSummary();\n      for (const p of targets) {\n       \
         \ const status = { address: p.address, name: p.value, classification: p.procedure ?? null, pseudocode: 'not_attempted',\
@@ -250,8 +250,9 @@ jobs:
         \  assert i['sha256']==p['sha256']\n  for s in i['function_status']:\n   a=hex(int(s['address'],16));attempted.add(a);records.setdefault(a,[]).append(s)\n\
         \   if s.get('pseudocode')=='recovered':done.add(a)\nresult={'image_sha256':p['sha256'],'targets':p['addresses'],'recovered_unique':sorted(done),'missing_addresses':sorted(set(p['addresses'])-done),'without_saved_attempt':sorted(set(p['addresses'])-attempted),'function_records':records,'max_new_attempts_per_address':1,'max_process_passes':2}\n\
         pathlib.Path('gap-evidence/result.json').write_text(json.dumps(result,indent=2))\nwith open(os.environ['GITHUB_STEP_SUMMARY'],'a')\
-        \ as f:f.write('## Address-only REA recovery\n\n'+str(len(done))+' / '+str(len(p['addresses']))+' target functions\
-        \ have pseudocode.\n\nRemaining addresses: '+', '.join(result['missing_addresses'])+'\n')\nPY\n"
+        \ as f:\n print('## Address-only REA recovery',file=f)\n print(str(len(done))+' / '+str(len(p['addresses']))+' target\
+        \ functions have pseudocode.',file=f)\n print('Remaining addresses: '+', '.join(result['missing_addresses']),file=f)\n\
+        if result['missing_addresses']:raise SystemExit(1)\nPY\n"
     - name: Retain new evidence without changing checkpoints
       if: always()
       uses: actions/upload-artifact@v4
@@ -314,18 +315,26 @@ jobs:
         \ review candidates.\n  if decoded.mnemonic.lower()!=mm.lower():mismatch.append({'address':aa,'ghidra':mm,'capstone':decoded.mnemonic})\n\
         \ row=rows.get((sha,ad))\n if row and row['artifact_id']==source:\n  row['independently_decoded_instructions']=n\n\
         \  if bad:row['flags'].append('raw_bytes_mapping_or_decode_failure');row['raw_decode_failure_addresses']=bad\n  if\
-        \ mismatch:row['mnemonic_difference_count']=len(mismatch);row['mnemonic_difference_examples']=mismatch[:5]\n\nrun_ids=[38491368864,38506344850,38506344446,38506344402,38506344808,38506344846,38534716963,38534716950,38534716942,38534716923,38534716921]\n\
-        for page in range(1,31):\n batch=api('actions/runs?per_page=100&page='+str(page))['workflow_runs']\n run_ids.extend(r['id']\
-        \ for r in batch if re.match(r'^REA overnight \\d{3}',r['name']) or r['name']=='REA final gap recovery and verification')\n\
-        \ if len(batch)<100:break\nfor run_id in dict.fromkeys(run_ids):\n for page in range(1,10):\n  aa=api(f'actions/runs/{run_id}/artifacts?per_page=100&page={page}')['artifacts'];artifacts.extend(a\
-        \ for a in aa if a['size_in_bytes']>1000 and a['name']!='rea-final-verification')\n  if len(aa)<100:break\nartifacts=list({a['id']:a\
-        \ for a in artifacts}.values())\n(OUT/'artifact-sources.json').write_text(json.dumps(artifacts,indent=2))\nfor ix,a\
-        \ in enumerate(artifacts):\n dirty.clear()\n if time.monotonic()>DEADLINE:failures.append({'reason':'bounded audit\
-        \ time budget exhausted','unprocessed_artifacts':len(artifacts)-ix});break\n try:\n  with tempfile.TemporaryDirectory()\
+        \ mismatch:row['mnemonic_difference_count']=len(mismatch);row['mnemonic_difference_examples']=mismatch[:5]\n\n# Reuse\
+        \ the immutable prior whole-payload audit, then process this run's new checkpoints only.\nprior_artifact=api('actions/artifacts/11933026710')\n\
+        with tempfile.TemporaryDirectory() as td:\n prior_path=pathlib.Path(td)/'previous.zip';download(prior_artifact,prior_path)\n\
+        \ with zipfile.ZipFile(prior_path) as prior_zip:\n  previous_summary=json.loads(prior_zip.read('summary.json'))\n\
+        \  previous_sources=json.loads(prior_zip.read('artifact-sources.json'))\n  for line in prior_zip.open('function-audit.jsonl'):\n\
+        \   row=json.loads(line);rows[(row['image_sha256'],row['address'])]=row\n  for image in previous_summary['images']:\n\
+        \   h=image['image_sha256'];imagepaths[h]=image['path']\n   inv={a for (sha,a) in rows if sha==h}|set(image['missing_addresses'])\n\
+        \   assert len(inv)==image['native_inventory'],('Prior inventory reconstruction mismatch',h)\n   inventories[h]=inv\n\
+        \   compiler[h]=inv|set(image['compiler_starts_outside_inventory'])\nprior_evidence_limitations=[x for x in previous_summary['failures']\
+        \ if x['artifact_id']==11878916555]\nresolved_prior_report_errors=[x for x in previous_summary['failures'] if x['artifact_id']==11864709807]\n\
+        counts['prior_artifacts_verified']=previous_summary['counts']['artifacts_verified']\ncurrent_run=int(os.environ['GITHUB_RUN_ID'])\n\
+        for page in range(1,10):\n aa=api(f'actions/runs/{current_run}/artifacts?per_page=100&page={page}')['artifacts']\n\
+        \ artifacts.extend(a for a in aa if a['name'].startswith('rea-final-gaps-'))\n if len(aa)<100:break\nassert len(artifacts)==5,'Expected\
+        \ five new image checkpoints'\nartifacts=list({a['id']:a for a in artifacts}.values())\n(OUT/'artifact-sources.json').write_text(json.dumps(previous_sources+artifacts,indent=2))\n\
+        for ix,a in enumerate(artifacts):\n dirty.clear()\n if time.monotonic()>DEADLINE:failures.append({'reason':'bounded\
+        \ audit time budget exhausted','unprocessed_artifacts':len(artifacts)-ix});break\n try:\n  with tempfile.TemporaryDirectory()\
         \ as td:\n   dest=pathlib.Path(td)/'artifact.zip';download(a,dest)\n   with zipfile.ZipFile(dest) as z:\n    names=set(z.namelist());coverage=[n\
         \ for n in names if n=='coverage.json' or re.match(r'^pass\\d+/coverage.json$',n) or re.match(r'^(?:overnight-evidence/attempt\\\
         d+|gap-evidence/pass\\d+)/coverage.json$',n)]\n    for cn in sorted(coverage):\n     cov=json.loads(z.read(cn));prefix=cn[:-len('coverage.json')]\n\
-        \     for image in cov['images']:\n      sha=image['sha256'];imagepaths[sha]=image['path'];directory=prefix+image['directory']+'/'\n\
+        \     for image in cov.get('images',[]):\n      sha=image['sha256'];imagepaths[sha]=image['path'];directory=prefix+image['directory']+'/'\n\
         \      invname=directory+'procedures.json'\n      if invname in names and not inventories.get(sha):\n       inv=json.loads(z.read(invname))['normalized_result'];inventories[sha]={addr(p['address'])\
         \ for p in inv if not p.get('procedure',{}).get('external') and not p['address'].startswith('EXTERNAL:')}\n      mn=prefix+'manifest.json'\n\
         \      if mn in names:\n       for mi in json.loads(z.read(mn))['images']:compiler[mi['sha256']]=set(map(addr,mi['compiler_function_starts']))\n\
@@ -346,8 +355,9 @@ jobs:
         flags=collections.Counter(f for r in rows.values() for f in r['flags']);images=[]\nfor sha,inventory in inventories.items():\n\
         \ recovered={ad for (h,ad),r in rows.items() if h==sha and r['pseudocode']}\n images.append({'image_sha256':sha,'path':imagepaths[sha],'native_inventory':len(inventory),'recovered_unique':len(recovered&inventory),'missing_addresses':sorted(inventory-recovered),'compiler_starts_outside_inventory':sorted(compiler.get(sha,set())-inventory)})\n\
         with (OUT/'function-audit.jsonl').open('w') as f:\n for r in rows.values():f.write(json.dumps(r)+'\\n')\nresult={'kind':'structural\
-        \ audit with independent original-byte instruction decoding; not semantic equivalence','counts':dict(counts),'unique_function_records':len(rows),'flag_counts':dict(flags),'images':images,'failures':failures,'runtime_equivalence_tests':0,'build_verified':False,'complete':not\
-        \ failures and len(images)==59}\n(OUT/'summary.json').write_text(json.dumps(result,indent=2));print(json.dumps({'complete':result['complete'],'images':len(images),'flags':dict(flags),'failures':len(failures)}))\n\
+        \ audit with independent original-byte instruction decoding; not semantic equivalence','counts':dict(counts),'unique_function_records':len(rows),'flag_counts':dict(flags),'images':images,'failures':failures,'prior_evidence_limitations':prior_evidence_limitations,'resolved_prior_report_errors':resolved_prior_report_errors,'prior_audit_artifact_id':11933026710,'processing_complete':not\
+        \ failures,'runtime_equivalence_tests':0,'build_verified':False,'complete':not failures and not prior_evidence_limitations\
+        \ and len(images)==59}\n(OUT/'summary.json').write_text(json.dumps(result,indent=2));print(json.dumps({'complete':result['complete'],'images':len(images),'flags':dict(flags),'failures':len(failures)}))\n\
         with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:f.write('## REA structural verification\\n\\n'+json.dumps({k:v\
         \ for k,v in result.items() if k not in ['images','failures']},indent=2)+'\\n\\nSemantic and runtime equivalence remain\
         \ unverified.\\n')\nif failures:raise SystemExit(1)\n\nSOURCE\npython verify_payload.py\n"
