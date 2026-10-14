@@ -1,0 +1,36 @@
+name: REA overnight 297 - Logic and MADSP
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-overnight-297.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - short: logic
+          image: Frameworks/Logic.framework/Logic
+          baseline: '38506344850'
+          baselineArtifact: rea-image-logic
+          latest: '38534716942'
+          latestArtifact: rea-resume-logic
+        - short: madsp
+          image: Frameworks/MADSP.framework/MADSP
+          baseline: '38506344446'
+          baselineArtifact: rea-image-madsp
+          latest: '38534716923'
+          latestArtifact: rea-resume-madsp
+    uses: ./.github/workflows/rea-overnight-worker.yml
+    with:
+      image: ${{ matrix.image }}
+      artifact: rea-overnight-297-${{ matrix.short }}
+      partition: 297
+      baseline-run: ${{ matrix.baseline }}
+      baseline-artifact: ${{ matrix.baselineArtifact }}
+      latest-run: ${{ matrix.latest }}
+      latest-artifact: ${{ matrix.latestArtifact }}
