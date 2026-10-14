@@ -1,0 +1,17 @@
+name: REA resume - MADSP
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-resume-madsp.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-resume-worker.yml
+    with:
+      image: Frameworks/MADSP.framework/MADSP
+      artifact: rea-resume-madsp
+      baseline-run: '38506344446'
+      baseline-artifact: rea-image-madsp

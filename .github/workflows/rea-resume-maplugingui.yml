@@ -1,0 +1,17 @@
+name: REA resume - MAPlugInGUI
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-resume-maplugingui.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-resume-worker.yml
+    with:
+      image: Frameworks/MAPlugInGUI.framework/MAPlugInGUI
+      artifact: rea-resume-maplugingui
+      baseline-run: '38506344808'
+      baseline-artifact: rea-image-maplugingui

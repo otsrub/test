@@ -1,0 +1,17 @@
+name: REA resume - Logic
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-resume-logic.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-resume-worker.yml
+    with:
+      image: Frameworks/Logic.framework/Logic
+      artifact: rea-resume-logic
+      baseline-run: '38506344850'
+      baseline-artifact: rea-image-logic

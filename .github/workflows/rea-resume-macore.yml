@@ -1,0 +1,17 @@
+name: REA resume - MACore
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-resume-macore.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-resume-worker.yml
+    with:
+      image: Frameworks/MACore.framework/MACore
+      artifact: rea-resume-macore
+      baseline-run: '38506344402'
+      baseline-artifact: rea-image-macore

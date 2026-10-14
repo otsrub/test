@@ -1,0 +1,17 @@
+name: REA resume - MAGenerativeInstruments
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-resume-magenerativeinstruments.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-resume-worker.yml
+    with:
+      image: Frameworks/MAGenerativeInstruments.framework/MAGenerativeInstruments
+      artifact: rea-resume-magenerativeinstruments
+      baseline-run: '38506344846'
+      baseline-artifact: rea-image-magenerativeinstruments
