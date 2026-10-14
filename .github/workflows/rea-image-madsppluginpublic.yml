@@ -1,0 +1,15 @@
+name: REA image - MADSPPlugInPublic
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-madsppluginpublic.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MADSPPlugInPublic.framework/MADSPPlugInPublic
+      artifact: rea-image-madsppluginpublic

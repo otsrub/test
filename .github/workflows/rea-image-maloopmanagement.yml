@@ -1,0 +1,15 @@
+name: REA image - MALoopManagement
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-maloopmanagement.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MALoopManagement.framework/MALoopManagement
+      artifact: rea-image-maloopmanagement

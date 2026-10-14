@@ -1,0 +1,15 @@
+name: REA image - MALearnableControlUI
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-malearnablecontrolui.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MALearnableControlUI.framework/MALearnableControlUI
+      artifact: rea-image-malearnablecontrolui

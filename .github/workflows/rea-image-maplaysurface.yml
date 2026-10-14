@@ -1,0 +1,15 @@
+name: REA image - MAPlaySurface
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-maplaysurface.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MAPlaySurface.framework/MAPlaySurface
+      artifact: rea-image-maplaysurface

@@ -1,0 +1,15 @@
+name: REA image - MAContentBrowser
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-macontentbrowser.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MAContentBrowser.framework/MAContentBrowser
+      artifact: rea-image-macontentbrowser

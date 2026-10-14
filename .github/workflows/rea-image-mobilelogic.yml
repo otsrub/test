@@ -1,0 +1,15 @@
+name: REA image - MobileLogic
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-mobilelogic.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: MobileLogic
+      artifact: rea-image-mobilelogic

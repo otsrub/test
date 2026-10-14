@@ -1,0 +1,15 @@
+name: REA image - MALiveLoops
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-maliveloops.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MALiveLoops.framework/MALiveLoops
+      artifact: rea-image-maliveloops

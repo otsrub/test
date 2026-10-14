@@ -1,0 +1,15 @@
+name: REA image - Jet2P
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-jet2p.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/Jet2P.framework/Jet2P
+      artifact: rea-image-jet2p

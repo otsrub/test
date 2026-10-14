@@ -1,0 +1,15 @@
+name: REA image - MAHarmony
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-maharmony.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MAHarmony.framework/MAHarmony
+      artifact: rea-image-maharmony

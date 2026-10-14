@@ -1,0 +1,15 @@
+name: REA image - DequeModule
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-dequemodule.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/DequeModule.framework/DequeModule
+      artifact: rea-image-dequemodule

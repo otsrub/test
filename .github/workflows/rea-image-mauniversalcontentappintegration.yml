@@ -1,0 +1,15 @@
+name: REA image - MAUniversalContentAppIntegration
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-mauniversalcontentappintegration.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MAUniversalContentAppIntegration.framework/MAUniversalContentAppIntegration
+      artifact: rea-image-mauniversalcontentappintegration

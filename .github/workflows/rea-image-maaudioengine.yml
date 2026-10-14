@@ -1,0 +1,15 @@
+name: REA image - MAAudioEngine
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-maaudioengine.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MAAudioEngine.framework/MAAudioEngine
+      artifact: rea-image-maaudioengine

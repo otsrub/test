@@ -1,0 +1,15 @@
+name: REA image - ChordsKit
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-chordskit.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/ChordsKit.framework/ChordsKit
+      artifact: rea-image-chordskit

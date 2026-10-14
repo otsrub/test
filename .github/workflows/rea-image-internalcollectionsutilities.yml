@@ -1,0 +1,15 @@
+name: REA image - InternalCollectionsUtilities
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-internalcollectionsutilities.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/InternalCollectionsUtilities.framework/InternalCollectionsUtilities
+      artifact: rea-image-internalcollectionsutilities

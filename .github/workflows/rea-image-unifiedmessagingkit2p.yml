@@ -1,0 +1,15 @@
+name: REA image - UnifiedMessagingKit2P
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-unifiedmessagingkit2p.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/UnifiedMessagingKit2P.framework/UnifiedMessagingKit2P
+      artifact: rea-image-unifiedmessagingkit2p

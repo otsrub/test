@@ -1,0 +1,15 @@
+name: REA image - SentencePiece
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-sentencepiece.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/SentencePiece.framework/SentencePiece
+      artifact: rea-image-sentencepiece

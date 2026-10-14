@@ -1,0 +1,15 @@
+name: REA image - MobileLogicThumbnailExtension
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-mobilelogicthumbnailextension.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: PlugIns/MobileLogicThumbnailExtension.appex/MobileLogicThumbnailExtension
+      artifact: rea-image-mobilelogicthumbnailextension

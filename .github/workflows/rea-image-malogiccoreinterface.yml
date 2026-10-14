@@ -1,0 +1,15 @@
+name: REA image - MALogicCoreInterface
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-malogiccoreinterface.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MALogicCoreInterface.framework/MALogicCoreInterface
+      artifact: rea-image-malogiccoreinterface

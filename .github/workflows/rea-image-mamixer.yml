@@ -1,0 +1,15 @@
+name: REA image - MAMixer
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-mamixer.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MAMixer.framework/MAMixer
+      artifact: rea-image-mamixer

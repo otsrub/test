@@ -1,0 +1,15 @@
+name: REA image - MASubscription
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-masubscription.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MASubscription.framework/MASubscription
+      artifact: rea-image-masubscription

@@ -1,0 +1,15 @@
+name: REA image - Logic
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-logic.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/Logic.framework/Logic
+      artifact: rea-image-logic

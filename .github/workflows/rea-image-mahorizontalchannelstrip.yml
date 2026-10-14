@@ -1,0 +1,15 @@
+name: REA image - MAHorizontalChannelStrip
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-mahorizontalchannelstrip.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MAHorizontalChannelStrip.framework/MAHorizontalChannelStrip
+      artifact: rea-image-mahorizontalchannelstrip

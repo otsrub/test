@@ -1,0 +1,15 @@
+name: REA image - MAGUI
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-magui.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MAGUI.framework/MAGUI
+      artifact: rea-image-magui

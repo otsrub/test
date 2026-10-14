@@ -1,0 +1,15 @@
+name: REA image - MATower
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-image-matower.yml
+    - .github/workflows/rea-framework-worker.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  recover:
+    uses: ./.github/workflows/rea-framework-worker.yml
+    with:
+      image: Frameworks/MATower.framework/MATower
+      artifact: rea-image-matower
