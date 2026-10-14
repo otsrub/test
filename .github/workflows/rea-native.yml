@@ -1,0 +1,98 @@
+name: REA native analysis
+on:
+  push:
+    paths:
+      - '.github/workflows/rea-native.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rea-native
+  cancel-in-progress: false
+jobs:
+  verify-rea:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install verified Ghidra and REA
+        run: |
+          mkdir -p tools evidence runtime-tmp
+          curl -fL --retry 3 -o ghidra.zip https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip
+          printf '%s  %s\n' ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db ghidra.zip | sha256sum -c -
+          unzip -q ghidra.zip -d tools
+          npm install --prefix rea-tool --no-audit --no-fund rea-agents@6.4.0
+          echo "GHIDRA_INSTALL_DIR=$PWD/tools/ghidra_12.1.4_PUBLIC" >> "$GITHUB_ENV"
+          echo "TMPDIR=$PWD/runtime-tmp" >> "$GITHUB_ENV"
+          echo "$PWD/rea-tool/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Verify native provider
+        run: |
+          test -r /proc/self/stat
+          rea --version
+          rea doctor --provider ghidra --json > evidence/doctor.json
+      - name: Download and verify original archive
+        run: |
+          curl -fL --retry 3 -o MobileLogic.zip https://github.com/otsrub/test/releases/download/mobilelogic-3.4-archive/MobileLogic.zip
+          printf '%s  %s\n' f2a650fd7a51a7bb2bc5e8e5cc35a95236c02723ab3faeb162cca64ee62a744e MobileLogic.zip | sha256sum -c -
+          python - <<'PY'
+          import pathlib, zipfile, struct, json, plistlib
+          root = pathlib.Path('MobileLogic.app').resolve()
+          root.mkdir()
+          with zipfile.ZipFile('MobileLogic.zip') as z:
+              for item in z.infolist():
+                  if item.is_dir() or item.filename.startswith('__MACOSX/'):
+                      continue
+                  dest = (root / item.filename).resolve()
+                  if not dest.is_relative_to(root):
+                      raise ValueError('Unsafe ZIP path')
+                  dest.parent.mkdir(parents=True, exist_ok=True)
+                  with z.open(item) as src, dest.open('wb') as out:
+                      import shutil
+                      shutil.copyfileobj(src, out)
+          info = plistlib.loads((root / 'Info.plist').read_bytes())
+          b = (root / info['CFBundleExecutable']).read_bytes()
+          assert b[:4] == bytes.fromhex('cffaedfe')
+          offset = 32
+          text_base = entry_offset = None
+          for _ in range(struct.unpack_from('<I', b, 16)[0]):
+              command, size = struct.unpack_from('<II', b, offset)
+              if command == 0x19 and b[offset+8:offset+24].rstrip(b'\0') == b'__TEXT':
+                  text_base = struct.unpack_from('<Q', b, offset+24)[0] - struct.unpack_from('<Q', b, offset+40)[0]
+              if command == 0x80000028:
+                  entry_offset = struct.unpack_from('<Q', b, offset+8)[0]
+              offset += size
+          assert text_base is not None and entry_offset is not None
+          pathlib.Path('evidence/entry-address.txt').write_text(hex(text_base + entry_offset))
+          pathlib.Path('evidence/target.json').write_text(json.dumps({k:info.get(k) for k in ['CFBundleIdentifier','CFBundleExecutable','CFBundleShortVersionString','MinimumOSVersion']}, indent=2))
+          PY
+      - name: Native overview through REA
+        env:
+          REA_GHIDRA_STARTUP_TIMEOUT_MS: '600000'
+        run: |
+          rea analyze "$PWD/MobileLogic.app/MobileLogic" --provider ghidra --snapshot "$PWD/evidence/main.snapshot.json" --json > evidence/main-native.json
+      - name: Decompile real entry function through REA
+        env:
+          REA_GHIDRA_STARTUP_TIMEOUT_MS: '600000'
+        run: |
+          ENTRY=$(cat evidence/entry-address.txt)
+          rea decompile "$PWD/MobileLogic.app/MobileLogic" "$ENTRY" --provider ghidra --snapshot "$PWD/evidence/main.snapshot.json" --json > evidence/entry-decompiled.json
+          python - <<'PY'
+          import json
+          d=json.load(open('evidence/entry-decompiled.json'))
+          assert 'error' not in d, d
+          PY
+      - name: Retain evidence and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rea-native-evidence
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 30
+
