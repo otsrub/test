@@ -1,0 +1,163 @@
+name: REA overnight targeted worker
+'on':
+  workflow_call:
+    inputs:
+      image:
+        required: true
+        type: string
+      artifact:
+        required: true
+        type: string
+      baseline-run:
+        required: true
+        type: string
+      baseline-artifact:
+        required: true
+        type: string
+      partition:
+        required: true
+        type: number
+      latest-run:
+        required: true
+        type: string
+      latest-artifact:
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-overnight-${{ inputs.artifact }}
+  cancel-in-progress: false
+jobs:
+  recover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 210
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.baseline-artifact }}
+        path: baseline
+        run-id: ${{ inputs.baseline-run }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Wait for current resume checkpoint
+      env:
+        GH_TOKEN: ${{ github.token }}
+        LATEST_RUN: ${{ inputs.latest-run }}
+      run: "for tick in $(seq 1 190); do\n  state=$(gh api repos/otsrub/test/actions/runs/$LATEST_RUN --jq .status)\n  if [ \"$state\" = completed ]; then exit 0; fi\n  echo \"Waiting for upstream checkpoint: $state ($tick/190)\"\n  sleep 30\ndone\necho \"Upstream checkpoint has not completed within 95 minutes\" >&2\nexit 1\n"
+    - name: Download current resume checkpoint
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.latest-artifact }}
+        path: latest
+        run-id: ${{ inputs.latest-run }}
+        github-token: ${{ github.token }}
+    - name: Merge successful address coverage from both checkpoints
+      run: "python - <<'MERGE'\nimport json,pathlib\nbase=json.loads(pathlib.Path('baseline/coverage.json').read_text())\nnew=json.loads(pathlib.Path('latest/coverage.json').read_text())\nfor i in base['images']:\n n=next((x for x in new['images'] if x['path']==i['path'] and x['sha256']==i['sha256']),None)\n if n is None: raise ValueError('Current checkpoint SHA mismatch')\n i['function_status']+=n['function_status']\nbase['baseline_provenance']={'original_run':'${{ inputs.baseline-run }}','resume_run':'${{ inputs.latest-run }}'}\npathlib.Path('baseline/coverage.json').write_text(json.dumps(base))\nMERGE\n"
+    - name: Plan missing addresses before installing REA
+      id: plan
+      env:
+        PARTITION_INDEX: ${{ inputs.partition }}
+      run: 'python - <<''PLAN''
+
+        import json,pathlib,os
+
+        base=json.loads(pathlib.Path(''baseline/coverage.json'').read_text())
+
+        i=base[''images''][0]
+
+        inv=json.loads((pathlib.Path(''baseline'')/i[''directory'']/''procedures.json'').read_text())[''normalized_result'']
+
+        inv.sort(key=lambda p:(p[''address''],p[''value'']))
+
+        done={s[''address''] for s in i[''function_status''] if not s.get(''errors'') and s.get(''pseudocode'') in [''recovered'',''external_import''] and s.get(''assembly'') in [''recovered'',''empty'',''external_import''] and s.get(''info'') in [''recovered'',''external_import''] and s.get(''references'') in [''recovered'',''external_import'']}
+
+        idx=int(os.environ[''PARTITION_INDEX''])
+
+        targets=[p[''address''] for n,p in enumerate(inv) if n%500==idx and p[''address''] not in done and not p.get(''procedure'',{}).get(''external'',False)]
+
+        root=pathlib.Path(''overnight-evidence'');root.mkdir(exist_ok=True)
+
+        plan={''image'':i[''path''],''image_sha256'':i[''sha256''],''partition'':idx,''partitions'':500,''addresses'':targets,''checkpoint_runs'':base[''baseline_provenance''],''completed_unique_records'':len(done)}
+
+        (root/''plan.json'').write_text(json.dumps(plan,indent=2))
+
+        with open(os.environ[''GITHUB_OUTPUT''],''a'') as f:f.write(''needed=''+str(bool(targets)).lower()+''\n'')
+
+        with open(os.environ[''GITHUB_STEP_SUMMARY''],''a'') as f:f.write(''Planned missing native functions: ''+str(len(targets))+''; partition ''+str(idx)+''/500.\n'')
+
+        print(json.dumps({''planned_native_functions'':len(targets),''partition'':idx}))
+
+        PLAN
+
+        '
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+      if: steps.plan.outputs.needed == 'true'
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: '21'
+      if: steps.plan.outputs.needed == 'true'
+    - name: Install verified analysis engines
+      run: 'mkdir -p tools evidence runtime-tmp
+
+        curl -fL --retry 3 -o ghidra.zip https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip
+
+        printf ''%s  %s\n'' ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db ghidra.zip | sha256sum -c -
+
+        unzip -q ghidra.zip -d tools
+
+        npm install --prefix rea-tool --no-audit --no-fund rea-agents@6.4.0
+
+        echo "GHIDRA_INSTALL_DIR=$PWD/tools/ghidra_12.1.4_PUBLIC" >> "$GITHUB_ENV"
+
+        echo "TMPDIR=$PWD/runtime-tmp" >> "$GITHUB_ENV"
+
+        '
+      if: steps.plan.outputs.needed == 'true'
+    - name: Download and inventory entire payload
+      run: "curl -fL --retry 3 -o MobileLogic.zip https://github.com/otsrub/test/releases/download/mobilelogic-3.4-archive/MobileLogic.zip\nmkdir -p recovery\ncat > recovery/prepare.py <<'SOURCE'\nimport collections\nimport hashlib\nimport json\nimport pathlib\nimport struct\nimport zipfile\n\nARCHIVE_SHA256 = 'f2a650fd7a51a7bb2bc5e8e5cc35a95236c02723ab3faeb162cca64ee62a744e'\nroot = pathlib.Path('MobileLogic.app').resolve()\nroot.mkdir(exist_ok=True)\narchive = pathlib.Path('MobileLogic.zip')\nassert hashlib.file_digest(archive.open('rb'), 'sha256').hexdigest() == ARCHIVE_SHA256\nresources = []\nwith zipfile.ZipFile(archive) as z:\n    for item in z.infolist():\n        if item.is_dir() or item.filename.startswith('__MACOSX/'):\n            continue\n        dest = (root / item.filename).resolve()\n        if not dest.is_relative_to(root):\n            raise ValueError('Unsafe archive path: ' + item.filename)\n        dest.parent.mkdir(parents=True, exist_ok=True)\n        digest = hashlib.sha256()\n\
+        \        with z.open(item) as src, dest.open('wb') as out:\n            while chunk := src.read(1024 * 1024):\n                digest.update(chunk)\n                out.write(chunk)\n        resources.append({'path': item.filename, 'bytes': item.file_size, 'sha256': digest.hexdigest(), 'archive_mode': item.external_attr >> 16})\n\nimages = []\nunsupported = []\nfor resource in resources:\n    path = root / resource['path']\n    with path.open('rb') as f:\n        magic = f.read(4)\n    if magic not in [bytes.fromhex(h) for h in ['cffaedfe', 'cefaedfe', 'cafebabe', 'bebafeca', 'cafebabf', 'bfbafeca']]:\n        continue\n    if magic != bytes.fromhex('cffaedfe'):\n        unsupported.append({**resource, 'reason': 'Manifest parser supports thin little-endian Mach-O 64 only'})\n        continue\n    b = path.read_bytes()\n    cpu, subtype, kind, ncmds = struct.unpack_from('<IIII', b, 4)\n    offset = 32\n    image = {**resource, 'cpu_type': cpu, 'cpu_subtype': subtype, 'file_type':\
+        \ kind, 'segments': [], 'sections': [], 'dependencies': [], 'encryption': [], 'compiler_function_starts': [], 'code_bytes': 0}\n    text_base = None\n    function_start_data = None\n    for _ in range(ncmds):\n        cmd, size = struct.unpack_from('<II', b, offset)\n        assert size >= 8 and offset + size <= len(b)\n        if cmd == 0x19:\n            name = b[offset+8:offset+24].split(b'\\0')[0].decode()\n            vmaddr, vmsize, fileoff, filesize = struct.unpack_from('<QQQQ', b, offset+24)\n            image['segments'].append({'name': name, 'vmaddr': hex(vmaddr), 'vmsize': vmsize, 'fileoff': fileoff, 'filesize': filesize})\n            if name == '__TEXT':\n                text_base = vmaddr\n            nsects = struct.unpack_from('<I', b, offset+64)[0]\n            for i in range(nsects):\n                pos = offset + 72 + 80 * i\n                assert pos + 80 <= offset + size\n                sectname = b[pos:pos+16].split(b'\\0')[0].decode()\n                addr,\
+        \ length, section_fileoff = struct.unpack_from('<QQI', b, pos+32)\n                flags = struct.unpack_from('<I', b, pos+64)[0]\n                image['sections'].append({'segment': name, 'name': sectname, 'address': hex(addr), 'bytes': length, 'fileoff': section_fileoff, 'flags': flags})\n                if flags & 0x80000400:\n                    image['code_bytes'] += length\n        elif cmd == 0x26:\n            start, length = struct.unpack_from('<II', b, offset+8)\n            function_start_data = b[start:start+length]\n        elif cmd in (0x21, 0x2c):\n            start, length, cryptid = struct.unpack_from('<III', b, offset+8)\n            image['encryption'].append({'offset': start, 'bytes': length, 'cryptid': cryptid})\n        elif cmd in (0xc, 0x80000018, 0x8000001f, 0x80000023):\n            nameoff = struct.unpack_from('<I', b, offset+8)[0]\n            image['dependencies'].append(b[offset+nameoff:offset+size].split(b'\\0')[0].decode(errors='replace'))\n     \
+        \   offset += size\n    if function_start_data is not None and text_base is not None:\n        cursor = 0\n        address = text_base\n        while cursor < len(function_start_data):\n            shift = value = 0\n            while True:\n                byte = function_start_data[cursor]\n                cursor += 1\n                value |= (byte & 0x7f) << shift\n                if not byte & 0x80:\n                    break\n                shift += 7\n                assert shift <= 63\n            if value == 0:\n                break\n            address += value\n            image['compiler_function_starts'].append(hex(address))\n    images.append(image)\n\nloads = [0] * 10\nbuckets = [[] for _ in loads]\nfor image in sorted(images, key=lambda i: (-i['code_bytes'], i['path'])):\n    shard = min(range(10), key=lambda j: (loads[j], j))\n    image['shard'] = shard\n    buckets[shard].append(image['path'])\n    loads[shard] += image['code_bytes']\nout = pathlib.Path('evidence')\n\
+        out.mkdir(exist_ok=True)\nmanifest = {'archive_sha256': ARCHIVE_SHA256, 'images': images, 'unsupported_native_images': unsupported, 'shards': buckets, 'shard_code_bytes': loads, 'resource_count': len(resources), 'scope': 'Static recovery only; compiler function starts do not prove all original source functions.'}\n(out/'manifest.json').write_text(json.dumps(manifest, indent=2))\n(out/'resource-inventory.json').write_text(json.dumps(resources, indent=2))\nprint(json.dumps({'native_images': len(images), 'unsupported_native_images': len(unsupported), 'shard_code_bytes': loads}))\n\nSOURCE\npython recovery/prepare.py\n"
+      if: steps.plan.outputs.needed == 'true'
+    - name: Recover disjoint function partition through REA with two bounded passes
+      env:
+        FOCUS_PATHS: '["${{ inputs.image }}"]'
+        SHARD: ${{ inputs.artifact }}
+        REA_GHIDRA_STARTUP_TIMEOUT_MS: '3600000'
+        GHIDRA_HEADLESS_MAXMEM: 3G
+        BASELINE_RUN: ${{ inputs.baseline-run }}
+        PARTITION_COUNT: '500'
+        PARTITION_INDEX: ${{ inputs.partition }}
+      run: "cat > recovery/recover.mjs <<'SOURCE'\nimport { Client } from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/index.mjs';\nimport { StdioClientTransport } from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/stdio.mjs';\nimport fs from 'node:fs/promises';\nimport { createWriteStream } from 'node:fs';\nimport { createGzip } from 'node:zlib';\nimport { pipeline } from 'node:stream/promises';\nimport { once } from 'node:events';\nimport path from 'node:path';\nimport { createHash } from 'node:crypto';\n\nconst manifest = JSON.parse(await fs.readFile('evidence/manifest.json', 'utf8'));\nconst shard = process.env.SHARD ?? 'pilot';\nconst selected = process.env.FOCUS_PATHS ? JSON.parse(process.env.FOCUS_PATHS) : shard === 'pilot' ? ['MobileLogic'] : manifest.shards[Number(shard)];\nconst partitionCount = Number(process.env.PARTITION_COUNT ?? 1);\nconst partitionIndex = Number(process.env.PARTITION_INDEX ?? 0);\nif (!Number.isInteger(partitionCount) || partitionCount\
+        \ < 1 || !Number.isInteger(partitionIndex) || partitionIndex < 0 || partitionIndex >= partitionCount) throw new Error('Invalid partition');\nconst inventoryOnly = process.env.INVENTORY_ONLY === '1';\nconst filter = process.env.FUNCTION_FILTER ? new RegExp(process.env.FUNCTION_FILTER, 'i') : null;\nif (!selected) throw new Error('Unknown shard');\nconst baseline = JSON.parse(await fs.readFile('baseline/coverage.json', 'utf8'));\nconst summary = { shard, partition: {count: partitionCount, index: partitionIndex}, selection_filter: process.env.FUNCTION_FILTER ?? null, archive_sha256: manifest.archive_sha256, images: [], complete: false, status: 'running', fidelity: 'Ghidra static pseudocode, not original source or a verified buildable reconstruction' };\nawait fs.mkdir('evidence/recovered', { recursive: true });\nconst saveSummary = () => fs.writeFile('evidence/coverage.json', JSON.stringify(summary, null, 2));\nawait saveSummary();\n\nfunction unwrap(result) {\n  if (result.structuredContent\
+        \ !== undefined) return result.structuredContent;\n  const text = result.content?.filter(x => x.type === 'text').map(x => x.text).join('');\n  if (!text) throw new Error('MCP result has no machine-readable content');\n  return JSON.parse(text);\n}\nasync function recover(image) {\n  const imageIndex = manifest.images.findIndex(x => x.path === image.path);\n  const dest = path.resolve('evidence/recovered', String(imageIndex).padStart(3, '0'));\n  await fs.mkdir(dest, { recursive: true });\n  const prior = baseline.images.find(i => i.path === image.path && i.sha256 === image.sha256);\n  if (!prior) throw new Error('Baseline image SHA mismatch');\n  const done = new Set(prior.function_status.filter(s => !s.errors?.length && ['recovered','external_import'].includes(s.pseudocode) && ['recovered','empty','external_import'].includes(s.assembly) && ['recovered','external_import'].includes(s.info) && ['recovered','external_import'].includes(s.references)).map(s => s.address));\n  if (process.env.SKIP_ATTEMPTED_FILE)\
+        \ {\n    const attempted=JSON.parse(await fs.readFile(process.env.SKIP_ATTEMPTED_FILE,'utf8'));\n    for (const i of attempted.images) if(i.path===image.path && i.sha256===image.sha256) for (const s of i.function_status) done.add(s.address);\n  }\n  const deferred = new Set(prior.function_status.filter(s => s.errors?.length).map(s => s.address));\n  if (image.path === 'Frameworks/MADSP.framework/MADSP') deferred.add('0x8961a8');\n  const record = { deferred_addresses: [...deferred], baseline_run: process.env.BASELINE_RUN, baseline_completed_records: done.size, baseline_pseudocode_entries: prior.decompiled, path: image.path, sha256: image.sha256, directory: path.relative('evidence', dest), status: 'running', procedures: 0, external_imports: 0, decompiled: 0, null_pseudocode: 0, errors: 0, assembly_recovered: 0, function_status: [], unmatched_compiler_function_starts: [], limitations: [] };\n  summary.images.push(record);\n  await saveSummary();\n  let client;\n  let connected = false;\n\
+        \  const gzip = createGzip({ level: 6 });\n  const gzipCompletion = pipeline(gzip, createWriteStream(path.join(dest, 'rea-evidence.jsonl.gz')));\n  gzipCompletion.catch(() => {});\n  async function evidence(value) {\n    if (!gzip.write(JSON.stringify(value) + '\\n')) await once(gzip, 'drain');\n  }\n  const serverLog = createWriteStream(path.join(dest, 'server.log'));\n  await once(serverLog, 'open');\n  const transport = new StdioClientTransport({ command: process.execPath, args: [path.resolve('rea-tool/node_modules/rea-agents/scripts/rea.mjs'), '--mcp'], env: { ...process.env, REA_MCP_MAX_RESPONSE_BYTES: '67108864', NODE_OPTIONS: '--max-old-space-size=8192' }, maxBufferSize: 67108864, stderr: serverLog });\n  try {\n    client = new Client({ name: 'mobilelogic-full-recovery', version: '1.0.0' });\n    await client.connect(transport);\n    connected = true;\n    const { tools } = await client.listTools();\n    const available = new Set(tools.map(t => t.name));\n    const required\
+        \ = ['open_binary','close_binary','list_procedures','list_names','list_strings','list_segments','procedure_info','procedure_pseudo_code','procedure_assembly','procedure_references'];\n    for (const name of required) if (!available.has(name)) throw new Error('Required REA tool absent: ' + name);\n    async function call(name, args = {}) {\n      const timeoutMs = ['open_binary','list_procedures','list_names','list_strings','list_segments'].includes(name) ? 3600000 : 120000;\n      const controller = new AbortController();\n      const started = Date.now();\n      await fs.writeFile('evidence/active-call.json', JSON.stringify({name,args,started,timeoutMs}));\n      console.log(JSON.stringify({event:'call_started',tool:name,procedure:args.procedure ?? null,timeoutMs}));\n      let timer;\n      let response;\n      try {\n        response = await Promise.race([client.callTool({name,arguments:args},{timeout:timeoutMs,resetTimeoutOnProgress:false,maxTotalTimeout:timeoutMs,signal:controller.signal}),new\
+        \ Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('Hard request deadline exceeded: '+name));},timeoutMs);})]);\n      } finally { clearTimeout(timer); }\n      const value = unwrap(response);\n      await evidence({ tool: name, arguments: args, result: value, isError: Boolean(response.isError) });\n      if (response.isError || value?.error) {\n        const error = new Error(JSON.stringify(value?.error ?? value));\n        error.toolResult = value;\n        throw error;\n      }\n      return value;\n    }\n    await call('open_binary', { path: path.resolve('MobileLogic.app', image.path), provider_id: 'ghidra' });\n    const inventory = await call('list_procedures');\n    const procedures = inventory.normalized_result;\n    if (!Array.isArray(procedures)) throw new Error('Procedure inventory is not an array');\n    procedures.sort((a,b) => a.address.localeCompare(b.address) || a.value.localeCompare(b.value));\n    record.inventory_sha256 = createHash('sha256').update(JSON.stringify(procedures.map(p\
+        \ => [p.address,p.value,p.procedure?.external === true]))).digest('hex');\n    record.procedures = procedures.length;\n    if (!record.procedures) throw new Error('Empty function inventory');\n    const addresses = new Set(procedures.map(p => p.address));\n    record.unmatched_compiler_function_starts = image.compiler_function_starts.filter(a => !addresses.has(a));\n    await fs.writeFile(path.join(dest, 'procedures.json'), JSON.stringify(inventory));\n    await fs.writeFile(path.join(dest, 'image.json'), JSON.stringify(image, null, 2));\n    for (const [tool, filename] of []) {\n      try { await fs.writeFile(path.join(dest, filename), JSON.stringify(await call(tool))); }\n      catch (e) { record.limitations.push(tool + ': ' + e.message); }\n    }\n    const pseudoFile = await fs.open(path.join(dest, 'recovered-pseudocode.c'), 'w');\n    const asmFile = await fs.open(path.join(dest, 'recovered-assembly.txt'), 'w');\n    try {\n      await pseudoFile.write('/* Static Ghidra pseudocode\
+        \ recovered via REA. NOT original source or verified compilable C. */\\n');\n      const planned = new Set(JSON.parse(await fs.readFile('overnight-evidence/plan.json','utf8')).addresses);\n      const targets = procedures.filter((p,i) => planned.has(p.address) && !done.has(p.address) && !inventoryOnly && i % partitionCount === partitionIndex && (!filter || filter.test(p.value))).sort((a,b) => Number(deferred.has(a.address))-Number(deferred.has(b.address)));\n      await fs.writeFile(path.join(dest,'target-addresses.json'),JSON.stringify({image_sha256:image.sha256,partitionIndex,partitionCount,addresses:targets.map(p=>p.address)},null,2));\n      record.target_count=targets.length;\n      await saveSummary();\n      for (const p of targets) {\n        const status = { address: p.address, name: p.value, classification: p.procedure ?? null, pseudocode: 'not_attempted', assembly: 'not_attempted', info: 'not_attempted', references: 'not_attempted', errors: [] };\n        record.function_status.push(status);\n\
+        \        if (p.procedure?.external === true) {\n          status.pseudocode = status.assembly = status.info = status.references = 'external_import';\n          record.external_imports++;\n          continue;\n        }\n        const header = '\\n/* ' + p.address + ' ' + p.value.replaceAll('*/', '* /').replaceAll('\\n', ' ') + ' */\\n';\n        for (const [tool, key] of [['procedure_info','info'],['procedure_pseudo_code','pseudocode'],['procedure_assembly','assembly'],['procedure_references','references']]) {\n          try {\n            const result = await call(tool, { procedure: p.address });\n            const value = result.normalized_result;\n            if (key === 'pseudocode') {\n              if (typeof value === 'string' && value.trim()) { await pseudoFile.write(header + value + '\\n'); status[key] = 'recovered'; record.decompiled++; }\n              else { status[key] = 'null'; record.null_pseudocode++; }\n            } else if (key === 'assembly') {\n             \
+        \ if (typeof value === 'string' && value.trim()) { await asmFile.write(header + value + '\\n'); status[key] = 'recovered'; record.assembly_recovered++; }\n              else status[key] = 'empty';\n            } else status[key] = 'recovered';\n          } catch (e) { status[key] = 'failed'; status.errors.push({ tool, message: e.message.slice(0,2000) }); record.errors++; await saveSummary(); if (/timed out|deadline|Not connected|Connection closed/i.test(e.message)) throw e; }\n        }\n        if (record.function_status.length % 100 === 0) {\n          console.log(JSON.stringify({ image: image.path, processed: record.function_status.length, total: procedures.length, decompiled: record.decompiled, errors: record.errors }));\n          await saveSummary();\n        }\n      }\n    } finally { await pseudoFile.close(); await asmFile.close(); }\n    record.status = 'resumed_static_evidence';\n    record.scope_complete = !record.errors && !record.null_pseudocode;\n    /* Original status\
+        \ expression retained only as documentation:\n    record.status = inventoryOnly ? 'inventory_only' : filter || partitionCount > 1 ? 'filtered_static_evidence' : record.errors || record.unmatched_compiler_function_starts.length || record.null_pseudocode ? 'partial' : 'complete_within_analyzed_function_inventory';\n    */\n    await call('close_binary');\n    connected = false;\n  } catch (e) {\n    record.status = 'failed';\n    record.failure = e.message;\n    console.error(JSON.stringify({ image: image.path, failure: e.message }));\n  } finally {\n    if (connected) {\n      try { await client.callTool({ name: 'close_binary', arguments: {} }, { timeout: 5000 }); }\n      catch (e) { record.limitations.push('close_binary: ' + e.message); }\n    }\n    if (client) await Promise.race([client.close().catch(() => {}),new Promise(resolve=>setTimeout(resolve,10000))]);\n    serverLog.end();\n    gzip.end();\n    await gzipCompletion;\n    await fs.writeFile(path.join(dest, 'coverage.json'),\
+        \ JSON.stringify(record, null, 2));\n    await saveSummary();\n  }\n  console.log(JSON.stringify({ image: image.path, status: record.status, procedures: record.procedures, decompiled: record.decompiled, errors: record.errors }));\n}\nconst deadline = Date.now() + 5 * 60 * 60 * 1000;\nfor (const selectedPath of selected) {\n  if (Date.now() > deadline) { summary.status = 'deadline'; break; }\n  const image = manifest.images.find(i => i.path === selectedPath);\n  if (!image) throw new Error('Selected native image absent from manifest: ' + selectedPath);\n  await recover(image);\n}\nsummary.complete = summary.images.length === selected.length && summary.images.every(i => i.status === 'complete_within_analyzed_function_inventory');\nsummary.status = summary.complete ? 'complete_within_analyzed_function_inventory' : 'partial';\nawait saveSummary();\nconsole.log(JSON.stringify({ shard, status: summary.status, images: summary.images.length, selected: selected.length }));\n\nif (summary.images.some(i\
+        \ => i.status === 'failed' || i.errors)) process.exitCode = 1;\n\nSOURCE\nmkdir -p overnight-evidence\nset +e\ntimeout --signal=TERM --kill-after=30s 45m node recovery/recover.mjs\nfirst_status=$?\nset -e\nmv evidence overnight-evidence/attempt1\nif [ \"$first_status\" -ne 0 ]; then\n  mkdir evidence\n  cp overnight-evidence/attempt1/manifest.json evidence/manifest.json\n  cp overnight-evidence/attempt1/resource-inventory.json evidence/resource-inventory.json\n  set +e\n  SKIP_ATTEMPTED_FILE=overnight-evidence/attempt1/coverage.json timeout --signal=TERM --kill-after=30s 45m node recovery/recover.mjs\n  second_status=$?\n  set -e\n  mv evidence overnight-evidence/attempt2\n  echo \"Attempt exit statuses: $first_status, $second_status\"\nfi\npython - <<'REPORT'\nimport json,pathlib,os\nroot=pathlib.Path('overnight-evidence')\nwith open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:\n f.write('## Targeted REA recovery\\n\\nPartition ${{ inputs.partition }}/500; original checkpoint ${{\
+        \ inputs.baseline-run }}; resume checkpoint ${{ inputs.latest-run }}.\\n\\n')\n for p in sorted(root.glob('*/coverage.json')):\n  c=json.loads(p.read_text())\n  for i in c['images']:\n   f.write(f\"{p.parent.name}: {i['path']}, {i['decompiled']} pseudocode entries, {i['assembly_recovered']} assembly entries, {i['errors']} errors, status {i['status']}.\\n\\n\")\n f.write('Static evidence only; original source, a faithful build and device equivalence remain unverified. Failed or unattempted addresses remain gaps.\\n')\nREPORT\n"
+      if: steps.plan.outputs.needed == 'true'
+    - name: Retain pseudocode assembly and coverage
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact }}
+        path: 'overnight-evidence/
+
+          evidence/'
+        if-no-files-found: error
+        retention-days: 90
+        compression-level: 6
