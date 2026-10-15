@@ -1,0 +1,533 @@
+name: REA corrected profile continuation
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-profile-continuation.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-corrected-profile-continuation
+  cancel-in-progress: false
+jobs:
+  select:
+    if: ${{ github.run_attempt == 1 }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    outputs:
+      has_targets: ${{ steps.choose.outputs.has_targets }}
+      has_remaining: ${{ steps.choose.outputs.has_remaining }}
+      probe: ${{ steps.choose.outputs.probe }}
+      matrix: ${{ steps.choose.outputs.matrix }}
+    steps:
+    - name: Wait for previous checkpoints to finish
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "for tick in $(seq 1 180); do\n state=$(gh api repos/otsrub/test/actions/runs/38670888947 --jq .status)\n if [\
+        \ \"$state\" = completed ]; then exit 0; fi\n echo \"Waiting for earlier bounded run to retain its final checkpoints:\
+        \ $state\"\n sleep 30\ndone\necho 'Previous run did not complete within the bounded wait' >&2\nexit 1\n"
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: rea-profile-target-*
+        run-id: '38670888947'
+        github-token: ${{ github.token }}
+        path: earlier
+        merge-multiple: false
+    - name: Select only targets without an earlier decompilation attempt
+      id: choose
+      run: "cat > targets.json <<'TARGETS'\n[\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\":\
+        \ \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\",\n    \"address\": \"0x20eed8\",\n    \"short\"\
+        : \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\": \"logic-20eed8\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\"\
+        ,\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\",\n    \"address\": \"0x24c844\"\
+        ,\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\": \"logic-24c844\"\n  },\n  {\n  \
+        \  \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x30d514\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-30d514\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x3115ac\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-3115ac\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x3c49c8\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-3c49c8\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x4c17d4\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-4c17d4\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x52c3ac\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-52c3ac\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x5db01c\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-5db01c\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x706100\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-706100\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x777cf8\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-777cf8\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x8b493c\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-8b493c\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x8d4ba0\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-8d4ba0\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0xd2cc5c\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-d2cc5c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x449cf0\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"madsp-449cf0\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x8961a8\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-8961a8\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x8afac0\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"madsp-8afac0\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x8cb148\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"madsp-8cb148\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x910100\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-910100\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x93ef7c\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-93ef7c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x967204\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-967204\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x984840\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-984840\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x9a1e5c\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-9a1e5c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x9ccfd4\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-9ccfd4\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x9f7ec8\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-9f7ec8\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xa1c290\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-a1c290\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xa4b79c\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-a4b79c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xa80a08\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-a80a08\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xa946c\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-a946c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xaa6938\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-aa6938\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xadae18\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-adae18\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xb0c024\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-b0c024\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xb3497c\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-b3497c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xb693e4\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-b693e4\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xbbb238\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-bbb238\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xbdca90\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-bdca90\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xc07630\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-c07630\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xc12a38\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-c12a38\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xc141a8\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-c141a8\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xc72b0\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-c72b0\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xfdc4\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-fdc4\"\n  },\n  {\n    \"image\": \"Frameworks/MACore.framework/MACore\",\n    \"sha256\": \"88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5\"\
+        ,\n    \"address\": \"0x3c144\",\n    \"short\": \"macore\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"macore-3c144\"\n  },\n  {\n    \"image\": \"Frameworks/MACore.framework/MACore\",\n    \"sha256\": \"88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5\"\
+        ,\n    \"address\": \"0xc6d64\",\n    \"short\": \"macore\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"macore-c6d64\"\n  },\n  {\n    \"image\": \"Frameworks/MAGenerativeInstruments.framework/MAGenerativeInstruments\"\
+        ,\n    \"sha256\": \"cf2e3dc0b233e6e1a878a4040095494d57b0ab97b8ed461b16960d232d6d10d7\",\n    \"address\": \"0x77858\"\
+        ,\n    \"short\": \"magenerativeinstruments\",\n    \"unattempted_last_run\": false,\n    \"slug\": \"magenerativeinstruments-77858\"\
+        \n  },\n  {\n    \"image\": \"Frameworks/MAGenerativeInstruments.framework/MAGenerativeInstruments\",\n    \"sha256\"\
+        : \"cf2e3dc0b233e6e1a878a4040095494d57b0ab97b8ed461b16960d232d6d10d7\",\n    \"address\": \"0xeecb8\",\n    \"short\"\
+        : \"magenerativeinstruments\",\n    \"unattempted_last_run\": false,\n    \"slug\": \"magenerativeinstruments-eecb8\"\
+        \n  },\n  {\n    \"image\": \"Frameworks/MAPlugInGUI.framework/MAPlugInGUI\",\n    \"sha256\": \"74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4\"\
+        ,\n    \"address\": \"0x25210\",\n    \"short\": \"maplugingui\",\n    \"unattempted_last_run\": false,\n    \"slug\"\
+        : \"maplugingui-25210\"\n  },\n  {\n    \"image\": \"Frameworks/MAPlugInGUI.framework/MAPlugInGUI\",\n    \"sha256\"\
+        : \"74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4\",\n    \"address\": \"0x26390\",\n    \"short\"\
+        : \"maplugingui\",\n    \"unattempted_last_run\": false,\n    \"slug\": \"maplugingui-26390\"\n  }\n]\nTARGETS\npython\
+        \ - <<'PY'\nimport json,pathlib,os\ntargets=json.load(open('targets.json'));observed={}\nfor p in pathlib.Path('earlier').glob('*/result.json'):\n\
+        \ r=json.loads(p.read_text());k=(r['image_sha256'],r['address']);active=p.with_name('active-call.json');a=json.loads(active.read_text())\
+        \ if active.exists() else {}\n observed[k]=(r,a)\neligible=[];excluded=[]\nfor t in targets:\n record=observed.get((t['sha256'],t['address']))\n\
+        \ if record:\n  result,active=record\n  if result.get('pseudocode')!='not_attempted' or active.get('name')=='procedure_pseudo_code'\
+        \ or result.get('exact_entry') is False:\n   excluded.append({'image_sha256':t['sha256'],'address':t['address'],'status':result.get('status'),'artifact_preserved':True});continue\n\
+        \ eligible.append(t)\neligible.sort(key=lambda t:(t['short']!='madsp',not t['unattempted_last_run'],int(t['address'],16)))\n\
+        probe=next((t for t in eligible if t['short']=='madsp' and t['address']=='0xfdc4'),eligible[0] if eligible else {})\n\
+        remaining=[t for t in eligible if t!=probe]\npathlib.Path('selection').mkdir(exist_ok=True);pathlib.Path('selection/eligible-targets.json').write_text(json.dumps(eligible,indent=2));pathlib.Path('selection/excluded-actual-attempts.json').write_text(json.dumps(excluded,indent=2))\n\
+        with open(os.environ['GITHUB_OUTPUT'],'a') as f:\n print('has_targets='+str(bool(eligible)).lower(),file=f);print('has_remaining='+str(bool(remaining)).lower(),file=f);print('probe='+json.dumps(probe,separators=(',',':')),file=f);print('matrix='+json.dumps({'include':remaining},separators=(',',':')),file=f)\n\
+        with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:\n print('## Corrected profile selection',file=f);print(str(len(eligible))+'\
+        \ addresses remain eligible; '+str(len(excluded))+' actual prior attempts or recovered candidates are retained and\
+        \ excluded from this pass.',file=f)\n\nPY\n"
+    - if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: rea-corrected-profile-selection
+        path: selection/
+        if-no-files-found: error
+        retention-days: 90
+  probe:
+    needs:
+    - select
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      REA_GHIDRA_DISABLED_ANALYZERS: Objective-C Message Analyzer,Objective-C Type Metadata Analyzer,Demangler GNU,Call Convention
+        ID
+      REA_GHIDRA_STARTUP_TIMEOUT_MS: '2400000'
+      GHIDRA_HEADLESS_MAXMEM: 3G
+    outputs:
+      profile_ready: ${{ steps.status.outputs.profile_ready }}
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-original-input-${{ fromJSON(needs.select.outputs.probe).short }}
+        path: input/
+        run-id: '38670888947'
+        github-token: ${{ github.token }}
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: '21'
+    - name: Install verified analysis engines
+      run: 'mkdir -p tools evidence runtime-tmp
+
+        curl -fL --retry 3 -o ghidra.zip https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip
+
+        printf ''%s  %s\n'' ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db ghidra.zip | sha256sum -c -
+
+        unzip -q ghidra.zip -d tools
+
+        npm install --prefix rea-tool --no-audit --no-fund rea-agents@6.5.0
+
+        echo "GHIDRA_INSTALL_DIR=$PWD/tools/ghidra_12.1.4_PUBLIC" >> "$GITHUB_ENV"
+
+        echo "TMPDIR=$PWD/runtime-tmp" >> "$GITHUB_ENV"
+
+
+        test -f rea-tool/node_modules/rea-agents/bridge/ghidra/ReaGhidraAnalysisOptions.java
+
+        node -e "const p=require(''./rea-tool/node_modules/rea-agents/package.json'');if(p.version!==''6.5.0'')process.exit(1)"
+
+        '
+    - name: Write and validate single-target recovery client
+      run: "mkdir -p recovery evidence\ncat > recovery/one.mjs <<'SOURCE'\nimport {Client} from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/index.mjs';\n\
+        import {StdioClientTransport} from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/stdio.mjs';\nimport\
+        \ fs from 'node:fs/promises';\nimport {createWriteStream} from 'node:fs';\nimport {createHash} from 'node:crypto';\n\
+        import {createGzip} from 'node:zlib';\nimport {pipeline} from 'node:stream/promises';\nimport {once} from 'node:events';\n\
+        import path from 'node:path';\n\nexport function normalizeNative(a){if(typeof a!=='string'||!/^0x[0-9a-f]+$/i.test(a))return\
+        \ null;return '0x'+BigInt(a).toString(16);}\nexport function admitExact(info,target){return info && normalizeNative(info.entrypoint)===normalizeNative(target)&&info.classification?.external!==true;}\n\
+        export function usablePseudo(pseudo,assembly,exact){return Boolean(exact&&typeof pseudo==='string'&&pseudo.trim()&&!pseudo.includes('halt_baddata')&&typeof\
+        \ assembly==='string'&&/^\\s*0x[0-9a-f]+:/im.test(assembly));}\nif(process.env.REA_TEST_IMPORT==='1'){}else{await\
+        \ main();}\nasync function main(){\n const target=JSON.parse(process.env.TARGET_ROW);if(!normalizeNative(target.address))throw\
+        \ new Error('Non-native target rejected');\n const meta=JSON.parse(await fs.readFile('input/image.json','utf8'));if(meta.sha256!==target.sha256||meta.image!==target.image)throw\
+        \ new Error('Input identity mismatch');\n const binary=await fs.readFile('input/target.bin');if(createHash('sha256').update(binary).digest('hex')!==target.sha256)throw\
+        \ new Error('Input SHA256 mismatch');\n await fs.mkdir('evidence',{recursive:true});\n const result={image:target.image,image_sha256:target.sha256,address:normalizeNative(target.address),status:'running',rea_version:'6.5.0',analysis_profile_override:{disabled_analyzers:process.env.REA_GHIDRA_DISABLED_ANALYZERS.split(',')},max_new_attempts:1,info:'not_attempted',assembly:'not_attempted',pseudocode:'not_attempted',usable_candidate:false,errors:[],semantic_equivalence_verified:false,original_bytes_modified:false};\n\
+        \ const save=()=>fs.writeFile('evidence/result.json',JSON.stringify(result,null,2));await save();\n const zip=createGzip({level:6});const\
+        \ completed=pipeline(zip,createWriteStream('evidence/rea-evidence.jsonl.gz'));completed.catch(()=>{});\n const serverLog=createWriteStream('evidence/server.log');await\
+        \ once(serverLog,'open');\n const transport=new StdioClientTransport({command:process.execPath,args:[path.resolve('rea-tool/node_modules/rea-agents/scripts/rea.mjs'),'--mcp'],env:{...process.env,REA_MCP_MAX_RESPONSE_BYTES:'67108864',NODE_OPTIONS:'--max-old-space-size=6144'},stderr:serverLog,maxBufferSize:67108864});\n\
+        \ const client=new Client({name:'mobilelogic-targeted-analysis-profile-repair',version:'1.0.0'});let connected=false;let\
+        \ timedOut=false;\n async function record(v){if(!zip.write(JSON.stringify(v)+'\\n'))await once(zip,'drain');}\n async\
+        \ function call(name,args,timeout){\n  await fs.writeFile('evidence/active-call.json',JSON.stringify({name,args,timeout,started_utc:new\
+        \ Date().toISOString()}));console.log(JSON.stringify({event:'call',name,address:args.procedure??null}));\n  const\
+        \ controller=new AbortController();let timer;\n  try{\n   const response=await Promise.race([client.callTool({name,arguments:args},{timeout,resetTimeoutOnProgress:false,maxTotalTimeout:timeout,signal:controller.signal}),new\
+        \ Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;controller.abort();reject(new Error('Hard request deadline\
+        \ exceeded: '+name));},timeout);})]);\n   let value=response.structuredContent;if(value===undefined){const text=response.content?.filter(c=>c.type==='text').map(c=>c.text).join('');value=JSON.parse(text);}\n\
+        \   await record({tool:name,arguments:args,result:value,isError:Boolean(response.isError)});\n   if(response.isError||value.error){let\
+        \ err=new Error(value.error?.message??'Provider error');err.details=value.error??value;throw err;}\n   const digest=value.subject?.digest?.sha256;if((name!=='open_binary'||digest!==undefined)&&digest!==target.sha256)throw\
+        \ new Error('Evidence subject SHA256 mismatch or missing identity');\n   return value.normalized_result;\n  }finally{clearTimeout(timer);}\n\
+        \ }\n try{\n  await client.connect(transport);connected=true;\n  const available=new Set((await client.listTools()).tools.map(t=>t.name));for(const\
+        \ name of ['open_binary','procedure_info','procedure_assembly','procedure_pseudo_code'])if(!available.has(name))throw\
+        \ new Error('Required REA tool absent: '+name);\n  await call('open_binary',{path:path.resolve('input/target.bin'),provider_id:'ghidra'},2400000);\n\
+        \  let info,assembly,pseudo;\n  try{info=await call('procedure_info',{procedure:target.address},2400000);await fs.writeFile('evidence/procedure-info.json',JSON.stringify(info,null,2));result.info='recovered';result.exact_entry=admitExact(info,target.address);await\
+        \ save();}\n  catch(e){result.info='failed';result.errors.push({tool:'procedure_info',message:e.message,details:e.details});await\
+        \ save();throw e;}\n  if(!result.exact_entry){result.status='not_an_exact_native_procedure';result.resolved_entry=info?.entrypoint??null;await\
+        \ save();return;}\n  // Preserve assembly before entering the decompiler, so a timeout cannot discard it.\n  try{assembly=await\
+        \ call('procedure_assembly',{procedure:target.address},120000);await fs.writeFile('evidence/assembly.txt',typeof assembly==='string'?assembly:JSON.stringify(assembly));result.assembly=typeof\
+        \ assembly==='string'&&assembly.trim()?'recovered':'empty';await save();}\n  catch(e){result.assembly='failed';result.errors.push({tool:'procedure_assembly',message:e.message,details:e.details});await\
+        \ save();if(timedOut)throw e;}\n  try{pseudo=await call('procedure_pseudo_code',{procedure:target.address},360000);result.pseudocode=typeof\
+        \ pseudo==='string'&&pseudo.trim()?'recovered':'empty';await fs.writeFile('evidence/pseudocode.c',typeof pseudo==='string'?pseudo:JSON.stringify(pseudo));result.usable_candidate=usablePseudo(pseudo,assembly,result.exact_entry);await\
+        \ save();}\n  catch(e){result.pseudocode='failed';result.errors.push({tool:'procedure_pseudo_code',message:e.message,details:e.details});await\
+        \ save();}\n  result.status=result.usable_candidate?'pseudocode_candidate_recovered':'unresolved';\n }catch(e){result.status='unresolved';if(!result.errors.some(x=>x.message===e.message))result.errors.push({tool:'session',message:e.message});}\n\
+        \ finally{\n  result.finished_utc=new Date().toISOString();await save();\n  if(connected&&!timedOut){try{await client.callTool({name:'close_binary',arguments:{}},{timeout:5000});}catch{}}\n\
+        \  await Promise.race([client.close().catch(()=>{}),new Promise(r=>setTimeout(r,10000))]);serverLog.end();zip.end();await\
+        \ completed;\n  const unchanged=createHash('sha256').update(await fs.readFile('input/target.bin')).digest('hex')===target.sha256;result.input_sha256_unchanged=unchanged;if(!unchanged)result.status='input_identity_failure';await\
+        \ save();\n  await fs.appendFile(process.env.GITHUB_STEP_SUMMARY,'Target '+target.image+' '+target.address+': '+result.status+'\\\
+        n\\nPseudocode candidates require semantic verification.\\n');\n  console.log(JSON.stringify({image:target.image,address:target.address,status:result.status}));if(!result.usable_candidate||!unchanged)process.exitCode=1;\n\
+        \ }\n}\n\nSOURCE\nnode --check recovery/one.mjs\n"
+    - name: Attempt one exact unresolved function with alternate analysis profile
+      env:
+        TARGET_ROW: ${{ needs.select.outputs.probe }}
+      run: timeout --signal=TERM --kill-after=30s 48m node recovery/one.mjs
+    - name: Record profile admission
+      id: status
+      if: always()
+      run: 'python - <<''PY''
+
+        import json,pathlib,os
+
+        p=pathlib.Path(''evidence/result.json'');r=json.loads(p.read_text()) if p.exists() else {}
+
+        ready=r.get(''info'')==''recovered'' and r.get(''exact_entry'') is True
+
+        with open(os.environ[''GITHUB_OUTPUT''],''a'') as f:print(''profile_ready=''+str(ready).lower(),file=f)
+
+        PY
+
+        '
+    - name: Retain address-specific evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: rea-corrected-target-${{ fromJSON(needs.select.outputs.probe).slug }}
+        path: evidence/
+        if-no-files-found: error
+        retention-days: 90
+    if: ${{ needs.select.outputs.has_targets == 'true' }}
+  recover:
+    needs:
+    - select
+    - probe
+    if: ${{ always() && needs.select.result == 'success' && needs.select.outputs.has_remaining == 'true' && needs.probe.outputs.profile_ready
+      == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
+    env:
+      REA_GHIDRA_DISABLED_ANALYZERS: Objective-C Message Analyzer,Objective-C Type Metadata Analyzer,Demangler GNU,Call Convention
+        ID
+      REA_GHIDRA_STARTUP_TIMEOUT_MS: '2400000'
+      GHIDRA_HEADLESS_MAXMEM: 3G
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-original-input-${{ matrix.short }}
+        path: input/
+        run-id: '38670888947'
+        github-token: ${{ github.token }}
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: '21'
+    - name: Install verified analysis engines
+      run: 'mkdir -p tools evidence runtime-tmp
+
+        curl -fL --retry 3 -o ghidra.zip https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip
+
+        printf ''%s  %s\n'' ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db ghidra.zip | sha256sum -c -
+
+        unzip -q ghidra.zip -d tools
+
+        npm install --prefix rea-tool --no-audit --no-fund rea-agents@6.5.0
+
+        echo "GHIDRA_INSTALL_DIR=$PWD/tools/ghidra_12.1.4_PUBLIC" >> "$GITHUB_ENV"
+
+        echo "TMPDIR=$PWD/runtime-tmp" >> "$GITHUB_ENV"
+
+
+        test -f rea-tool/node_modules/rea-agents/bridge/ghidra/ReaGhidraAnalysisOptions.java
+
+        node -e "const p=require(''./rea-tool/node_modules/rea-agents/package.json'');if(p.version!==''6.5.0'')process.exit(1)"
+
+        '
+    - name: Write and validate single-target recovery client
+      run: "mkdir -p recovery evidence\ncat > recovery/one.mjs <<'SOURCE'\nimport {Client} from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/index.mjs';\n\
+        import {StdioClientTransport} from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/stdio.mjs';\nimport\
+        \ fs from 'node:fs/promises';\nimport {createWriteStream} from 'node:fs';\nimport {createHash} from 'node:crypto';\n\
+        import {createGzip} from 'node:zlib';\nimport {pipeline} from 'node:stream/promises';\nimport {once} from 'node:events';\n\
+        import path from 'node:path';\n\nexport function normalizeNative(a){if(typeof a!=='string'||!/^0x[0-9a-f]+$/i.test(a))return\
+        \ null;return '0x'+BigInt(a).toString(16);}\nexport function admitExact(info,target){return info && normalizeNative(info.entrypoint)===normalizeNative(target)&&info.classification?.external!==true;}\n\
+        export function usablePseudo(pseudo,assembly,exact){return Boolean(exact&&typeof pseudo==='string'&&pseudo.trim()&&!pseudo.includes('halt_baddata')&&typeof\
+        \ assembly==='string'&&/^\\s*0x[0-9a-f]+:/im.test(assembly));}\nif(process.env.REA_TEST_IMPORT==='1'){}else{await\
+        \ main();}\nasync function main(){\n const target=JSON.parse(process.env.TARGET_ROW);if(!normalizeNative(target.address))throw\
+        \ new Error('Non-native target rejected');\n const meta=JSON.parse(await fs.readFile('input/image.json','utf8'));if(meta.sha256!==target.sha256||meta.image!==target.image)throw\
+        \ new Error('Input identity mismatch');\n const binary=await fs.readFile('input/target.bin');if(createHash('sha256').update(binary).digest('hex')!==target.sha256)throw\
+        \ new Error('Input SHA256 mismatch');\n await fs.mkdir('evidence',{recursive:true});\n const result={image:target.image,image_sha256:target.sha256,address:normalizeNative(target.address),status:'running',rea_version:'6.5.0',analysis_profile_override:{disabled_analyzers:process.env.REA_GHIDRA_DISABLED_ANALYZERS.split(',')},max_new_attempts:1,info:'not_attempted',assembly:'not_attempted',pseudocode:'not_attempted',usable_candidate:false,errors:[],semantic_equivalence_verified:false,original_bytes_modified:false};\n\
+        \ const save=()=>fs.writeFile('evidence/result.json',JSON.stringify(result,null,2));await save();\n const zip=createGzip({level:6});const\
+        \ completed=pipeline(zip,createWriteStream('evidence/rea-evidence.jsonl.gz'));completed.catch(()=>{});\n const serverLog=createWriteStream('evidence/server.log');await\
+        \ once(serverLog,'open');\n const transport=new StdioClientTransport({command:process.execPath,args:[path.resolve('rea-tool/node_modules/rea-agents/scripts/rea.mjs'),'--mcp'],env:{...process.env,REA_MCP_MAX_RESPONSE_BYTES:'67108864',NODE_OPTIONS:'--max-old-space-size=6144'},stderr:serverLog,maxBufferSize:67108864});\n\
+        \ const client=new Client({name:'mobilelogic-targeted-analysis-profile-repair',version:'1.0.0'});let connected=false;let\
+        \ timedOut=false;\n async function record(v){if(!zip.write(JSON.stringify(v)+'\\n'))await once(zip,'drain');}\n async\
+        \ function call(name,args,timeout){\n  await fs.writeFile('evidence/active-call.json',JSON.stringify({name,args,timeout,started_utc:new\
+        \ Date().toISOString()}));console.log(JSON.stringify({event:'call',name,address:args.procedure??null}));\n  const\
+        \ controller=new AbortController();let timer;\n  try{\n   const response=await Promise.race([client.callTool({name,arguments:args},{timeout,resetTimeoutOnProgress:false,maxTotalTimeout:timeout,signal:controller.signal}),new\
+        \ Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;controller.abort();reject(new Error('Hard request deadline\
+        \ exceeded: '+name));},timeout);})]);\n   let value=response.structuredContent;if(value===undefined){const text=response.content?.filter(c=>c.type==='text').map(c=>c.text).join('');value=JSON.parse(text);}\n\
+        \   await record({tool:name,arguments:args,result:value,isError:Boolean(response.isError)});\n   if(response.isError||value.error){let\
+        \ err=new Error(value.error?.message??'Provider error');err.details=value.error??value;throw err;}\n   const digest=value.subject?.digest?.sha256;if((name!=='open_binary'||digest!==undefined)&&digest!==target.sha256)throw\
+        \ new Error('Evidence subject SHA256 mismatch or missing identity');\n   return value.normalized_result;\n  }finally{clearTimeout(timer);}\n\
+        \ }\n try{\n  await client.connect(transport);connected=true;\n  const available=new Set((await client.listTools()).tools.map(t=>t.name));for(const\
+        \ name of ['open_binary','procedure_info','procedure_assembly','procedure_pseudo_code'])if(!available.has(name))throw\
+        \ new Error('Required REA tool absent: '+name);\n  await call('open_binary',{path:path.resolve('input/target.bin'),provider_id:'ghidra'},2400000);\n\
+        \  let info,assembly,pseudo;\n  try{info=await call('procedure_info',{procedure:target.address},2400000);await fs.writeFile('evidence/procedure-info.json',JSON.stringify(info,null,2));result.info='recovered';result.exact_entry=admitExact(info,target.address);await\
+        \ save();}\n  catch(e){result.info='failed';result.errors.push({tool:'procedure_info',message:e.message,details:e.details});await\
+        \ save();throw e;}\n  if(!result.exact_entry){result.status='not_an_exact_native_procedure';result.resolved_entry=info?.entrypoint??null;await\
+        \ save();return;}\n  // Preserve assembly before entering the decompiler, so a timeout cannot discard it.\n  try{assembly=await\
+        \ call('procedure_assembly',{procedure:target.address},120000);await fs.writeFile('evidence/assembly.txt',typeof assembly==='string'?assembly:JSON.stringify(assembly));result.assembly=typeof\
+        \ assembly==='string'&&assembly.trim()?'recovered':'empty';await save();}\n  catch(e){result.assembly='failed';result.errors.push({tool:'procedure_assembly',message:e.message,details:e.details});await\
+        \ save();if(timedOut)throw e;}\n  try{pseudo=await call('procedure_pseudo_code',{procedure:target.address},360000);result.pseudocode=typeof\
+        \ pseudo==='string'&&pseudo.trim()?'recovered':'empty';await fs.writeFile('evidence/pseudocode.c',typeof pseudo==='string'?pseudo:JSON.stringify(pseudo));result.usable_candidate=usablePseudo(pseudo,assembly,result.exact_entry);await\
+        \ save();}\n  catch(e){result.pseudocode='failed';result.errors.push({tool:'procedure_pseudo_code',message:e.message,details:e.details});await\
+        \ save();}\n  result.status=result.usable_candidate?'pseudocode_candidate_recovered':'unresolved';\n }catch(e){result.status='unresolved';if(!result.errors.some(x=>x.message===e.message))result.errors.push({tool:'session',message:e.message});}\n\
+        \ finally{\n  result.finished_utc=new Date().toISOString();await save();\n  if(connected&&!timedOut){try{await client.callTool({name:'close_binary',arguments:{}},{timeout:5000});}catch{}}\n\
+        \  await Promise.race([client.close().catch(()=>{}),new Promise(r=>setTimeout(r,10000))]);serverLog.end();zip.end();await\
+        \ completed;\n  const unchanged=createHash('sha256').update(await fs.readFile('input/target.bin')).digest('hex')===target.sha256;result.input_sha256_unchanged=unchanged;if(!unchanged)result.status='input_identity_failure';await\
+        \ save();\n  await fs.appendFile(process.env.GITHUB_STEP_SUMMARY,'Target '+target.image+' '+target.address+': '+result.status+'\\\
+        n\\nPseudocode candidates require semantic verification.\\n');\n  console.log(JSON.stringify({image:target.image,address:target.address,status:result.status}));if(!result.usable_candidate||!unchanged)process.exitCode=1;\n\
+        \ }\n}\n\nSOURCE\nnode --check recovery/one.mjs\n"
+    - name: Attempt one exact unresolved function with alternate analysis profile
+      env:
+        TARGET_ROW: ${{ toJSON(matrix) }}
+      run: timeout --signal=TERM --kill-after=30s 48m node recovery/one.mjs
+    - name: Record profile admission
+      id: status
+      if: always()
+      run: 'python - <<''PY''
+
+        import json,pathlib,os
+
+        p=pathlib.Path(''evidence/result.json'');r=json.loads(p.read_text()) if p.exists() else {}
+
+        ready=r.get(''info'')==''recovered'' and r.get(''exact_entry'') is True
+
+        with open(os.environ[''GITHUB_OUTPUT''],''a'') as f:print(''profile_ready=''+str(ready).lower(),file=f)
+
+        PY
+
+        '
+    - name: Retain address-specific evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: rea-corrected-target-${{ matrix.slug }}
+        path: evidence/
+        if-no-files-found: error
+        retention-days: 90
+  summarize:
+    needs:
+    - select
+    - probe
+    - recover
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: rea-profile-target-*
+        run-id: '38670888947'
+        github-token: ${{ github.token }}
+        path: earlier
+        merge-multiple: false
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: rea-corrected-target-*
+        path: new-results
+        merge-multiple: false
+    - name: Merge distinct candidate recovery without discarding earlier evidence
+      run: "cat > targets.json <<'TARGETS'\n[\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\":\
+        \ \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\",\n    \"address\": \"0x20eed8\",\n    \"short\"\
+        : \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\": \"logic-20eed8\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\"\
+        ,\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\",\n    \"address\": \"0x24c844\"\
+        ,\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\": \"logic-24c844\"\n  },\n  {\n  \
+        \  \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x30d514\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-30d514\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x3115ac\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-3115ac\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x3c49c8\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-3c49c8\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x4c17d4\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-4c17d4\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x52c3ac\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-52c3ac\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x5db01c\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-5db01c\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x706100\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-706100\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x777cf8\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-777cf8\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x8b493c\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-8b493c\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0x8d4ba0\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-8d4ba0\"\n  },\n  {\n    \"image\": \"Frameworks/Logic.framework/Logic\",\n    \"sha256\": \"8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287\"\
+        ,\n    \"address\": \"0xd2cc5c\",\n    \"short\": \"logic\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"logic-d2cc5c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x449cf0\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"madsp-449cf0\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x8961a8\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-8961a8\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x8afac0\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"madsp-8afac0\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x8cb148\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"madsp-8cb148\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x910100\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-910100\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x93ef7c\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-93ef7c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x967204\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-967204\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x984840\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-984840\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x9a1e5c\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-9a1e5c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x9ccfd4\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-9ccfd4\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0x9f7ec8\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-9f7ec8\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xa1c290\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-a1c290\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xa4b79c\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-a4b79c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xa80a08\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-a80a08\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xa946c\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-a946c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xaa6938\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-aa6938\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xadae18\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-adae18\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xb0c024\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-b0c024\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xb3497c\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-b3497c\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xb693e4\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-b693e4\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xbbb238\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-bbb238\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xbdca90\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-bdca90\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xc07630\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-c07630\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xc12a38\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-c12a38\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xc141a8\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-c141a8\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xc72b0\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-c72b0\"\n  },\n  {\n    \"image\": \"Frameworks/MADSP.framework/MADSP\",\n    \"sha256\": \"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8\"\
+        ,\n    \"address\": \"0xfdc4\",\n    \"short\": \"madsp\",\n    \"unattempted_last_run\": true,\n    \"slug\": \"\
+        madsp-fdc4\"\n  },\n  {\n    \"image\": \"Frameworks/MACore.framework/MACore\",\n    \"sha256\": \"88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5\"\
+        ,\n    \"address\": \"0x3c144\",\n    \"short\": \"macore\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"macore-3c144\"\n  },\n  {\n    \"image\": \"Frameworks/MACore.framework/MACore\",\n    \"sha256\": \"88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5\"\
+        ,\n    \"address\": \"0xc6d64\",\n    \"short\": \"macore\",\n    \"unattempted_last_run\": false,\n    \"slug\":\
+        \ \"macore-c6d64\"\n  },\n  {\n    \"image\": \"Frameworks/MAGenerativeInstruments.framework/MAGenerativeInstruments\"\
+        ,\n    \"sha256\": \"cf2e3dc0b233e6e1a878a4040095494d57b0ab97b8ed461b16960d232d6d10d7\",\n    \"address\": \"0x77858\"\
+        ,\n    \"short\": \"magenerativeinstruments\",\n    \"unattempted_last_run\": false,\n    \"slug\": \"magenerativeinstruments-77858\"\
+        \n  },\n  {\n    \"image\": \"Frameworks/MAGenerativeInstruments.framework/MAGenerativeInstruments\",\n    \"sha256\"\
+        : \"cf2e3dc0b233e6e1a878a4040095494d57b0ab97b8ed461b16960d232d6d10d7\",\n    \"address\": \"0xeecb8\",\n    \"short\"\
+        : \"magenerativeinstruments\",\n    \"unattempted_last_run\": false,\n    \"slug\": \"magenerativeinstruments-eecb8\"\
+        \n  },\n  {\n    \"image\": \"Frameworks/MAPlugInGUI.framework/MAPlugInGUI\",\n    \"sha256\": \"74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4\"\
+        ,\n    \"address\": \"0x25210\",\n    \"short\": \"maplugingui\",\n    \"unattempted_last_run\": false,\n    \"slug\"\
+        : \"maplugingui-25210\"\n  },\n  {\n    \"image\": \"Frameworks/MAPlugInGUI.framework/MAPlugInGUI\",\n    \"sha256\"\
+        : \"74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4\",\n    \"address\": \"0x26390\",\n    \"short\"\
+        : \"maplugingui\",\n    \"unattempted_last_run\": false,\n    \"slug\": \"maplugingui-26390\"\n  }\n]\nTARGETS\npython\
+        \ - <<'PY'\nimport json,pathlib,os\ntargets=json.load(open('targets.json'));expected={(t['sha256'],t['address']) for\
+        \ t in targets};observed={}\nfor folder in ['earlier','new-results']:\n for p in pathlib.Path(folder).glob('*/result.json'):\n\
+        \  r=json.loads(p.read_text());k=(r['image_sha256'],r['address']);assert k in expected\n  old=observed.get(k)\n  if\
+        \ old is None or (r.get('usable_candidate',False),r.get('input_sha256_unchanged',False))>(old.get('usable_candidate',False),old.get('input_sha256_unchanged',False)):observed[k]=r\n\
+        recovered={k for k,r in observed.items() if r.get('usable_candidate') and r.get('input_sha256_unchanged')}\nout={'deduplication_key':['image_sha256','address'],'original_unresolved_targets':46,'new_pseudocode_candidates':[{'image_sha256':h,'address':a}\
+        \ for h,a in sorted(recovered)],'remaining_targets':[{'image_sha256':h,'address':a} for h,a in sorted(expected-recovered)],'original_checkpoints_preserved':True,'semantic_equivalence_verified':False,'build_verified':False,'compiler_start_triage_run':38670888947,'compiler_starts_still_requiring_exact_boundary_resolution':353}\n\
+        pathlib.Path('report').mkdir(exist_ok=True);pathlib.Path('report/summary.json').write_text(json.dumps(out,indent=2))\n\
+        with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:print(str(len(recovered))+' distinct additional pseudocode candidates;\
+        \ '+str(len(expected-recovered))+' original target gaps remain. These counts do not establish accuracy.',file=f)\n\
+        \nPY\n"
+    - if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: rea-corrected-profile-summary
+        path: report/
+        if-no-files-found: error
+        retention-days: 90
