@@ -44,9 +44,9 @@ jobs:
     - name: Review only 100 unknown extents; retain all prior evidence
       run: 'set -eu
 
-        BOUNDARIES=$(find prior -path "*/inventory/compiler-boundaries.json" -print -quit)
+        BOUNDARIES=prior/prior-eight-function-evidence/original-inventory/compiler-boundaries.json
 
-        test -n "$BOUNDARIES"
+        test -s "$BOUNDARIES"
 
         cp "$BOUNDARIES" evidence/prior-compiler-boundaries.json
 
