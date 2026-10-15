@@ -1,0 +1,280 @@
+name: REA corrected final-profile admission and Darwin module link
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-profile-admission-correction.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-final-profile-admission-corrected
+  cancel-in-progress: false
+jobs:
+  module-link:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    if: ${{ github.run_attempt == 1 }}
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-payload-inventory-and-five-function-module
+        run-id: '38698377304'
+        github-token: ${{ github.token }}
+        path: package
+    - name: Install official LLVM object tools
+      run: 'sudo apt-get update
+
+        sudo apt-get install -y lld-18 llvm-18'
+    - name: Create Darwin archive index and link only the five-function module
+      run: 'set -eu
+
+        mkdir -p module-link
+
+        cp package/module/*.c package/module/*.o package/module/build-report.json module-link/
+
+        llvm-ar-18 --format=darwin rcs module-link/libmobilelogic_madsp_subset.a module-link/click.o module-link/small.o module-link/madsp_fdc4.o
+
+        llvm-nm-18 --print-armap module-link/libmobilelogic_madsp_subset.a > module-link/archive-symbols.txt
+
+        ld64.lld-18 -arch arm64 -platform_version ios 17.0 17.0 -dylib -install_name @rpath/libmobilelogic_madsp_subset.dylib
+        -undefined error -all_load module-link/libmobilelogic_madsp_subset.a -o module-link/libmobilelogic_madsp_subset.dylib
+
+        llvm-nm-18 --undefined-only module-link/libmobilelogic_madsp_subset.dylib > module-link/undefined-symbols.txt
+
+        test ! -s module-link/undefined-symbols.txt
+
+        llvm-nm-18 --defined-only module-link/libmobilelogic_madsp_subset.dylib > module-link/defined-symbols.txt
+
+        sha256sum module-link/*.a module-link/*.dylib module-link/*.o > module-link/SHA256SUMS
+
+        python - <<''REPORT''
+
+        import json,pathlib
+
+        p=pathlib.Path(''module-link'');names=(p/''defined-symbols.txt'').read_text()
+
+        for name in [''mobilelogic_madsp_fdc4'',''mobilelogic_madsp_10170'',''mobilelogic_madsp_2505c'',''mobilelogic_madsp_25068'',''mobilelogic_madsp_9f7ec8'']:assert
+        name in names
+
+        assert b''__.SYMDEF'' in (p/''libmobilelogic_madsp_subset.a'').read_bytes()[:128]
+
+        (p/''link-report.json'').write_text(json.dumps({''ios_arm64_darwin_archive_indexed'':True,''standalone_five_function_dylib_linked'':True,''undefined_symbols'':[],''original_source_functions'':5,''original_instruction_bytes'':208,''whole_app_linked'':False,''whole_app_runtime_verified'':False,''semantic_evidence'':''Retained
+        prior function-local differential tests only; this job adds link validation, not new runtime evidence''},indent=2)+''\n'')
+
+        REPORT'
+    - name: Preserve prior evidence and limits
+      if: always()
+      run: 'cp package/SOURCE_STATUS.md module-link/
+
+        cp -R package/prior-source module-link/prior-source-evidence'
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: rea-five-function-darwin-module-link
+        path: module-link/
+        if-no-files-found: error
+        retention-days: 90
+  last-admitted-profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      REA_GHIDRA_DISABLED_ANALYZERS: Objective-C Message Analyzer,Objective-C Type Metadata Analyzer,Demangler GNU,Call Convention
+        ID,Stack,Apply Data Archives,Decompiler Switch Analysis
+      REA_GHIDRA_STARTUP_TIMEOUT_MS: '2400000'
+      GHIDRA_HEADLESS_MAXMEM: 3G
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-original-input-${{ matrix.target.short }}
+        path: input/
+        run-id: '38670888947'
+        github-token: ${{ github.token }}
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-source-preparation-and-leaf-verification
+        run-id: '38685299502'
+        github-token: ${{ github.token }}
+        path: checkpoint
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: rea-stack-disabled-*
+        run-id: '38692191730'
+        github-token: ${{ github.token }}
+        path: previous
+        merge-multiple: false
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: rea-final-profile-*
+        run-id: '38698377304'
+        github-token: ${{ github.token }}
+        path: admission-failures
+        merge-multiple: false
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: '21'
+    - name: Install verified analysis engines
+      run: 'mkdir -p tools evidence runtime-tmp
+
+        curl -fL --retry 3 -o ghidra.zip https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip
+
+        printf ''%s  %s\n'' ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db ghidra.zip | sha256sum -c -
+
+        unzip -q ghidra.zip -d tools
+
+        npm install --prefix rea-tool --no-audit --no-fund rea-agents@6.5.0
+
+        echo "GHIDRA_INSTALL_DIR=$PWD/tools/ghidra_12.1.4_PUBLIC" >> "$GITHUB_ENV"
+
+        echo "TMPDIR=$PWD/runtime-tmp" >> "$GITHUB_ENV"
+
+
+        test -f rea-tool/node_modules/rea-agents/bridge/ghidra/ReaGhidraAnalysisOptions.java
+
+        node -e "const p=require(''./rea-tool/node_modules/rea-agents/package.json'');if(p.version!==''6.5.0'')process.exit(1)"
+
+        '
+    - name: Write and validate single-target recovery client
+      run: "mkdir -p recovery evidence\ncat > recovery/one.mjs <<'SOURCE'\nimport {Client} from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/index.mjs';\n\
+        import {StdioClientTransport} from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/stdio.mjs';\nimport\
+        \ fs from 'node:fs/promises';\nimport {createWriteStream} from 'node:fs';\nimport {createHash} from 'node:crypto';\n\
+        import {createGzip} from 'node:zlib';\nimport {pipeline} from 'node:stream/promises';\nimport {once} from 'node:events';\n\
+        import path from 'node:path';\n\nexport function normalizeNative(a){if(typeof a!=='string'||!/^0x[0-9a-f]+$/i.test(a))return\
+        \ null;return '0x'+BigInt(a).toString(16);}\nexport function admitExact(info,target){return info && normalizeNative(info.entrypoint)===normalizeNative(target)&&info.classification?.external!==true;}\n\
+        export function usablePseudo(pseudo,assembly,exact){return Boolean(exact&&typeof pseudo==='string'&&pseudo.trim()&&!pseudo.includes('halt_baddata')&&typeof\
+        \ assembly==='string'&&/^\\s*0x[0-9a-f]+:/im.test(assembly));}\nif(process.env.REA_TEST_IMPORT==='1'){}else{await\
+        \ main();}\nasync function main(){\n const target=JSON.parse(process.env.TARGET_ROW);if(!normalizeNative(target.address))throw\
+        \ new Error('Non-native target rejected');\n const allowed=JSON.parse(await fs.readFile('checkpoint/remaining-targets.json','utf8'));if(!allowed.some(r=>r.image_sha256===target.sha256&&normalizeNative(r.address)===normalizeNative(target.address)&&!r.usable_candidate))throw\
+        \ new Error('Not an unresolved checkpoint target');\n const previous=[];for(const folder of await fs.readdir('previous')){const\
+        \ r=JSON.parse(await fs.readFile(path.join('previous',folder,'result.json'),'utf8'));if(r.image_sha256===target.sha256&&normalizeNative(r.address)===normalizeNative(target.address))previous.push(r);}if(previous.length!==1||previous[0].usable_candidate||!previous[0].input_sha256_unchanged||previous[0].further_profile_number!==1)throw\
+        \ new Error('Final-profile checkpoint guard rejected target');\n const rejected=[];for(const folder of await fs.readdir('admission-failures')){const\
+        \ r=JSON.parse(await fs.readFile(path.join('admission-failures',folder,'result.json'),'utf8'));if(r.image_sha256===target.sha256&&normalizeNative(r.address)===normalizeNative(target.address))rejected.push(r);}if(rejected.length!==1||rejected[0].pseudocode!=='not_attempted'||rejected[0].assembly!=='not_attempted'||!rejected[0].input_sha256_unchanged)throw\
+        \ new Error('Target reached analysis under prior final profile; correction must not repeat it');\n const meta=JSON.parse(await\
+        \ fs.readFile('input/image.json','utf8'));if(meta.sha256!==target.sha256||meta.image!==target.image)throw new Error('Input\
+        \ identity mismatch');\n const binary=await fs.readFile('input/target.bin');if(createHash('sha256').update(binary).digest('hex')!==target.sha256)throw\
+        \ new Error('Input SHA256 mismatch');\n await fs.mkdir('evidence',{recursive:true});\n const result={image:target.image,image_sha256:target.sha256,address:normalizeNative(target.address),status:'running',retry_profile_id:'no-archives-no-switch-20261015',further_profile_number:2,rea_version:'6.5.0',analysis_profile_override:{disabled_analyzers:process.env.REA_GHIDRA_DISABLED_ANALYZERS.split(',')},max_new_attempts:1,info:'not_attempted',assembly:'not_attempted',pseudocode:'not_attempted',usable_candidate:false,errors:[],semantic_equivalence_verified:false,original_bytes_modified:false};\n\
+        \ const save=()=>fs.writeFile('evidence/result.json',JSON.stringify(result,null,2));await save();\n const zip=createGzip({level:6});const\
+        \ completed=pipeline(zip,createWriteStream('evidence/rea-evidence.jsonl.gz'));completed.catch(()=>{});\n const serverLog=createWriteStream('evidence/server.log');await\
+        \ once(serverLog,'open');\n const transport=new StdioClientTransport({command:process.execPath,args:[path.resolve('rea-tool/node_modules/rea-agents/scripts/rea.mjs'),'--mcp'],env:{...process.env,REA_MCP_MAX_RESPONSE_BYTES:'67108864',NODE_OPTIONS:'--max-old-space-size=6144'},stderr:serverLog,maxBufferSize:67108864});\n\
+        \ const client=new Client({name:'mobilelogic-targeted-analysis-profile-repair',version:'1.0.0'});let connected=false;let\
+        \ timedOut=false;\n async function record(v){if(!zip.write(JSON.stringify(v)+'\\n'))await once(zip,'drain');}\n async\
+        \ function call(name,args,timeout){\n  await fs.writeFile('evidence/active-call.json',JSON.stringify({name,args,timeout,started_utc:new\
+        \ Date().toISOString()}));console.log(JSON.stringify({event:'call',name,address:args.procedure??null}));\n  const\
+        \ controller=new AbortController();let timer;\n  try{\n   const response=await Promise.race([client.callTool({name,arguments:args},{timeout,resetTimeoutOnProgress:false,maxTotalTimeout:timeout,signal:controller.signal}),new\
+        \ Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;controller.abort();reject(new Error('Hard request deadline\
+        \ exceeded: '+name));},timeout);})]);\n   let value=response.structuredContent;if(value===undefined){const text=response.content?.filter(c=>c.type==='text').map(c=>c.text).join('');value=JSON.parse(text);}\n\
+        \   await record({tool:name,arguments:args,result:value,isError:Boolean(response.isError)});\n   if(response.isError||value.error){let\
+        \ err=new Error(value.error?.message??'Provider error');err.details=value.error??value;throw err;}\n   const digest=value.subject?.digest?.sha256;if((name!=='open_binary'||digest!==undefined)&&digest!==target.sha256)throw\
+        \ new Error('Evidence subject SHA256 mismatch or missing identity');\n   return value.normalized_result;\n  }finally{clearTimeout(timer);}\n\
+        \ }\n try{\n  await client.connect(transport);connected=true;\n  const available=new Set((await client.listTools()).tools.map(t=>t.name));for(const\
+        \ name of ['open_binary','procedure_info','procedure_assembly','procedure_pseudo_code'])if(!available.has(name))throw\
+        \ new Error('Required REA tool absent: '+name);\n  await call('open_binary',{path:path.resolve('input/target.bin'),provider_id:'ghidra'},2400000);\n\
+        \  let info,assembly,pseudo;\n  try{info=await call('procedure_info',{procedure:target.address},2400000);await fs.writeFile('evidence/procedure-info.json',JSON.stringify(info,null,2));result.info='recovered';result.exact_entry=admitExact(info,target.address);await\
+        \ save();}\n  catch(e){result.info='failed';result.errors.push({tool:'procedure_info',message:e.message,details:e.details});await\
+        \ save();throw e;}\n  if(!result.exact_entry){result.status='not_an_exact_native_procedure';result.resolved_entry=info?.entrypoint??null;await\
+        \ save();return;}\n  // Preserve assembly before entering the decompiler, so a timeout cannot discard it.\n  try{assembly=await\
+        \ call('procedure_assembly',{procedure:target.address},120000);await fs.writeFile('evidence/assembly.txt',typeof assembly==='string'?assembly:JSON.stringify(assembly));result.assembly=typeof\
+        \ assembly==='string'&&assembly.trim()?'recovered':'empty';await save();}\n  catch(e){result.assembly='failed';result.errors.push({tool:'procedure_assembly',message:e.message,details:e.details});await\
+        \ save();if(timedOut)throw e;}\n  try{pseudo=await call('procedure_pseudo_code',{procedure:target.address},360000);result.pseudocode=typeof\
+        \ pseudo==='string'&&pseudo.trim()?'recovered':'empty';await fs.writeFile('evidence/pseudocode.c',typeof pseudo==='string'?pseudo:JSON.stringify(pseudo));result.usable_candidate=usablePseudo(pseudo,assembly,result.exact_entry);await\
+        \ save();}\n  catch(e){result.pseudocode='failed';result.errors.push({tool:'procedure_pseudo_code',message:e.message,details:e.details});await\
+        \ save();}\n  result.status=result.usable_candidate?'pseudocode_candidate_recovered':'unresolved';\n }catch(e){result.status='unresolved';if(!result.errors.some(x=>x.message===e.message))result.errors.push({tool:'session',message:e.message});}\n\
+        \ finally{\n  result.finished_utc=new Date().toISOString();await save();\n  if(connected&&!timedOut){try{await client.callTool({name:'close_binary',arguments:{}},{timeout:5000});}catch{}}\n\
+        \  await Promise.race([client.close().catch(()=>{}),new Promise(r=>setTimeout(r,10000))]);serverLog.end();zip.end();await\
+        \ completed;\n  const unchanged=createHash('sha256').update(await fs.readFile('input/target.bin')).digest('hex')===target.sha256;result.input_sha256_unchanged=unchanged;if(!unchanged)result.status='input_identity_failure';await\
+        \ save();\n  await fs.appendFile(process.env.GITHUB_STEP_SUMMARY,'Target '+target.image+' '+target.address+': '+result.status+'\\\
+        n\\nPseudocode candidates require semantic verification.\\n');\n  console.log(JSON.stringify({image:target.image,address:target.address,status:result.status}));if(!result.usable_candidate||!unchanged)process.exitCode=1;\n\
+        \ }\n}\n\nSOURCE\nnode --check recovery/one.mjs\n"
+    - name: Attempt one exact unresolved function with alternate analysis profile
+      env:
+        TARGET_ROW: ${{ toJSON(matrix.target) }}
+      run: timeout --signal=TERM --kill-after=30s 48m node recovery/one.mjs
+    - name: Record profile admission
+      id: status
+      if: always()
+      run: 'python - <<''PY''
+
+        import json,pathlib,os
+
+        p=pathlib.Path(''evidence/result.json'');r=json.loads(p.read_text()) if p.exists() else {}
+
+        ready=r.get(''info'')==''recovered'' and r.get(''exact_entry'') is True
+
+        with open(os.environ[''GITHUB_OUTPUT''],''a'') as f:print(''profile_ready=''+str(ready).lower(),file=f)
+
+        PY
+
+        '
+    - name: Retain address-specific evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: rea-final-admitted-${{ matrix.target.slug }}
+        path: evidence/
+        if-no-files-found: error
+        retention-days: 90
+    if: ${{ github.run_attempt == 1 }}
+    name: final-profile ${{ matrix.target.slug }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        target:
+        - image: Frameworks/MAPlugInGUI.framework/MAPlugInGUI
+          sha256: 74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4
+          address: '0x25210'
+          short: maplugingui
+          slug: maplugingui-25210
+        - image: Frameworks/MAPlugInGUI.framework/MAPlugInGUI
+          sha256: 74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4
+          address: '0x26390'
+          short: maplugingui
+          slug: maplugingui-26390
+        - image: Frameworks/MACore.framework/MACore
+          sha256: 88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5
+          address: '0x3c144'
+          short: macore
+          slug: macore-3c144
+        - image: Frameworks/MACore.framework/MACore
+          sha256: 88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5
+          address: '0xc6d64'
+          short: macore
+          slug: macore-c6d64
+        - image: Frameworks/MADSP.framework/MADSP
+          sha256: 8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8
+          address: '0x449cf0'
+          short: madsp
+          slug: madsp-449cf0
+        - image: Frameworks/MADSP.framework/MADSP
+          sha256: 8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8
+          address: '0x8961a8'
+          short: madsp
+          slug: madsp-8961a8
+        - image: Frameworks/MADSP.framework/MADSP
+          sha256: 8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8
+          address: '0x8cb148'
+          short: madsp
+          slug: madsp-8cb148
+        - image: Frameworks/MADSP.framework/MADSP
+          sha256: 8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8
+          address: '0xa946c'
+          short: madsp
+          slug: madsp-a946c
+        - image: Frameworks/Logic.framework/Logic
+          sha256: 8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287
+          address: '0x8b493c'
+          short: logic
+          slug: logic-8b493c
+        - image: Frameworks/MAGenerativeInstruments.framework/MAGenerativeInstruments
+          sha256: cf2e3dc0b233e6e1a878a4040095494d57b0ab97b8ed461b16960d232d6d10d7
+          address: '0x77858'
+          short: magenerativeinstruments
+          slug: magenerativeinstruments-77858
+        - image: Frameworks/MAGenerativeInstruments.framework/MAGenerativeInstruments
+          sha256: cf2e3dc0b233e6e1a878a4040095494d57b0ab97b8ed461b16960d232d6d10d7
+          address: '0xeecb8'
+          short: magenerativeinstruments
+          slug: magenerativeinstruments-eecb8
