@@ -18,6 +18,12 @@ jobs:
         run-id: '38751580429'
         github-token: ${{ github.token }}
         path: prior
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-fourteen-function-logic-evidence
+        run-id: '38758641890'
+        github-token: ${{ github.token }}
+        path: previous-failure
     - uses: actions/setup-python@v5
       with:
         python-version: '3.12'
@@ -49,7 +55,7 @@ jobs:
         unsigned char *owner=(const void *)ld64((const unsigned char *)object+0x20);\n    const unsigned
         char *sentinel=owner+8;\n    const unsigned char *node=(const void *)ld64(sentinel);\n    if (!node)
         return 0;\n    int key=(int)ld8(q+0x47);\n    const unsigned char *candidate=sentinel;\n    do
-        {\n        unsigned lower=ld16s(node+0x1a)<key-1;\n        if(lower) candidate=node;\n        node=(const
+        {\n        unsigned lower=ld16s(node+0x1a)<key-1;\n        if(!lower) candidate=node;\n        node=(const
         void *)ld64(node+8*lower);\n    } while(node);\n    if(candidate==sentinel) return 0;\n    return
         ld16s(candidate+0x1a)<key;\n}\n'', ''verify_logic_tree.py'': ''"""Actual linked ARM64 vs original
         bytes: two Logic functions, no runtime stubs.\nUsage: python verify_logic_tree.py INVENTORY OUT
@@ -143,6 +149,8 @@ jobs:
       run: 'mkdir -p evidence
 
         cp -R prior evidence/prior-clean-source-checkpoint
+
+        cp -R previous-failure evidence/rejected-first-tree-source
 
         cp -R assets source-package evidence/
 
