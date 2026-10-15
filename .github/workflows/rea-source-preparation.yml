@@ -1,0 +1,209 @@
+name: REA source preparation and instruction verification
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-source-preparation.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-source-preparation
+  cancel-in-progress: false
+jobs:
+  source-pilot:
+    if: ${{ github.run_attempt == 1 }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: rea-profile-target-*
+        run-id: '38670888947'
+        github-token: ${{ github.token }}
+        path: earlier
+        merge-multiple: false
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: rea-corrected-target-*
+        run-id: '38671963764'
+        github-token: ${{ github.token }}
+        path: corrected
+        merge-multiple: false
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-original-input-madsp
+        run-id: '38670888947'
+        github-token: ${{ github.token }}
+        path: input
+        merge-multiple: false
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install instruction emulator
+      run: python -m pip install unicorn==2.1.4
+    - name: Preserve candidates, compile real leaf source, compare with original instructions
+      run: "cat > source-pilot.py <<'PY'\nimport pathlib,json,hashlib,shutil,subprocess,ctypes,random,struct\nfrom unicorn\
+        \ import Uc, UC_ARCH_ARM64, UC_MODE_ARM\nfrom unicorn.arm64_const import UC_ARM64_REG_X0,UC_ARM64_REG_X8,UC_ARM64_REG_X30,UC_ARM64_REG_SP,UC_ARM64_REG_PC\n\
+        \nout=pathlib.Path('source-preparation');out.mkdir(exist_ok=True)\nobserved={}\nfor folder in ['earlier','corrected']:\n\
+        \ for p in pathlib.Path(folder).glob('*/result.json'):\n  r=json.loads(p.read_text());key=(r['image_sha256'],r['address']);old=observed.get(key)\n\
+        \  if old is None or (bool(r.get('usable_candidate')),r.get('finished_utc',''))>(bool(old[0].get('usable_candidate')),old[0].get('finished_utc','')):observed[key]=(r,p.parent)\n\
+        candidates=[];remaining=[]\nfor (sha,addr),(r,folder) in sorted(observed.items()):\n if not (r.get('usable_candidate')\
+        \ and r.get('input_sha256_unchanged')):\n  remaining.append(r);continue\n assert r.get('exact_entry') and not r.get('original_bytes_modified')\n\
+        \ info=json.loads((folder/'procedure-info.json').read_text());pseudo=(folder/'pseudocode.c').read_text();asm=(folder/'assembly.txt').read_text()\n\
+        \ assert int(info['entrypoint'],16)==int(addr,16) and not info['classification']['external']\n assert pseudo.strip()\
+        \ and 'halt_baddata' not in pseudo and asm.strip()\n dest=out/'candidates'/sha/addr;dest.mkdir(parents=True,exist_ok=True)\n\
+        \ for f in ['result.json','procedure-info.json','assembly.txt','pseudocode.c']:shutil.copy2(folder/f,dest/f)\n candidates.append({'image_sha256':sha,'address':addr,'pseudocode_sha256':hashlib.sha256(pseudo.encode()).hexdigest(),'verification':'identity-and-presence-only'})\n\
+        assert len(candidates)==34 and len(remaining)==12,(len(candidates),len(remaining))\n(out/'candidate-manifest.json').write_text(json.dumps(candidates,indent=2));(out/'remaining-targets.json').write_text(json.dumps(remaining,indent=2))\n\
+        \n# This is a real recovered leaf function. The address is retained in its name;\n# no replacement stubs or invented\
+        \ application logic are used.\nsrc='''/* MADSP SHA256 8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8,\
+        \ native 0xfdc4.\n   Contract: object+0x400 points to eight readable bytes in ordinary memory.\n   Little-endian load\
+        \ and bit 22 extraction; no writes. */\ntypedef __UINT64_TYPE__ ml_u64;\nml_u64 mobilelogic_madsp_fdc4(const void\
+        \ *object) {\n const unsigned char *p=(const unsigned char *)object+0x400;\n ml_u64 value=0;\n for(unsigned i=0;i<8;i++)\
+        \ value|=(ml_u64)p[i]<<(8*i);\n return (value>>22)&1u;\n}\n'''\nmodule=out/'pilot';module.mkdir(exist_ok=True);(module/'madsp_fdc4.c').write_text(src)\n\
+        data=pathlib.Path('input/target.bin').read_bytes();sha=hashlib.sha256(data).hexdigest()\nassert sha=='8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8'\n\
+        # Resolve original address through Mach-O LC_SEGMENT_64 mappings, never assume VA=file offset.\nassert data[:4]==bytes.fromhex('cffaedfe')\n\
+        ncmd=struct.unpack_from('<I',data,16)[0];pos=32;code=None\nfor _ in range(ncmd):\n cmd,size=struct.unpack_from('<II',data,pos)\n\
+        \ if cmd==0x19:\n  vm,vmsz,off,filesz=struct.unpack_from('<QQQQ',data,pos+24)\n  if vm<=0xfdc4 and 0xfdc4+12<=vm+filesz:code=data[off+0xfdc4-vm:off+0xfdc4-vm+12]\n\
+        \ pos+=size\nassert code is not None\n# Verify exact original opcodes, not just the decompiler's assembly text.\n\
+        assert struct.unpack('<III',code)==(0xf9420008,0xd3565900,0xd65f03c0),code.hex()\n(module/'original-fdc4.bin').write_bytes(code)\n\
+        commands=[]\nfor opt in [0,2,3]:\n cmd=['cc',f'-O{opt}','-std=c11','-Wall','-Wextra','-Werror','-fPIC','-shared',str(module/'madsp_fdc4.c'),'-o',str(module/f'pilot-O{opt}.so')]\n\
+        \ subprocess.run(cmd,check=True);commands.append(cmd)\ncmd=['clang','-target','arm64-apple-ios17.0','-ffreestanding','-O2','-std=c11','-Wall','-Wextra','-Werror','-c',str(module/'madsp_fdc4.c'),'-o',str(module/'madsp_fdc4-ios-arm64.o')]\n\
+        subprocess.run(cmd,check=True);commands.append(cmd)\nlibs=[]\nfor opt in [0,2,3]:\n f=ctypes.CDLL(str((module/f'pilot-O{opt}.so').resolve())).mobilelogic_madsp_fdc4;f.argtypes=[ctypes.c_void_p];f.restype=ctypes.c_uint64;libs.append(f)\n\
+        u=Uc(UC_ARCH_ARM64,UC_MODE_ARM);u.mem_map(0x10000,0x1000);u.mem_write(0x10000,code);u.mem_map(0x20000,0x2000);u.mem_map(0x40000,0x1000)\n\
+        rng=random.Random(0xfdc4);values=[0,(1<<64)-1]+[1<<i for i in range(64)]+[((1<<64)-1)^(1<<i) for i in range(64)]+[rng.getrandbits(64)\
+        \ for _ in range(10000)]\ncases=0\nfor i,value in enumerate(values):\n align=i%16;payload=bytearray(rng.randbytes(0x420));payload[align+0x400:align+0x408]=struct.pack('<Q',value)\n\
+        \ u.mem_write(0x20000,bytes(payload));u.reg_write(UC_ARM64_REG_X0,0x20000+align);u.reg_write(UC_ARM64_REG_X30,0x10100);u.reg_write(UC_ARM64_REG_SP,0x40800)\n\
+        \ u.emu_start(0x10000,0x10100,count=10);assert u.reg_read(UC_ARM64_REG_PC)==0x10100\n expected=u.reg_read(UC_ARM64_REG_X0);buf=ctypes.create_string_buffer(bytes(payload))\n\
+        \ assert expected==(value>>22)&1\n for f in libs:assert f(ctypes.addressof(buf)+align)==expected\n assert buf.raw[:len(payload)]==bytes(payload)\
+        \ and bytes(u.mem_read(0x20000,len(payload)))==bytes(payload)\n cases+=1\nreport={'image_sha256':sha,'address':'0xfdc4','original_opcodes_hex':code.hex(),'host_shared_library_builds':['O0','O2','O3'],'ios_arm64_object_compiled':True,'ios_application_linked':False,'differential_reference':'Unicorn\
+        \ execution of original Mach-O instruction bytes','test_cases':cases,'alignment_offsets_tested':16,'scope':'one 12-byte\
+        \ leaf function; ordinary readable memory inputs','whole_payload_verified':False,'whole_application_build_verified':False,'commands':commands}\n\
+        (out/'verification.json').write_text(json.dumps(report,indent=2))\n(out/'README.md').write_text('34 distinct new pseudocode\
+        \ candidates are preserved with original evidence. Only the MADSP 0xfdc4 pilot has been compiled and differentially\
+        \ tested in this job. The iOS output is an object file, not a linked application. Candidate presence and a passing\
+        \ leaf test do not establish whole-payload correctness. The remaining 12 targets and 353 compiler-start boundaries\
+        \ require further work.\\n')\nprint(json.dumps(report,indent=2))\n\nPY\npython source-pilot.py\n"
+    - if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: rea-source-preparation-and-leaf-verification
+        path: source-preparation/
+        if-no-files-found: error
+        retention-days: 90
+  retry-unattempted:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      REA_GHIDRA_DISABLED_ANALYZERS: Objective-C Message Analyzer,Objective-C Type Metadata Analyzer,Demangler GNU,Call Convention
+        ID
+      REA_GHIDRA_STARTUP_TIMEOUT_MS: '2400000'
+      GHIDRA_HEADLESS_MAXMEM: 3G
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-original-input-madsp
+        path: input/
+        run-id: '38670888947'
+        github-token: ${{ github.token }}
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: '21'
+    - name: Install verified analysis engines
+      run: 'mkdir -p tools evidence runtime-tmp
+
+        curl -fL --retry 3 -o ghidra.zip https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip
+
+        printf ''%s  %s\n'' ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db ghidra.zip | sha256sum -c -
+
+        unzip -q ghidra.zip -d tools
+
+        npm install --prefix rea-tool --no-audit --no-fund rea-agents@6.5.0
+
+        echo "GHIDRA_INSTALL_DIR=$PWD/tools/ghidra_12.1.4_PUBLIC" >> "$GITHUB_ENV"
+
+        echo "TMPDIR=$PWD/runtime-tmp" >> "$GITHUB_ENV"
+
+
+        test -f rea-tool/node_modules/rea-agents/bridge/ghidra/ReaGhidraAnalysisOptions.java
+
+        node -e "const p=require(''./rea-tool/node_modules/rea-agents/package.json'');if(p.version!==''6.5.0'')process.exit(1)"
+
+        '
+    - name: Write and validate single-target recovery client
+      run: "mkdir -p recovery evidence\ncat > recovery/one.mjs <<'SOURCE'\nimport {Client} from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/index.mjs';\n\
+        import {StdioClientTransport} from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/stdio.mjs';\nimport\
+        \ fs from 'node:fs/promises';\nimport {createWriteStream} from 'node:fs';\nimport {createHash} from 'node:crypto';\n\
+        import {createGzip} from 'node:zlib';\nimport {pipeline} from 'node:stream/promises';\nimport {once} from 'node:events';\n\
+        import path from 'node:path';\n\nexport function normalizeNative(a){if(typeof a!=='string'||!/^0x[0-9a-f]+$/i.test(a))return\
+        \ null;return '0x'+BigInt(a).toString(16);}\nexport function admitExact(info,target){return info && normalizeNative(info.entrypoint)===normalizeNative(target)&&info.classification?.external!==true;}\n\
+        export function usablePseudo(pseudo,assembly,exact){return Boolean(exact&&typeof pseudo==='string'&&pseudo.trim()&&!pseudo.includes('halt_baddata')&&typeof\
+        \ assembly==='string'&&/^\\s*0x[0-9a-f]+:/im.test(assembly));}\nif(process.env.REA_TEST_IMPORT==='1'){}else{await\
+        \ main();}\nasync function main(){\n const target=JSON.parse(process.env.TARGET_ROW);if(!normalizeNative(target.address))throw\
+        \ new Error('Non-native target rejected');\n const meta=JSON.parse(await fs.readFile('input/image.json','utf8'));if(meta.sha256!==target.sha256||meta.image!==target.image)throw\
+        \ new Error('Input identity mismatch');\n const binary=await fs.readFile('input/target.bin');if(createHash('sha256').update(binary).digest('hex')!==target.sha256)throw\
+        \ new Error('Input SHA256 mismatch');\n await fs.mkdir('evidence',{recursive:true});\n const result={image:target.image,image_sha256:target.sha256,address:normalizeNative(target.address),status:'running',rea_version:'6.5.0',analysis_profile_override:{disabled_analyzers:process.env.REA_GHIDRA_DISABLED_ANALYZERS.split(',')},max_new_attempts:1,info:'not_attempted',assembly:'not_attempted',pseudocode:'not_attempted',usable_candidate:false,errors:[],semantic_equivalence_verified:false,original_bytes_modified:false};\n\
+        \ const save=()=>fs.writeFile('evidence/result.json',JSON.stringify(result,null,2));await save();\n const zip=createGzip({level:6});const\
+        \ completed=pipeline(zip,createWriteStream('evidence/rea-evidence.jsonl.gz'));completed.catch(()=>{});\n const serverLog=createWriteStream('evidence/server.log');await\
+        \ once(serverLog,'open');\n const transport=new StdioClientTransport({command:process.execPath,args:[path.resolve('rea-tool/node_modules/rea-agents/scripts/rea.mjs'),'--mcp'],env:{...process.env,REA_MCP_MAX_RESPONSE_BYTES:'67108864',NODE_OPTIONS:'--max-old-space-size=6144'},stderr:serverLog,maxBufferSize:67108864});\n\
+        \ const client=new Client({name:'mobilelogic-targeted-analysis-profile-repair',version:'1.0.0'});let connected=false;let\
+        \ timedOut=false;\n async function record(v){if(!zip.write(JSON.stringify(v)+'\\n'))await once(zip,'drain');}\n async\
+        \ function call(name,args,timeout){\n  await fs.writeFile('evidence/active-call.json',JSON.stringify({name,args,timeout,started_utc:new\
+        \ Date().toISOString()}));console.log(JSON.stringify({event:'call',name,address:args.procedure??null}));\n  const\
+        \ controller=new AbortController();let timer;\n  try{\n   const response=await Promise.race([client.callTool({name,arguments:args},{timeout,resetTimeoutOnProgress:false,maxTotalTimeout:timeout,signal:controller.signal}),new\
+        \ Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;controller.abort();reject(new Error('Hard request deadline\
+        \ exceeded: '+name));},timeout);})]);\n   let value=response.structuredContent;if(value===undefined){const text=response.content?.filter(c=>c.type==='text').map(c=>c.text).join('');value=JSON.parse(text);}\n\
+        \   await record({tool:name,arguments:args,result:value,isError:Boolean(response.isError)});\n   if(response.isError||value.error){let\
+        \ err=new Error(value.error?.message??'Provider error');err.details=value.error??value;throw err;}\n   const digest=value.subject?.digest?.sha256;if((name!=='open_binary'||digest!==undefined)&&digest!==target.sha256)throw\
+        \ new Error('Evidence subject SHA256 mismatch or missing identity');\n   return value.normalized_result;\n  }finally{clearTimeout(timer);}\n\
+        \ }\n try{\n  await client.connect(transport);connected=true;\n  const available=new Set((await client.listTools()).tools.map(t=>t.name));for(const\
+        \ name of ['open_binary','procedure_info','procedure_assembly','procedure_pseudo_code'])if(!available.has(name))throw\
+        \ new Error('Required REA tool absent: '+name);\n  await call('open_binary',{path:path.resolve('input/target.bin'),provider_id:'ghidra'},2400000);\n\
+        \  let info,assembly,pseudo;\n  try{info=await call('procedure_info',{procedure:target.address},2400000);await fs.writeFile('evidence/procedure-info.json',JSON.stringify(info,null,2));result.info='recovered';result.exact_entry=admitExact(info,target.address);await\
+        \ save();}\n  catch(e){result.info='failed';result.errors.push({tool:'procedure_info',message:e.message,details:e.details});await\
+        \ save();throw e;}\n  if(!result.exact_entry){result.status='not_an_exact_native_procedure';result.resolved_entry=info?.entrypoint??null;await\
+        \ save();return;}\n  // Preserve assembly before entering the decompiler, so a timeout cannot discard it.\n  try{assembly=await\
+        \ call('procedure_assembly',{procedure:target.address},120000);await fs.writeFile('evidence/assembly.txt',typeof assembly==='string'?assembly:JSON.stringify(assembly));result.assembly=typeof\
+        \ assembly==='string'&&assembly.trim()?'recovered':'empty';await save();}\n  catch(e){result.assembly='failed';result.errors.push({tool:'procedure_assembly',message:e.message,details:e.details});await\
+        \ save();if(timedOut)throw e;}\n  try{pseudo=await call('procedure_pseudo_code',{procedure:target.address},360000);result.pseudocode=typeof\
+        \ pseudo==='string'&&pseudo.trim()?'recovered':'empty';await fs.writeFile('evidence/pseudocode.c',typeof pseudo==='string'?pseudo:JSON.stringify(pseudo));result.usable_candidate=usablePseudo(pseudo,assembly,result.exact_entry);await\
+        \ save();}\n  catch(e){result.pseudocode='failed';result.errors.push({tool:'procedure_pseudo_code',message:e.message,details:e.details});await\
+        \ save();}\n  result.status=result.usable_candidate?'pseudocode_candidate_recovered':'unresolved';\n }catch(e){result.status='unresolved';if(!result.errors.some(x=>x.message===e.message))result.errors.push({tool:'session',message:e.message});}\n\
+        \ finally{\n  result.finished_utc=new Date().toISOString();await save();\n  if(connected&&!timedOut){try{await client.callTool({name:'close_binary',arguments:{}},{timeout:5000});}catch{}}\n\
+        \  await Promise.race([client.close().catch(()=>{}),new Promise(r=>setTimeout(r,10000))]);serverLog.end();zip.end();await\
+        \ completed;\n  const unchanged=createHash('sha256').update(await fs.readFile('input/target.bin')).digest('hex')===target.sha256;result.input_sha256_unchanged=unchanged;if(!unchanged)result.status='input_identity_failure';await\
+        \ save();\n  await fs.appendFile(process.env.GITHUB_STEP_SUMMARY,'Target '+target.image+' '+target.address+': '+result.status+'\\\
+        n\\nPseudocode candidates require semantic verification.\\n');\n  console.log(JSON.stringify({image:target.image,address:target.address,status:result.status}));if(!result.usable_candidate||!unchanged)process.exitCode=1;\n\
+        \ }\n}\n\nSOURCE\nnode --check recovery/one.mjs\n"
+    - name: Attempt one exact unresolved function with alternate analysis profile
+      env:
+        TARGET_ROW: '{"image":"Frameworks/MADSP.framework/MADSP","sha256":"8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8","address":"0x8961a8","short":"madsp","unattempted_last_run":true,"slug":"madsp-8961a8"}'
+      run: timeout --signal=TERM --kill-after=30s 48m node recovery/one.mjs
+    - name: Record profile admission
+      id: status
+      if: always()
+      run: 'python - <<''PY''
+
+        import json,pathlib,os
+
+        p=pathlib.Path(''evidence/result.json'');r=json.loads(p.read_text()) if p.exists() else {}
+
+        ready=r.get(''info'')==''recovered'' and r.get(''exact_entry'') is True
+
+        with open(os.environ[''GITHUB_OUTPUT''],''a'') as f:print(''profile_ready=''+str(ready).lower(),file=f)
+
+        PY
+
+        '
+    - name: Retain address-specific evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: rea-source-unattempted-madsp-8961a8
+        path: evidence/
+        if-no-files-found: error
+        retention-days: 90
+    if: ${{ github.run_attempt == 1 }}
