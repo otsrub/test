@@ -1,0 +1,78 @@
+{
+  "as_of_utc": "2026-10-15T07:33:00Z",
+  "inventory_run": 38698377304,
+  "inventory_artifact": 11954378154,
+  "inventory": {
+    "archive_sha256": "f2a650fd7a51a7bb2bc5e8e5cc35a95236c02723ab3faeb162cca64ee62a744e",
+    "archive_bytes": 1003859785,
+    "native_images": 59,
+    "native_symbol_records": 150814,
+    "resource_records": 17903,
+    "compiler_starts_examined": 353,
+    "resolved_contiguous_extents": 253,
+    "remaining_boundary_unknowns": 100,
+    "source_types_recovered": false,
+    "whole_payload_decompiled": false,
+    "whole_application_build_verified": false,
+    "behavior_equivalence_verified": false
+  },
+  "module_link_run": 38698984659,
+  "module_link_job": 116302280172,
+  "module_link_artifact": 11955520201,
+  "module_link": {
+    "ios_arm64_darwin_archive_indexed": true,
+    "standalone_five_function_dylib_linked": true,
+    "undefined_symbols": [],
+    "original_source_functions": 5,
+    "original_instruction_bytes": 208,
+    "whole_app_linked": false,
+    "whole_app_runtime_verified": false,
+    "semantic_evidence": "Retained prior function-local differential tests only; this job adds link validation, not new runtime evidence"
+  },
+  "final_profile_run": 38698984659,
+  "further_profile_number": 2,
+  "profile_status": "in_progress; inspect all target artifacts before counting recoveries",
+  "invalid_admission_run": 38698377304,
+  "invalid_admission_detail": "All 11 targets stopped before assembly/decompilation because One Time timing label was not a selectable analyzer; corrected admission has guards excluding any reached target.",
+  "remaining_original_gap_records": 12,
+  "distinct_implementation_gaps": 11,
+  "forwarding_thunk": {
+    "image": "MADSP",
+    "address": "0x8afac0",
+    "destination": "0x8961a8",
+    "not_a_second_implementation": true
+  },
+  "quarantined_candidates": [
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "address": "0xc6d64",
+      "candidate_artifact_id": 11955785145,
+      "candidate_pseudocode_sha256": "fb16dbe0892cb60cb0080750f5232fb142cef73cb22b40b24ed2a72a17538c50",
+      "assessment": "quarantine-not-counted-as-recovered",
+      "reason": "Disabling switch analysis reduced reported body to 96-byte prefix ending in computed branch; original metadata and original jump table show additional code outside that body. Pseudocode references UNRECOVERED_JUMPTABLE. Candidate presence is not full function recovery.",
+      "ghidra_reported_body_bytes": 96,
+      "compiler_next_start": "0xcacf8",
+      "compiler_extent_bytes": 16276,
+      "branch_address": "0xc6dc0",
+      "jump_table_address": "0x11ceee",
+      "jump_base": "0xc6dc4",
+      "first_eight_observed_jump_destinations": [
+        "0xcab38",
+        "0xc6dc4",
+        "0xc7140",
+        "0xc7214",
+        "0xc6f70",
+        "0xc7370",
+        "0xc72c4",
+        "0xc74a0"
+      ],
+      "table_entry_count_verified": false,
+      "original_bytes_modified": false,
+      "semantic_equivalence_verified": false,
+      "followup": "Resolve switch bounds and CFG against original bytes; no further profile retries authorized after final profile."
+    }
+  ],
+  "further_profile_retries_allowed_after_current": 0,
+  "whole_app_linked": false,
+  "whole_app_equivalence_verified": false
+}
