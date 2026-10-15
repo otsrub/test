@@ -1,0 +1,269 @@
+name: REA original inventory, source module and final bounded profile
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-final-profile-and-inventory.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-final-profile-and-inventory
+  cancel-in-progress: false
+jobs:
+  inventory-and-module:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    if: ${{ github.run_attempt == 1 }}
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-compiler-start-triage
+        run-id: '38670888947'
+        github-token: ${{ github.token }}
+        path: triage
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-source-expansion-boundaries-and-dsp
+        run-id: '38692033603'
+        github-token: ${{ github.token }}
+        path: prior-source
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: rea-stack-disabled-*
+        run-id: '38692191730'
+        github-token: ${{ github.token }}
+        path: profile-checkpoints
+        merge-multiple: false
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Stage reviewed inventory and module build scripts
+      shell: python
+      run: 'import pathlib,base64
+
+        assets={''payload_inventory.py'': ''IiIiUmVhZC1vbmx5IG9yaWdpbmFsIGFyY2hpdmUgaW52ZW50b3J5IGFuZCBjb25zZXJ2YXRpdmUgY29tcGlsZXIgZXh0ZW50IHJldmlldy4KTm8gYmluYXJ5IHBhdGNoaW5nLCBzdHVicywgdHlwZSBpbnZlbnRpb24sIG9yIHNvdXJjZS1lcXVpdmFsZW5jZSBjbGFpbXMuCiIiIgppbXBvcnQgcGF0aGxpYixzdHJ1Y3QsaGFzaGxpYixqc29uLHppcGZpbGUsc3lzLGNvbGxlY3Rpb25zLHBsaXN0bGliCmZyb20gY2Fwc3RvbmUgaW1wb3J0IENzLENTX0FSQ0hfQVJNNjQsQ1NfTU9ERV9BUk0KZnJvbSBjYXBzdG9uZS5hcm02NCBpbXBvcnQgQVJNNjRfT1BfSU1NCkVYUEVDVEVEPSdmMmE2NTBmZDdhNTFhN2JiMmJjNWU4ZTVjYzM1YTk1MjM2YzAyNzIzYWIzZmFlYjE2MmNjYTY0ZWU2MmE3NDRlJwpkZWYgc2hhKGIpOnJldHVybiBoYXNobGliLnNoYTI1NihiKS5oZXhkaWdlc3QoKQpkZWYgY3N0cihiLG89MCk6cmV0dXJuIGJbbzpdLnNwbGl0KGInXDAnLDEpWzBdLmRlY29kZSgndXRmLTgnLCdyZXBsYWNlJykKZGVmIG1hY2hvKGIpOgogYXNzZXJ0IGJbOjRdPT1ieXRlcy5mcm9taGV4KCdjZmZhZWRmZScpCiBwb3M9MzI7c2VnbWVudHM9W107c2VjdGlvbnM9W107ZGVwcz1bXTtycGF0aHM9W107c3ltdGFiPU5vbmU7c3RhcnRkYXRhPU5vbmU7dXVpZD1Ob25lO2NyeXB0PVtdO2Jhc2U9Tm9uZQogZm9yIF8gaW4gcmFuZ2Uoc3RydWN0LnVucGFja19mcm9tKCc8SScsYiwxNilbMF0pOgogIGNtZCxzaXplPXN0cnVjdC51bnBhY2tfZnJvbSgnPElJJyxiLHBvcyk7YXNzZXJ0IHNpemU+PTggYW5kIHBvcytzaXplPD1sZW4oYikKICBpZiBjbWQ9PTI1OgogICBuYW1lPWNzdHIoYltwb3MrODpwb3MrMjRdKTt2bSx2bXN6LG9mZixmcz1zdHJ1Y3QudW5wYWNrX2Zyb20oJzxRUVFRJyxiLHBvcysyNCk7c2VnbWVudHMuYXBwZW5kKCh2bSxvZmYsZnMpKQogICBpZiBuYW1lPT0nX19URVhUJzpiYXNlPXZtCiAgIGZvciBqIGluIHJhbmdlKHN0cnVjdC51bnBhY2tfZnJvbSgnPEknLGIscG9zKzY0KVswXSk6CiAgICBwPXBvcys3Mis4MCpqO3ZhLG4sZm89c3RydWN0LnVucGFja19mcm9tKCc8UVFJJyxiLHArMzIpO3NlY3Rpb25zLmFwcGVuZCh7J25hbWUnOmNzdHIoYltwOnArMTZdKSwnc2VnbWVudCc6bmFtZSwnYWRkcmVzcyc6dmEsJ2J5dGVzJzpuLCdmaWxlb2ZmJzpmbywnZmxhZ3MnOnN0cnVjdC51bnBhY2tfZnJvbSgnPEknLGIscCs2NClbMF19KQogIGVsaWYgY21kIGluIFsxMiwweDgwMDAwMDE4LDB4ODAwMDAwMWYsMHg4MDAwMDAyMywweDIwLDEzXToKICAgbm8sdHMsY3VyLGNvbXBhdD1zdHJ1Y3QudW5wYWNrX2Zyb20oJzxJSUlJJyxiLHBvcys4KTtkZXBzLmFwcGVuZCh7J2tpbmQnOmhleChjbWQpLCduYW1lJzpjc3RyKGJbcG9zOnBvcytzaXplXSxubyksJ2N1cnJlbnRfdmVyc2lvbic6Y3VyLCdjb21wYXRpYmlsaXR5X3ZlcnNpb24nOmNvbXBhdH0pCiAgZWxpZiBjbWQ9PTB4ODAwMDAwMWM6cnBhdGhzLmFwcGVuZChjc3RyKGJbcG9zOnBvcytzaXplXSxzdHJ1Y3QudW5wYWNrX2Zyb20oJzxJJyxiLHBvcys4KVswXSkpCiAgZWxpZiBjbWQ9PTI6c3ltdGFiPXN0cnVjdC51bnBhY2tfZnJvbSgnPElJSUknLGIscG9zKzgpCiAgZWxpZiBjbWQ9PTB4MjY6CiAgIG9mZixuPXN0cnVjdC51bnBhY2tfZnJvbSgnPElJJyxiLHBvcys4KTtzdGFydGRhdGE9YltvZmY6b2ZmK25dCiAgZWxpZiBjbWQ9PTB4MWI6dXVpZD1iW3Bvcys4OnBvcysyNF0uaGV4KCkKICBlbGlmIGNtZCBpbiBbMHgyMSwweDJjXTpjcnlwdC5hcHBlbmQoeydvZmZzZXQnOnN0cnVjdC51bnBhY2tfZnJvbSgnPEknLGIscG9zKzgpWzBdLCdzaXplJzpzdHJ1Y3QudW5wYWNrX2Zyb20oJzxJJyxiLHBvcysxMilbMF0sJ2NyeXB0aWQnOnN0cnVjdC51bnBhY2tfZnJvbSgnPEknLGIscG9zKzE2KVswXX0pCiAgcG9zKz1zaXplCiBzdGFydHM9W10KIGlmIHN0YXJ0ZGF0YSBpcyBub3QgTm9uZToKICBhc3NlcnQgYmFzZSBpcyBub3QgTm9uZQogIGE9YmFzZTt2PXNoaWZ0PTAKICBmb3IgYnl0ZSBpbiBzdGFydGRhdGE6CiAgIHZ8PShieXRlJjEyNyk8PHNoaWZ0CiAgIGlmIGJ5dGUmMTI4OnNoaWZ0Kz03O2NvbnRpbnVlCiAgIGlmIHY9PTA6YnJlYWsKICAgYSs9djtzdGFydHMuYXBwZW5kKGEpO3Y9c2hpZnQ9MAogc3ltYm9scz1bXQogaWYgc3ltdGFiOgogIG9mZixuLHNvLHN6PXN5bXRhYjtzdHJpbmdzPWJbc286c28rc3pdCiAgZm9yIGkgaW4gcmFuZ2Uobik6CiAgIHNpLGtpbmQsc2VjLGRlc2MsdmFsdWU9c3RydWN0LnVucGFja19mcm9tKCc8SUJCSFEnLGIsb2ZmKzE2KmkpCiAgIGlmIGtpbmQmMHhlMCBvciBub3Qgc2k6Y29udGludWUKICAgc3ltYm9scy5hcHBlbmQoeyduYW1lJzpjc3RyKHN0cmluZ3Msc2kpLCdhZGRyZXNzJzpoZXgodmFsdWUpLCduX3R5cGUnOmtpbmQsJ3NlY3Rpb25faW5kZXgnOnNlYywnZGVzY3JpcHRpb25fYml0cyc6ZGVzYywnZXh0ZXJuYWwnOmJvb2woa2luZCYxKSwndW5kZWZpbmVkJzpraW5kJjE0PT0wfSkKIHJldHVybiB7J3NlZ21lbnRzJzpzZWdtZW50cywnc2VjdGlvbnMnOnNlY3Rpb25zLCdkZXBlbmRlbmNpZXMnOmRlcHMsJ3JwYXRocyc6cnBhdGhzLCd1dWlkJzp1dWlkLCdlbmNyeXB0aW9uJzpjcnlwdCwnc3RhcnRzJzpzdGFydHMsJ3N5bWJvbHMnOnN5bWJvbHN9CmRlZiByZXZpZXcoYixtLHJvdyk6CiBhPWludChyb3dbJ2NvbXBpbGVyX3N0YXJ0J10sMTYpO3N0YXJ0cz1tWydzdGFydHMnXTtyPXsnaW1hZ2UnOnJvd1snaW1hZ2UnXSwnaW1hZ2Vfc2hhMjU2JzpzaGEoYiksJ2FkZHJlc3MnOmhleChhKSwnZXhhY3RfY29udGlndW91c19leHRlbnRfdmVyaWZpZWQnOkZhbHNlLCdzZW1hbnRpY19lcXVpdmFsZW5jZV92ZXJpZmllZCc6RmFsc2V9CiBpZiBhIG5vdCBpbiBzdGFydHM6clsnc3RhdHVzJ109J2NvbXBpbGVyX3N0YXJ0X25vdF9pbl9vcmlnaW5hbF9tZXRhZGF0YSc7cmV0dXJuIHIKIGluZGV4PXN0YXJ0cy5pbmRleChhKQogaWYgaW5kZXgrMT09bGVuKHN0YXJ0cyk6clsnc3RhdHVzJ109J2xhc3Rfc3RhcnRfaGFzX25vX21ldGFkYXRhX3VwcGVyX2JvdW5kJztyZXR1cm4gcgogZW5kPXN0YXJ0c1tpbmRleCsxXTtyWyduZXh0X2NvbXBpbGVyX3N0YXJ0J109aGV4KGVuZCk7Y29kZT1Ob25lCiBmb3Igdm0sb2ZmLG4gaW4gbVsnc2VnbWVudHMnXToKICBpZiB2bTw9YSBhbmQgZW5kPD12bStuOmNvZGU9YltvZmYrYS12bTpvZmYrZW5kLXZtXQogaWYgY29kZSBpcyBOb25lOnJbJ3N0YXR1cyddPSdleHRlbnRfbm90X2ZpbGVfYmFja2VkJztyZXR1cm4gcgogci51cGRhdGUoeydleHRlbnRfYnl0ZXMnOmxlbihjb2RlKSwnZXh0ZW50X3NoYTI1Nic6c2hhKGNvZGUpfSkKIGlmIGxlbihjb2RlKT4xMDI0KjEwMjQ6clsnc3RhdHVzJ109J2V4dGVudF9leGNlZWRzX2JvdW5kZWRfcmV2aWV3JztyZXR1cm4gcgogY3M9Q3MoQ1NfQVJDSF9BUk02NCxDU19NT0RFX0FSTSk7Y3MuZGV0YWlsPVRydWU7aW5zPWxpc3QoY3MuZGlzYXNtKGNvZGUsYSkpO2J5YWRkcj17aS5hZGRyZXNzOmkgZm9yIGkgaW4gaW5zfQogcmVhc29ucz1bXTt0YWlscz1bXTtjYWxscz1bXQogaWYgbGVuKGlucykqNCE9bGVuKGNvZGUpOnJlYXNvbnMuYXBwZW5kKCdub3RfYWxsX2V4dGVudF9ieXRlc19kZWNvZGUnKQogcmVhY2hhYmxlPXNldCgpO3RvZG89W2FdCiB3aGlsZSB0b2RvOgogIHBjPXRvZG8ucG9wKCkKICBpZiBwYyBpbiByZWFjaGFibGU6Y29udGludWUKICBpZiBwYyBub3QgaW4gYnlhZGRyOnJlYXNvbnMuYXBwZW5kKCdjb250cm9sX2Zsb3dfb3V0c2lkZV9kZWNvZGVkX2V4dGVudCcpO2NvbnRpbnVlCiAgcmVhY2hhYmxlLmFkZChwYyk7aT1ieWFkZHJbcGNdO21uPWkubW5lbW9uaWMKICBpZiBtbiBpbiBbJ3JldCcsJ3JldGFhJywncmV0YWInXTpjb250aW51ZQogIGlmIG1uIGluIFsnYnInLCdicmFhJywnYnJhYicsJ2JyYWF6JywnYnJhYnonLCdlcmV0JywnYnJrJywnaGx0JywndWRmJ106cmVhc29ucy5hcHBlbmQoJ2luZGlyZWN0X29yX2V4Y2VwdGlvbl9leGl0X3JlcXVpcmVzX3JldmlldycpO2NvbnRpbnVlCiAgaWYgbW49PSdiJzoKICAgdGFyZ2V0PWkub3BlcmFuZHNbLTFdLmltbQogICBpZiBhPD10YXJnZXQ8ZW5kOnRvZG8uYXBwZW5kKHRhcmdldCkKICAgZWxpZiB0YXJnZXQgaW4gc3RhcnRzOnRhaWxzLmFwcGVuZChoZXgodGFyZ2V0KSkKICAgZWxzZTpyZWFzb25zLmFwcGVuZCgnZXh0ZXJuYWxfYnJhbmNoX25vdF9rbm93bl9jb21waWxlcl9zdGFydCcpCiAgIGNvbnRpbnVlCiAgaWYgbW4uc3RhcnRzd2l0aCgnYi4nKSBvciBtbiBpbiBbJ2NieicsJ2NibnonLCd0YnonLCd0Ym56J106CiAgIHRhcmdldD1pLm9wZXJhbmRzWy0xXQogICBpZiB0YXJnZXQudHlwZT09QVJNNjRfT1BfSU1NIGFuZCBhPD10YXJnZXQuaW1tPGVuZDp0b2RvLmFwcGVuZCh0YXJnZXQuaW1tKQogICBlbHNlOnJlYXNvbnMuYXBwZW5kKCdjb25kaXRpb25hbF9icmFuY2hfb3V0c2lkZV9leHRlbnQnKQogIGlmIG1uIGluIFsnYmwnLCdibHInLCdibHJhYScsJ2JscmFiJ106Y2FsbHMuYXBwZW5kKHsnYWRkcmVzcyc6aGV4KHBjKSwnaW5zdHJ1Y3Rpb24nOm1uKycgJytpLm9wX3N0ciwnYmVoYXZpb3JfdmVyaWZpZWQnOkZhbHNlfSkKICB0b2RvLmFwcGVuZChwYys0KQogaWYgcmVhY2hhYmxlIT1zZXQoYnlhZGRyKTpyZWFzb25zLmFwcGVuZCgndW5yZWFjaGFibGVfYnl0ZXNfb3JfZXh0cmFfZnVuY3Rpb25fZnJhZ21lbnRzJykKIGlmIGlucyBhbmQgaW5zWy0xXS5tbmVtb25pYyBub3QgaW4gWydyZXQnLCdyZXRhYScsJ3JldGFiJywnYiddOnJlYXNvbnMuYXBwZW5kKCdub190ZXJtaW5hbF9yZXR1cm5fb3JfdGFpbF9hdF9tZXRhZGF0YV9lbmQnKQogcmVhc29ucz1zb3J0ZWQoc2V0KHJlYXNvbnMpKTtyLnVwZGF0ZSh7J3N0YXR1cyc6J3JlcXVpcmVzX2V4YWN0X2JvdW5kYXJ5X3JldmlldycgaWYgcmVhc29ucyBlbHNlICdjb250aWd1b3VzX2V4dGVudF9yZXNvbHZlZCcsJ2V4YWN0X2NvbnRpZ3VvdXNfZXh0ZW50X3ZlcmlmaWVkJzpub3QgcmVhc29ucywnbGltaXRhdGlvbnMnOnJlYXNvbnMsJ3RhaWxfdGFyZ2V0cyc6c29ydGVkKHNldCh0YWlscykpLCdjYWxscyc6Y2FsbHMsJ2luc3RydWN0aW9uX2NvdW50JzpsZW4oaW5zKSwncmVhY2hhYmxlX2luc3RydWN0aW9uX2NvdW50JzpsZW4ocmVhY2hhYmxlKX0pCiAjIE9ubHkgcmVzb2x2ZWQgZXh0ZW50cyBnZXQgb3JpZ2luYWwgaW5zdHJ1Y3Rpb24gZXZpZGVuY2U7IHVua25vd25zIHJldGFpbiBoYXNoZXMuCiBpZiBub3QgcmVhc29uczpyLnVwZGF0ZSh7J29yaWdpbmFsX2hleCc6Y29kZS5oZXgoKSwnYXNzZW1ibHknOltmJ3tpLmFkZHJlc3M6I3h9OiB7aS5tbmVtb25pY30ge2kub3Bfc3RyfScgZm9yIGkgaW4gaW5zXSwnYmFzaXMnOidPcmlnaW5hbCBMQ19GVU5DVElPTl9TVEFSVFMgYWRqYWNlbnQgZW50cmllczsgY29tcGxldGUgZGVjb2Rpbmc7IHJlYWNoYWJsZSBsb2NhbCBDRkc7IGV4cGxpY2l0IHJldHVybi90YWlsOyBubyBpbmZlcnJlZCBHaGlkcmEgcmFuZ2VzJ30pCiByZXR1cm4gcgpkZWYgbWFpbigpOgogYXJjaGl2ZT1wYXRobGliLlBhdGgoc3lzLmFyZ3ZbMV0pO291dD1wYXRobGliLlBhdGgoc3lzLmFyZ3ZbM10pO291dC5ta2RpcihwYXJlbnRzPVRydWUsZXhpc3Rfb2s9VHJ1ZSkKIHdpdGggYXJjaGl2ZS5vcGVuKCdyYicpIGFzIGY6YXNzZXJ0IGhhc2hsaWIuZmlsZV9kaWdlc3QoZiwnc2hhMjU2JykuaGV4ZGlnZXN0KCk9PUVYUEVDVEVECiB0cmlhZ2U9anNvbi5sb2FkcyhwYXRobGliLlBhdGgoc3lzLmFyZ3ZbMl0pLnJlYWRfdGV4dCgpKTt3YW50ZWQ9Y29sbGVjdGlvbnMuZGVmYXVsdGRpY3QobGlzdCkKIGZvciByIGluIHRyaWFnZTp3YW50ZWRbclsnaW1hZ2UnXV0uYXBwZW5kKHIpCiBpbWFnZXM9W107cmVzb3VyY2VzPVtdO2JvdW5kYXJpZXM9W107c2Vlbj1zZXQoKTtwbGlzdHM9W10KIHdpdGggemlwZmlsZS5aaXBGaWxlKGFyY2hpdmUpIGFzIHosKG91dC8nc3ltYm9scy5qc29ubCcpLm9wZW4oJ3cnKSBhcyBzeW1ib2xvdXQ6CiAgZm9yIG1lbWJlciBpbiB6LmluZm9saXN0KCk6CiAgIGlmIG1lbWJlci5pc19kaXIoKTpjb250aW51ZQogICBuYW1lPW1lbWJlci5maWxlbmFtZQogICB3aXRoIHoub3BlbihtZW1iZXIpIGFzIGY6CiAgICBwcmVmaXg9Zi5yZWFkKDQpCiAgICBpZiBwcmVmaXg9PWJ5dGVzLmZyb21oZXgoJ2NmZmFlZGZlJyk6CiAgICAgYj1wcmVmaXgrZi5yZWFkKCk7ZGlnZXN0PXNoYShiKTttPW1hY2hvKGIpCiAgICAgcm93PXsncGF0aCc6bmFtZSwnc2hhMjU2JzpkaWdlc3QsJ2J5dGVzJzpsZW4oYiksJ3V1aWQnOm1bJ3V1aWQnXSwnZGVwZW5kZW5jaWVzJzptWydkZXBlbmRlbmNpZXMnXSwncnBhdGhzJzptWydycGF0aHMnXSwnZW5jcnlwdGlvbic6bVsnZW5jcnlwdGlvbiddLCdzZWN0aW9ucyc6bVsnc2VjdGlvbnMnXSwnbmF0aXZlX3N5bWJvbF9yZWNvcmRzJzpsZW4obVsnc3ltYm9scyddKSwnY29tcGlsZXJfc3RhcnRfY291bnQnOmxlbihtWydzdGFydHMnXSksJ3NvdXJjZV90eXBlc19yZWNvdmVyZWQnOkZhbHNlfQogICAgIGltYWdlcy5hcHBlbmQocm93KQogICAgIGZvciBzIGluIG1bJ3N5bWJvbHMnXTpwcmludChqc29uLmR1bXBzKHsnaW1hZ2Vfc2hhMjU2JzpkaWdlc3QsKipzfSxzZXBhcmF0b3JzPSgnLCcsJzonKSksZmlsZT1zeW1ib2xvdXQpCiAgICAgaWYgbmFtZSBpbiB3YW50ZWQ6CiAgICAgIHNlZW4uYWRkKG5hbWUpCiAgICAgIGZvciByIGluIHdhbnRlZFtuYW1lXToKICAgICAgIGFzc2VydCBkaWdlc3Q9PXJbJ2ltYWdlX3NoYTI1NiddO2JvdW5kYXJpZXMuYXBwZW5kKHJldmlldyhiLG0scikpCiAgICBlbHNlOgogICAgIGg9aGFzaGxpYi5zaGEyNTYoKTtoLnVwZGF0ZShwcmVmaXgpO2RhdGE9Ynl0ZWFycmF5KHByZWZpeCkgaWYgbmFtZS5lbmRzd2l0aCgnSW5mby5wbGlzdCcpIGVsc2UgTm9uZQogICAgIHdoaWxlIGNodW5rOj1mLnJlYWQoMTAyNCoxMDI0KToKICAgICAgaC51cGRhdGUoY2h1bmspCiAgICAgIGlmIGRhdGEgaXMgbm90IE5vbmU6ZGF0YS5leHRlbmQoY2h1bmspCiAgICAgcmVzb3VyY2VzLmFwcGVuZCh7J3BhdGgnOm5hbWUsJ2J5dGVzJzptZW1iZXIuZmlsZV9zaXplLCdzaGEyNTYnOmguaGV4ZGlnZXN0KCksJ2tpbmQnOidyZXNvdXJjZS1vci1tZXRhZGF0YS1ub3QtcmVjb25zdHJ1Y3RlZC1zb3VyY2UnfSkKICAgICBpZiBkYXRhIGlzIG5vdCBOb25lOgogICAgICB0cnk6CiAgICAgICBwPXBsaXN0bGliLmxvYWRzKGRhdGEpO3BsaXN0cy5hcHBlbmQoeydwYXRoJzpuYW1lLCdidW5kbGVfaWQnOnAuZ2V0KCdDRkJ1bmRsZUlkZW50aWZpZXInKSwnZXhlY3V0YWJsZSc6cC5nZXQoJ0NGQnVuZGxlRXhlY3V0YWJsZScpLCdtaW5pbXVtX29zJzpwLmdldCgnTWluaW11bU9TVmVyc2lvbicpLCdidW5kbGVfdmVyc2lvbic6cC5nZXQoJ0NGQnVuZGxlVmVyc2lvbicpLCdwYWNrYWdlX3R5cGUnOnAuZ2V0KCdDRkJ1bmRsZVBhY2thZ2VUeXBlJyl9KQogICAgICBleGNlcHQgRXhjZXB0aW9uIGFzIGU6cGxpc3RzLmFwcGVuZCh7J3BhdGgnOm5hbWUsJ3BhcnNlX2Vycm9yJzpzdHIoZSl9KQogYXNzZXJ0IHNlZW49PXNldCh3YW50ZWQpIGFuZCBsZW4oYm91bmRhcmllcyk9PTM1MwogcmVzb2x2ZWQ9c3VtKHJbJ2V4YWN0X2NvbnRpZ3VvdXNfZXh0ZW50X3ZlcmlmaWVkJ10gZm9yIHIgaW4gYm91bmRhcmllcykKIGZvciBmaWxlbmFtZSxjb250ZW50IGluIFsoJ25hdGl2ZS1pbWFnZXMuanNvbicsaW1hZ2VzKSwoJ3Jlc291cmNlcy5qc29uJyxyZXNvdXJjZXMpLCgnYnVuZGxlcy5qc29uJyxwbGlzdHMpLCgnY29tcGlsZXItYm91bmRhcmllcy5qc29uJyxib3VuZGFyaWVzKV06CiAgKG91dC9maWxlbmFtZSkud3JpdGVfdGV4dChqc29uLmR1bXBzKGNvbnRlbnQsaW5kZW50PTIpKydcbicpCiBzdW1tYXJ5PXsnYXJjaGl2ZV9zaGEyNTYnOkVYUEVDVEVELCdhcmNoaXZlX2J5dGVzJzphcmNoaXZlLnN0YXQoKS5zdF9zaXplLCduYXRpdmVfaW1hZ2VzJzpsZW4oaW1hZ2VzKSwnbmF0aXZlX3N5bWJvbF9yZWNvcmRzJzpzdW0oeFsnbmF0aXZlX3N5bWJvbF9yZWNvcmRzJ10gZm9yIHggaW4gaW1hZ2VzKSwncmVzb3VyY2VfcmVjb3Jkcyc6bGVuKHJlc291cmNlcyksJ2NvbXBpbGVyX3N0YXJ0c19leGFtaW5lZCc6MzUzLCdyZXNvbHZlZF9jb250aWd1b3VzX2V4dGVudHMnOnJlc29sdmVkLCdyZW1haW5pbmdfYm91bmRhcnlfdW5rbm93bnMnOjM1My1yZXNvbHZlZCwnc291cmNlX3R5cGVzX3JlY292ZXJlZCc6RmFsc2UsJ3dob2xlX3BheWxvYWRfZGVjb21waWxlZCc6RmFsc2UsJ3dob2xlX2FwcGxpY2F0aW9uX2J1aWxkX3ZlcmlmaWVkJzpGYWxzZSwnYmVoYXZpb3JfZXF1aXZhbGVuY2VfdmVyaWZpZWQnOkZhbHNlfQogKG91dC8nc3VtbWFyeS5qc29uJykud3JpdGVfdGV4dChqc29uLmR1bXBzKHN1bW1hcnksaW5kZW50PTIpKydcbicpO3ByaW50KGpzb24uZHVtcHMoc3VtbWFyeSxpbmRlbnQ9MikpCmlmIF9fbmFtZV9fPT0nX19tYWluX18nOm1haW4oKQo='',
+        ''build_module.py'': ''IiIiQnVpbGQgb25seSB0aGUgZml2ZSBpbnN0cnVjdGlvbi1kZXJpdmVkIE1BRFNQIGZ1bmN0aW9ucyB3aXRoIHByaW9yIHRlc3QgZXZpZGVuY2UuIiIiCmltcG9ydCBwYXRobGliLHNodXRpbCxzdWJwcm9jZXNzLGpzb24saGFzaGxpYixzeXMKZnJvbSBwYXlsb2FkX2ludmVudG9yeSBpbXBvcnQgbWFjaG8Kcm9vdD1wYXRobGliLlBhdGgoc3lzLmFyZ3ZbMV0pO291dD1wYXRobGliLlBhdGgoc3lzLmFyZ3ZbMl0pO291dC5ta2RpcihwYXJlbnRzPVRydWUsZXhpc3Rfb2s9VHJ1ZSkKc291cmNlcz1bcm9vdC8nbWFkc3AvY2xpY2suYycscm9vdC8nbWFkc3Avc21hbGwuYycscm9vdC8ncHJpb3Itc291cmNlLXByZXBhcmF0aW9uL3BpbG90L21hZHNwX2ZkYzQuYyddCnJlcG9ydHM9W2pzb24ubG9hZHMoKHJvb3QvJ21hZHNwL2J1aWxkL3ZlcmlmaWNhdGlvbi5qc29uJykucmVhZF90ZXh0KCkpLGpzb24ubG9hZHMoKHJvb3QvJ21hZHNwL2J1aWxkL3NtYWxsLXZlcmlmaWNhdGlvbi5qc29uJykucmVhZF90ZXh0KCkpLGpzb24ubG9hZHMoKHJvb3QvJ3ByaW9yLXNvdXJjZS1wcmVwYXJhdGlvbi92ZXJpZmljYXRpb24uanNvbicpLnJlYWRfdGV4dCgpKV0KYXNzZXJ0IHJlcG9ydHNbMF1bJ2NvbXBpbGVkX2FybTY0X2JpdF9leGFjdF9jYXNlcyddPT0xMDI1NiBhbmQgcmVwb3J0c1swXVsnY29tcGlsZWRfYXJtNjRfbWlzbWF0Y2hfY291bnQnXT09MAphc3NlcnQgbGVuKHJlcG9ydHNbMV1bJ2Z1bmN0aW9ucyddKT09MyBhbmQgYWxsKHhbJ2JpdF9leGFjdCddIGFuZCB4WydjYXNlcyddPT0xMDI2MCBmb3IgeCBpbiByZXBvcnRzWzFdWydmdW5jdGlvbnMnXSkKYXNzZXJ0IHJlcG9ydHNbMl1bJ3Rlc3RfY2FzZXMnXT09MTAxMzAKY29tbWFuZHM9W107b2JqZWN0cz1bXTt1bmRlZmluZWQ9W107c291cmNlaW5mbz1bXQpmb3IgcCBpbiBzb3VyY2VzOgogdGFyZ2V0PW91dC8ocC5zdGVtKycuYycpO3NodXRpbC5jb3B5MihwLHRhcmdldCk7b2JqPXRhcmdldC53aXRoX3N1ZmZpeCgnLm8nKQogY21kPVsnY2xhbmcnLCctdGFyZ2V0JywnYXJtNjQtYXBwbGUtaW9zMTcuMCcsJy1mZnJlZXN0YW5kaW5nJywnLU8yJywnLWZuby1mYXN0LW1hdGgnLCctZmZwLWNvbnRyYWN0PW9mZicsJy1XYWxsJywnLVdleHRyYScsJy1XZXJyb3InLCctYycsc3RyKHRhcmdldCksJy1vJyxzdHIob2JqKV0KIHI9c3VicHJvY2Vzcy5ydW4oY21kLHRleHQ9VHJ1ZSxjYXB0dXJlX291dHB1dD1UcnVlKTtjb21tYW5kcy5hcHBlbmQoeydhcmd2JzpjbWQsJ2V4aXRfY29kZSc6ci5yZXR1cm5jb2RlLCdzdGRvdXQnOnIuc3Rkb3V0LCdzdGRlcnInOnIuc3RkZXJyfSk7ci5jaGVja19yZXR1cm5jb2RlKCkKIG09bWFjaG8ob2JqLnJlYWRfYnl0ZXMoKSk7dW5kZWZpbmVkLmV4dGVuZChzWyduYW1lJ10gZm9yIHMgaW4gbVsnc3ltYm9scyddIGlmIHNbJ3VuZGVmaW5lZCddKTtvYmplY3RzLmFwcGVuZChvYmopCiBzb3VyY2VpbmZvLmFwcGVuZCh7J3NvdXJjZSc6dGFyZ2V0Lm5hbWUsJ3NvdXJjZV9zaGEyNTYnOmhhc2hsaWIuc2hhMjU2KHRhcmdldC5yZWFkX2J5dGVzKCkpLmhleGRpZ2VzdCgpLCdvYmplY3QnOm9iai5uYW1lLCdvYmplY3Rfc2hhMjU2JzpoYXNobGliLnNoYTI1NihvYmoucmVhZF9ieXRlcygpKS5oZXhkaWdlc3QoKX0pCmFzc2VydCBub3QgdW5kZWZpbmVkLHVuZGVmaW5lZApjbWQ9WydhcicsJ3Jjcycsc3RyKG91dC8nbGlibW9iaWxlbG9naWNfbWFkc3BfdmVyaWZpZWRfc3Vic2V0LmEnKV0rbGlzdChtYXAoc3RyLG9iamVjdHMpKQpyPXN1YnByb2Nlc3MucnVuKGNtZCx0ZXh0PVRydWUsY2FwdHVyZV9vdXRwdXQ9VHJ1ZSk7Y29tbWFuZHMuYXBwZW5kKHsnYXJndic6Y21kLCdleGl0X2NvZGUnOnIucmV0dXJuY29kZSwnc3Rkb3V0JzpyLnN0ZG91dCwnc3RkZXJyJzpyLnN0ZGVycn0pO3IuY2hlY2tfcmV0dXJuY29kZSgpCnJlcG9ydD17J3NvdXJjZV9mdW5jdGlvbnMnOjUsJ29yaWdpbmFsX2luc3RydWN0aW9uX2J5dGVzJzoyMDgsJ29yaWdpbmFsX2FkZHJlc3Nlcyc6WycweGZkYzQnLCcweDEwMTcwJywnMHgyNTA1YycsJzB4MjUwNjgnLCcweDlmN2VjOCddLCdpbWFnZV9zaGEyNTYnOic4YjdjYmFhMzgzZDMwNTAyNDE5MjFlNzRkMTMzNGIyMjcwMzE5M2FmZWQ2ZWE1ZTkzODg1OTljYzQyYTYwZmU4JywnYXJ0aWZhY3Rfa2luZCc6J2lPUyBBUk02NCBzdGF0aWMgYXJjaGl2ZTsgbm90IGFuIGFwcGxpY2F0aW9uJywndW5kZWZpbmVkX29iamVjdF9zeW1ib2xzJzp1bmRlZmluZWQsJ3NvdXJjZXMnOnNvdXJjZWluZm8sJ2NvbXBpbGVfZGlhZ25vc3RpY3MnOmNvbW1hbmRzLCd3aG9sZV9hcHBfbGlua2VkJzpGYWxzZSwnd2hvbGVfYXBwX2JlaGF2aW9yX3ZlcmlmaWVkJzpGYWxzZSwndGVzdF9zY29wZSc6J1ByaW9yIGZ1bmN0aW9uLWxvY2FsIGRpZmZlcmVudGlhbCBldmlkZW5jZSByZXRhaW5lZDsgbWVtb3J5IGNvbnRyYWN0cyBhbmQgRlBDUj0wIGFwcGx5OyBubyBoYXJkd2FyZSBydW50aW1lIHZhbGlkYXRpb24nfQoob3V0LydidWlsZC1yZXBvcnQuanNvbicpLndyaXRlX3RleHQoanNvbi5kdW1wcyhyZXBvcnQsaW5kZW50PTIpKydcbicpO3ByaW50KGpzb24uZHVtcHMocmVwb3J0LGluZGVudD0yKSkK'',
+        ''SOURCE_STATUS.md'': ''IyBNb2JpbGVMb2dpYyBzb3VyY2UgcmVjb25zdHJ1Y3Rpb246IHZlcmlmaWVkIHN1YnNldCBvbmx5CgpUaGlzIHBhY2thZ2UgaXMgbm90IGEgcmVidWlsdCBNb2JpbGVMb2dpYyBhcHBsaWNhdGlvbi4gSXQgY29udGFpbnMgZml2ZSBzbWFsbAppbnN0cnVjdGlvbi1kZXJpdmVkIE1BRFNQIGZ1bmN0aW9ucyAoMjA4IG9yaWdpbmFsIGluc3RydWN0aW9uIGJ5dGVzKSwgdGhlaXIKc291cmNlIGFuZCBpT1MgQVJNNjQgc3RhdGljIGFyY2hpdmUsIGFuZCByZXRhaW5lZCBmdW5jdGlvbi1sb2NhbCB0ZXN0IGV2aWRlbmNlLgpObyBzdHVicyBhcmUgdXNlZCB0byBzYXRpc2Z5IGxpbmtpbmcgb3IgaW5mbGF0ZSBzb3VyY2UgY292ZXJhZ2UuCgpUaGUgb3JpZ2luYWwgTUFEU1AgaW1hZ2UgU0hBMjU2IGlzCmA4YjdjYmFhMzgzZDMwNTAyNDE5MjFlNzRkMTMzNGIyMjcwMzE5M2FmZWQ2ZWE1ZTkzODg1OTljYzQyYTYwZmU4YC4KRnVuY3Rpb24gbmFtZXMgcmV0YWluIG5hdGl2ZSBlbnRyeSBhZGRyZXNzZXMuIFJlYWQgdGhlIGNvbnRyYWN0cyBpbiBlYWNoIEMgZmlsZS4KVGhlIHR5cGVzIGFuZCBzdGFuZGFsb25lIG5hbWVzIGFyZSByZWNvbnN0cnVjdGlvbiBpbnRlcmZhY2VzLCBub3QgcmVjb3ZlcmVkIEMrKwpjbGFzcyBkZWNsYXJhdGlvbnMgb3IgYSByZXBsYWNlbWVudCB3aG9sZS1hcHBsaWNhdGlvbiBBQkkuCgpUaGUgRFNQIHNldHRlciBhdCBgMHg5ZjdlYzhgIG1hdGNoZWQgb3JpZ2luYWwgaW5zdHJ1Y3Rpb24gZXhlY3V0aW9uIGluIDEwLDI1NgpjYXNlcyB3aGVuIGl0cyBjb21waWxlZCBBUk02NCBvYmplY3Qgd2FzIGVtdWxhdGVkIHdpdGggRlBDUj0wLiBIb3N0IGJ1aWxkcyBoYXZlCjI1IGRpZmZlcmluZyBlZGdlIGNhc2VzIHBlciBvcHRpbWl6YXRpb24gbGV2ZWwsIHJldGFpbmVkIGluIHRoZSByZXBvcnQ7IGRvIG5vdAp1c2UgeDg2IGhvc3QgcmVzdWx0cyBhcyBwcm9vZiBvZiBBUk0gZmxvYXRpbmctcG9pbnQgaWRlbnRpdHkuIFRocmVlIGFkZGl0aW9uYWwKZnVuY3Rpb25zIGF0IGAweDEwMTcwYCwgYDB4MjUwNWNgLCBhbmQgYDB4MjUwNjhgIGVhY2ggbWF0Y2hlZCAxMCwyNjAgaG9zdCBjYXNlcyBhdApPMC9PMi9PMyBhZ2FpbnN0IG9yaWdpbmFsIGluc3RydWN0aW9uIGVtdWxhdGlvbi4gVGhlIG9yaWdpbmFsIGxlYWYgcGlsb3QgYXQKYDB4ZmRjNGAgcGFzc2VkIDEwLDEzMCBjYXNlcy4gRW11bGF0aW9uIGRvZXMgbm90IGVzdGFibGlzaCBoYXJkd2FyZSwgRlAgdHJhcC9zdGF0dXMsCmNvbmN1cnJlbmN5LCBpbnZhbGlkLW1lbW9yeSwgT1MtcnVudGltZSwgb3Igd2hvbGUtcHJvZ3JhbSBlcXVpdmFsZW5jZS4KClRoZSBvcmlnaW5hbCAzNCBjYW5kaWRhdGUgcmVjb3JkcyBhcmUgMzAgaW1wbGVtZW50YXRpb24gY2FuZGlkYXRlcywgdHdvCmZvcndhcmRpbmcgdGh1bmtzLCBhbmQgdHdvIHJlYWwgaW1wb3J0IHN0dWJzLiBJbXBvcnQgc3R1YnMgYW5kIHRodW5rIGRlc3RpbmF0aW9uCnBzZXVkb2NvZGUgbXVzdCBub3QgYmUgY291bnRlZCBhcyBuZXdseSByZWNvdmVyZWQgaW1wbGVtZW50YXRpb25zLiBTeW50aGV0aWMKaW1wb3J0IGFsaWFzZXMgYW5kIGBoYWx0X2JhZGRhdGFgIHBsYWNlaG9sZGVycyByZW1haW4gZXhjbHVkZWQuCgpUaGUgU3RhY2stZGlzYWJsZWQgcmV0cnkgcHJvZmlsZSByZWNvdmVyZWQgbm8gbmV3IHBzZXVkb2NvZGUuIEl0cyAxMiB1bnJlc29sdmVkCnJlY29yZHMgaW5jbHVkZSBhIGZvdXItYnl0ZSB0aHVuayBhdCBgMHg4YWZhYzBgIGZvcndhcmRpbmcgdG8gdGhlIHVucmVzb2x2ZWQKYDB4ODk2MWE4YCBmdW5jdGlvbi4gVGhlIGZpbmFsIHBlcm1pdHRlZCBwcm9maWxlIHJldHJpZXMgb25seSAxMSBkaXN0aW5jdAppbXBsZW1lbnRhdGlvbiB0YXJnZXRzLCBvbmNlIGVhY2g7IGl0IGRpc2FibGVzIGF1dG9tYXRpYyBkYXRhIGFyY2hpdmVzIGFuZApkZWNvbXBpbGVyIHN3aXRjaCBhbmFseXNpcyBpbiBhZGRpdGlvbiB0byB0aGUgcHJldmlvdXMgYW5hbHl6ZXIgZXhjbHVzaW9ucy4KTm8gbW9yZSBwcm9maWxlIHJldHJpZXMgYXJlIGF1dGhvcml6ZWQgYnkgdGhpcyB0YXNrIGFmdGVyIHRoYXQgcHJvZmlsZS4KClRoZSBpbnZlbnRvcnkgaXMgYW4gb3JpZ2luYWwtYnl0ZSBvYnNlcnZhdGlvbiwgbm90IHJlY29uc3RydWN0ZWQgc291cmNlOgoKLSBgbmF0aXZlLWltYWdlcy5qc29uYDogb3JpZ2luYWwgaGFzaGVzLCBzZWN0aW9ucywgVVVJRHMsIGltcG9ydHMgYW5kIHJwYXRocy4KLSBgc3ltYm9scy5qc29ubGA6IG9ic2VydmVkIG5hdGl2ZSBzeW1ib2wtdGFibGUgZW50cmllcywgbm90IGluZmVycmVkIHR5cGVzLgotIGByZXNvdXJjZXMuanNvbmA6IHJlc291cmNlL21ldGFkYXRhIHBhdGhzIGFuZCBoYXNoZXMsIG5vdCByZWdlbmVyYXRlZCByZXNvdXJjZXMuCi0gYGJ1bmRsZXMuanNvbmA6IHNlbGVjdGVkIGZpZWxkcyBmcm9tIG9yaWdpbmFsIGJ1bmRsZSBJbmZvLnBsaXN0cy4KLSBgY29tcGlsZXItYm91bmRhcmllcy5qc29uYDogY29uc2VydmF0aXZlIGNvbnRpZ3VvdXMgZXh0ZW50cyBvciBleHBsaWNpdCB1bmtub3ducy4KLSBgc3VtbWFyeS5qc29uYDogY3VycmVudCBleGFjdC1ib3VuZGFyeSBjb3VudHMsIHdpdGggc291cmNlL2J1aWxkIGxpbWl0cyBleHBsaWNpdC4KCkEgcmVzb2x2ZWQgY29tcGlsZXIgZXh0ZW50IGVzdGFibGlzaGVzIGFuIG9yaWdpbmFsIGNvbnRpZ3VvdXMgaW5zdHJ1Y3Rpb24gcmFuZ2UsCm5vdCBpdHMgdHlwZXMsIGNvbXBsZXRlIGV4Y2VwdGlvbiBiZWhhdmlvciwgY29ycmVjdCBzb3VyY2UsIG9yIGJlaGF2aW9yYWwgaWRlbnRpdHkuClVucmVzb2x2ZWQgaW5kaXJlY3QgZXhpdHMsIGV4dGVybmFsIGNvbmRpdGlvbmFsIGJyYW5jaGVzLCB1bmRlY29kYWJsZSBieXRlcywKdW5yZWFjaGFibGUgZnJhZ21lbnRzIGFuZCBtaXNzaW5nIHVwcGVyIGJvdW5kcyByZW1haW4gdW5rbm93bi4K'',
+        ''stack-profile-summary.json'': ''WwogIHsKICAgICJpbWFnZSI6ICJGcmFtZXdvcmtzL0xvZ2ljLmZyYW1ld29yay9Mb2dpYyIsCiAgICAiaW1hZ2Vfc2hhMjU2IjogIjhkYzAxNjljMmQyYmQwYjE1YTQ4MzQwYTlmMWMxNTA4MzE1Y2QzM2EyY2NlM2Y0OTcwNGRlNWJhNTE3MzQyODciLAogICAgImFkZHJlc3MiOiAiMHg4YjQ5M2MiLAogICAgInN0YXR1cyI6ICJ1bnJlc29sdmVkIiwKICAgICJwc2V1ZG9jb2RlIjogImZhaWxlZCIsCiAgICAidXNhYmxlX2NhbmRpZGF0ZSI6IGZhbHNlLAogICAgImlucHV0X3NoYTI1Nl91bmNoYW5nZWQiOiB0cnVlLAogICAgInJldHJ5X3Byb2ZpbGVfaWQiOiAic3RhY2stZGlzYWJsZWQtMjAyNjEwMTUiLAogICAgImZ1cnRoZXJfcHJvZmlsZV9udW1iZXIiOiAxCiAgfSwKICB7CiAgICAiaW1hZ2UiOiAiRnJhbWV3b3Jrcy9NQUNvcmUuZnJhbWV3b3JrL01BQ29yZSIsCiAgICAiaW1hZ2Vfc2hhMjU2IjogIjg4YThkOTNjNmNiNGI0MTE2NDg2MDFlZmRmYzVjYTI4NjNjM2I4MzMzMzllNTVlMjQ3MDM2OWRmMWQzYmM5ZDUiLAogICAgImFkZHJlc3MiOiAiMHgzYzE0NCIsCiAgICAic3RhdHVzIjogInVucmVzb2x2ZWQiLAogICAgInBzZXVkb2NvZGUiOiAiZmFpbGVkIiwKICAgICJ1c2FibGVfY2FuZGlkYXRlIjogZmFsc2UsCiAgICAiaW5wdXRfc2hhMjU2X3VuY2hhbmdlZCI6IHRydWUsCiAgICAicmV0cnlfcHJvZmlsZV9pZCI6ICJzdGFjay1kaXNhYmxlZC0yMDI2MTAxNSIsCiAgICAiZnVydGhlcl9wcm9maWxlX251bWJlciI6IDEKICB9LAogIHsKICAgICJpbWFnZSI6ICJGcmFtZXdvcmtzL01BQ29yZS5mcmFtZXdvcmsvTUFDb3JlIiwKICAgICJpbWFnZV9zaGEyNTYiOiAiODhhOGQ5M2M2Y2I0YjQxMTY0ODYwMWVmZGZjNWNhMjg2M2MzYjgzMzMzOWU1NWUyNDcwMzY5ZGYxZDNiYzlkNSIsCiAgICAiYWRkcmVzcyI6ICIweGM2ZDY0IiwKICAgICJzdGF0dXMiOiAidW5yZXNvbHZlZCIsCiAgICAicHNldWRvY29kZSI6ICJmYWlsZWQiLAogICAgInVzYWJsZV9jYW5kaWRhdGUiOiBmYWxzZSwKICAgICJpbnB1dF9zaGEyNTZfdW5jaGFuZ2VkIjogdHJ1ZSwKICAgICJyZXRyeV9wcm9maWxlX2lkIjogInN0YWNrLWRpc2FibGVkLTIwMjYxMDE1IiwKICAgICJmdXJ0aGVyX3Byb2ZpbGVfbnVtYmVyIjogMQogIH0sCiAgewogICAgImltYWdlIjogIkZyYW1ld29ya3MvTUFEU1AuZnJhbWV3b3JrL01BRFNQIiwKICAgICJpbWFnZV9zaGEyNTYiOiAiOGI3Y2JhYTM4M2QzMDUwMjQxOTIxZTc0ZDEzMzRiMjI3MDMxOTNhZmVkNmVhNWU5Mzg4NTk5Y2M0MmE2MGZlOCIsCiAgICAiYWRkcmVzcyI6ICIweDQ0OWNmMCIsCiAgICAic3RhdHVzIjogInVucmVzb2x2ZWQiLAogICAgInBzZXVkb2NvZGUiOiAiZmFpbGVkIiwKICAgICJ1c2FibGVfY2FuZGlkYXRlIjogZmFsc2UsCiAgICAiaW5wdXRfc2hhMjU2X3VuY2hhbmdlZCI6IHRydWUsCiAgICAicmV0cnlfcHJvZmlsZV9pZCI6ICJzdGFjay1kaXNhYmxlZC0yMDI2MTAxNSIsCiAgICAiZnVydGhlcl9wcm9maWxlX251bWJlciI6IDEKICB9LAogIHsKICAgICJpbWFnZSI6ICJGcmFtZXdvcmtzL01BRFNQLmZyYW1ld29yay9NQURTUCIsCiAgICAiaW1hZ2Vfc2hhMjU2IjogIjhiN2NiYWEzODNkMzA1MDI0MTkyMWU3NGQxMzM0YjIyNzAzMTkzYWZlZDZlYTVlOTM4ODU5OWNjNDJhNjBmZTgiLAogICAgImFkZHJlc3MiOiAiMHg4OTYxYTgiLAogICAgInN0YXR1cyI6ICJ1bnJlc29sdmVkIiwKICAgICJwc2V1ZG9jb2RlIjogImZhaWxlZCIsCiAgICAidXNhYmxlX2NhbmRpZGF0ZSI6IGZhbHNlLAogICAgImlucHV0X3NoYTI1Nl91bmNoYW5nZWQiOiB0cnVlLAogICAgInJldHJ5X3Byb2ZpbGVfaWQiOiAic3RhY2stZGlzYWJsZWQtMjAyNjEwMTUiLAogICAgImZ1cnRoZXJfcHJvZmlsZV9udW1iZXIiOiAxCiAgfSwKICB7CiAgICAiaW1hZ2UiOiAiRnJhbWV3b3Jrcy9NQURTUC5mcmFtZXdvcmsvTUFEU1AiLAogICAgImltYWdlX3NoYTI1NiI6ICI4YjdjYmFhMzgzZDMwNTAyNDE5MjFlNzRkMTMzNGIyMjcwMzE5M2FmZWQ2ZWE1ZTkzODg1OTljYzQyYTYwZmU4IiwKICAgICJhZGRyZXNzIjogIjB4OGFmYWMwIiwKICAgICJzdGF0dXMiOiAidW5yZXNvbHZlZCIsCiAgICAicHNldWRvY29kZSI6ICJmYWlsZWQiLAogICAgInVzYWJsZV9jYW5kaWRhdGUiOiBmYWxzZSwKICAgICJpbnB1dF9zaGEyNTZfdW5jaGFuZ2VkIjogdHJ1ZSwKICAgICJyZXRyeV9wcm9maWxlX2lkIjogInN0YWNrLWRpc2FibGVkLTIwMjYxMDE1IiwKICAgICJmdXJ0aGVyX3Byb2ZpbGVfbnVtYmVyIjogMQogIH0sCiAgewogICAgImltYWdlIjogIkZyYW1ld29ya3MvTUFEU1AuZnJhbWV3b3JrL01BRFNQIiwKICAgICJpbWFnZV9zaGEyNTYiOiAiOGI3Y2JhYTM4M2QzMDUwMjQxOTIxZTc0ZDEzMzRiMjI3MDMxOTNhZmVkNmVhNWU5Mzg4NTk5Y2M0MmE2MGZlOCIsCiAgICAiYWRkcmVzcyI6ICIweDhjYjE0OCIsCiAgICAic3RhdHVzIjogInVucmVzb2x2ZWQiLAogICAgInBzZXVkb2NvZGUiOiAiZmFpbGVkIiwKICAgICJ1c2FibGVfY2FuZGlkYXRlIjogZmFsc2UsCiAgICAiaW5wdXRfc2hhMjU2X3VuY2hhbmdlZCI6IHRydWUsCiAgICAicmV0cnlfcHJvZmlsZV9pZCI6ICJzdGFjay1kaXNhYmxlZC0yMDI2MTAxNSIsCiAgICAiZnVydGhlcl9wcm9maWxlX251bWJlciI6IDEKICB9LAogIHsKICAgICJpbWFnZSI6ICJGcmFtZXdvcmtzL01BRFNQLmZyYW1ld29yay9NQURTUCIsCiAgICAiaW1hZ2Vfc2hhMjU2IjogIjhiN2NiYWEzODNkMzA1MDI0MTkyMWU3NGQxMzM0YjIyNzAzMTkzYWZlZDZlYTVlOTM4ODU5OWNjNDJhNjBmZTgiLAogICAgImFkZHJlc3MiOiAiMHhhOTQ2YyIsCiAgICAic3RhdHVzIjogInVucmVzb2x2ZWQiLAogICAgInBzZXVkb2NvZGUiOiAiZmFpbGVkIiwKICAgICJ1c2FibGVfY2FuZGlkYXRlIjogZmFsc2UsCiAgICAiaW5wdXRfc2hhMjU2X3VuY2hhbmdlZCI6IHRydWUsCiAgICAicmV0cnlfcHJvZmlsZV9pZCI6ICJzdGFjay1kaXNhYmxlZC0yMDI2MTAxNSIsCiAgICAiZnVydGhlcl9wcm9maWxlX251bWJlciI6IDEKICB9LAogIHsKICAgICJpbWFnZSI6ICJGcmFtZXdvcmtzL01BR2VuZXJhdGl2ZUluc3RydW1lbnRzLmZyYW1ld29yay9NQUdlbmVyYXRpdmVJbnN0cnVtZW50cyIsCiAgICAiaW1hZ2Vfc2hhMjU2IjogImNmMmUzZGMwYjIzM2U2ZTFhODc4YTQwNDAwOTU0OTRkNTdiMGFiOTdiOGVkNDYxYjE2OTYwZDIzMmQ2ZDEwZDciLAogICAgImFkZHJlc3MiOiAiMHg3Nzg1OCIsCiAgICAic3RhdHVzIjogInVucmVzb2x2ZWQiLAogICAgInBzZXVkb2NvZGUiOiAiZmFpbGVkIiwKICAgICJ1c2FibGVfY2FuZGlkYXRlIjogZmFsc2UsCiAgICAiaW5wdXRfc2hhMjU2X3VuY2hhbmdlZCI6IHRydWUsCiAgICAicmV0cnlfcHJvZmlsZV9pZCI6ICJzdGFjay1kaXNhYmxlZC0yMDI2MTAxNSIsCiAgICAiZnVydGhlcl9wcm9maWxlX251bWJlciI6IDEKICB9LAogIHsKICAgICJpbWFnZSI6ICJGcmFtZXdvcmtzL01BR2VuZXJhdGl2ZUluc3RydW1lbnRzLmZyYW1ld29yay9NQUdlbmVyYXRpdmVJbnN0cnVtZW50cyIsCiAgICAiaW1hZ2Vfc2hhMjU2IjogImNmMmUzZGMwYjIzM2U2ZTFhODc4YTQwNDAwOTU0OTRkNTdiMGFiOTdiOGVkNDYxYjE2OTYwZDIzMmQ2ZDEwZDciLAogICAgImFkZHJlc3MiOiAiMHhlZWNiOCIsCiAgICAic3RhdHVzIjogInVucmVzb2x2ZWQiLAogICAgInBzZXVkb2NvZGUiOiAiZmFpbGVkIiwKICAgICJ1c2FibGVfY2FuZGlkYXRlIjogZmFsc2UsCiAgICAiaW5wdXRfc2hhMjU2X3VuY2hhbmdlZCI6IHRydWUsCiAgICAicmV0cnlfcHJvZmlsZV9pZCI6ICJzdGFjay1kaXNhYmxlZC0yMDI2MTAxNSIsCiAgICAiZnVydGhlcl9wcm9maWxlX251bWJlciI6IDEKICB9LAogIHsKICAgICJpbWFnZSI6ICJGcmFtZXdvcmtzL01BUGx1Z0luR1VJLmZyYW1ld29yay9NQVBsdWdJbkdVSSIsCiAgICAiaW1hZ2Vfc2hhMjU2IjogIjc0Y2FlYzcyNDA3NzljOWJlMjVkNGRiZjlmZGU1NzRhMjc4M2M4MTkyY2NhMjYyODY2YjE1MTFiYjAxZmUxYjQiLAogICAgImFkZHJlc3MiOiAiMHgyNTIxMCIsCiAgICAic3RhdHVzIjogInVucmVzb2x2ZWQiLAogICAgInBzZXVkb2NvZGUiOiAiZmFpbGVkIiwKICAgICJ1c2FibGVfY2FuZGlkYXRlIjogZmFsc2UsCiAgICAiaW5wdXRfc2hhMjU2X3VuY2hhbmdlZCI6IHRydWUsCiAgICAicmV0cnlfcHJvZmlsZV9pZCI6ICJzdGFjay1kaXNhYmxlZC0yMDI2MTAxNSIsCiAgICAiZnVydGhlcl9wcm9maWxlX251bWJlciI6IDEKICB9LAogIHsKICAgICJpbWFnZSI6ICJGcmFtZXdvcmtzL01BUGx1Z0luR1VJLmZyYW1ld29yay9NQVBsdWdJbkdVSSIsCiAgICAiaW1hZ2Vfc2hhMjU2IjogIjc0Y2FlYzcyNDA3NzljOWJlMjVkNGRiZjlmZGU1NzRhMjc4M2M4MTkyY2NhMjYyODY2YjE1MTFiYjAxZmUxYjQiLAogICAgImFkZHJlc3MiOiAiMHgyNjM5MCIsCiAgICAic3RhdHVzIjogInVucmVzb2x2ZWQiLAogICAgInBzZXVkb2NvZGUiOiAiZmFpbGVkIiwKICAgICJ1c2FibGVfY2FuZGlkYXRlIjogZmFsc2UsCiAgICAiaW5wdXRfc2hhMjU2X3VuY2hhbmdlZCI6IHRydWUsCiAgICAicmV0cnlfcHJvZmlsZV9pZCI6ICJzdGFjay1kaXNhYmxlZC0yMDI2MTAxNSIsCiAgICAiZnVydGhlcl9wcm9maWxlX251bWJlciI6IDEKICB9Cl0=''}
+
+        for name,data in assets.items():pathlib.Path(name).write_bytes(base64.b64decode(data))
+
+        '
+    - name: Download unchanged original archive
+      run: 'curl -fL --retry 3 -o MobileLogic.zip https://github.com/otsrub/test/releases/download/mobilelogic-3.4-archive/MobileLogic.zip
+
+        python -m pip install capstone==5.0.6'
+    - name: Inventory original bytes and resolve conservative compiler extents
+      run: python payload_inventory.py MobileLogic.zip triage/compiler-start-triage.json reconstruction/inventory
+    - name: Build five-function real iOS ARM64 static module without replacement stubs
+      run: python build_module.py prior-source reconstruction/module
+    - name: Preserve source, evidence and exact limits
+      if: always()
+      run: 'mkdir -p reconstruction
+
+        cp -R prior-source reconstruction/prior-source
+
+        cp -R profile-checkpoints reconstruction/stack-profile-checkpoints
+
+        cp SOURCE_STATUS.md stack-profile-summary.json payload_inventory.py build_module.py reconstruction/'
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: rea-payload-inventory-and-five-function-module
+        path: reconstruction/
+        if-no-files-found: error
+        retention-days: 90
+  last-target-profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      REA_GHIDRA_DISABLED_ANALYZERS: Objective-C Message Analyzer,Objective-C Type Metadata Analyzer,Demangler GNU,Call Convention
+        ID,Stack,Apply Data Archives,Decompiler Switch Analysis,Decompiler Switch Analysis - One Time
+      REA_GHIDRA_STARTUP_TIMEOUT_MS: '2400000'
+      GHIDRA_HEADLESS_MAXMEM: 3G
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-original-input-${{ matrix.target.short }}
+        path: input/
+        run-id: '38670888947'
+        github-token: ${{ github.token }}
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-source-preparation-and-leaf-verification
+        run-id: '38685299502'
+        github-token: ${{ github.token }}
+        path: checkpoint
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: rea-stack-disabled-*
+        run-id: '38692191730'
+        github-token: ${{ github.token }}
+        path: previous
+        merge-multiple: false
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: '21'
+    - name: Install verified analysis engines
+      run: 'mkdir -p tools evidence runtime-tmp
+
+        curl -fL --retry 3 -o ghidra.zip https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip
+
+        printf ''%s  %s\n'' ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db ghidra.zip | sha256sum -c -
+
+        unzip -q ghidra.zip -d tools
+
+        npm install --prefix rea-tool --no-audit --no-fund rea-agents@6.5.0
+
+        echo "GHIDRA_INSTALL_DIR=$PWD/tools/ghidra_12.1.4_PUBLIC" >> "$GITHUB_ENV"
+
+        echo "TMPDIR=$PWD/runtime-tmp" >> "$GITHUB_ENV"
+
+
+        test -f rea-tool/node_modules/rea-agents/bridge/ghidra/ReaGhidraAnalysisOptions.java
+
+        node -e "const p=require(''./rea-tool/node_modules/rea-agents/package.json'');if(p.version!==''6.5.0'')process.exit(1)"
+
+        '
+    - name: Write and validate single-target recovery client
+      run: "mkdir -p recovery evidence\ncat > recovery/one.mjs <<'SOURCE'\nimport {Client} from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/index.mjs';\n\
+        import {StdioClientTransport} from '../rea-tool/node_modules/@modelcontextprotocol/client/dist/stdio.mjs';\nimport\
+        \ fs from 'node:fs/promises';\nimport {createWriteStream} from 'node:fs';\nimport {createHash} from 'node:crypto';\n\
+        import {createGzip} from 'node:zlib';\nimport {pipeline} from 'node:stream/promises';\nimport {once} from 'node:events';\n\
+        import path from 'node:path';\n\nexport function normalizeNative(a){if(typeof a!=='string'||!/^0x[0-9a-f]+$/i.test(a))return\
+        \ null;return '0x'+BigInt(a).toString(16);}\nexport function admitExact(info,target){return info && normalizeNative(info.entrypoint)===normalizeNative(target)&&info.classification?.external!==true;}\n\
+        export function usablePseudo(pseudo,assembly,exact){return Boolean(exact&&typeof pseudo==='string'&&pseudo.trim()&&!pseudo.includes('halt_baddata')&&typeof\
+        \ assembly==='string'&&/^\\s*0x[0-9a-f]+:/im.test(assembly));}\nif(process.env.REA_TEST_IMPORT==='1'){}else{await\
+        \ main();}\nasync function main(){\n const target=JSON.parse(process.env.TARGET_ROW);if(!normalizeNative(target.address))throw\
+        \ new Error('Non-native target rejected');\n const allowed=JSON.parse(await fs.readFile('checkpoint/remaining-targets.json','utf8'));if(!allowed.some(r=>r.image_sha256===target.sha256&&normalizeNative(r.address)===normalizeNative(target.address)&&!r.usable_candidate))throw\
+        \ new Error('Not an unresolved checkpoint target');\n const previous=[];for(const folder of await fs.readdir('previous')){const\
+        \ r=JSON.parse(await fs.readFile(path.join('previous',folder,'result.json'),'utf8'));if(r.image_sha256===target.sha256&&normalizeNative(r.address)===normalizeNative(target.address))previous.push(r);}if(previous.length!==1||previous[0].usable_candidate||!previous[0].input_sha256_unchanged||previous[0].further_profile_number!==1)throw\
+        \ new Error('Final-profile checkpoint guard rejected target');\n const meta=JSON.parse(await fs.readFile('input/image.json','utf8'));if(meta.sha256!==target.sha256||meta.image!==target.image)throw\
+        \ new Error('Input identity mismatch');\n const binary=await fs.readFile('input/target.bin');if(createHash('sha256').update(binary).digest('hex')!==target.sha256)throw\
+        \ new Error('Input SHA256 mismatch');\n await fs.mkdir('evidence',{recursive:true});\n const result={image:target.image,image_sha256:target.sha256,address:normalizeNative(target.address),status:'running',retry_profile_id:'no-archives-no-switch-20261015',further_profile_number:2,rea_version:'6.5.0',analysis_profile_override:{disabled_analyzers:process.env.REA_GHIDRA_DISABLED_ANALYZERS.split(',')},max_new_attempts:1,info:'not_attempted',assembly:'not_attempted',pseudocode:'not_attempted',usable_candidate:false,errors:[],semantic_equivalence_verified:false,original_bytes_modified:false};\n\
+        \ const save=()=>fs.writeFile('evidence/result.json',JSON.stringify(result,null,2));await save();\n const zip=createGzip({level:6});const\
+        \ completed=pipeline(zip,createWriteStream('evidence/rea-evidence.jsonl.gz'));completed.catch(()=>{});\n const serverLog=createWriteStream('evidence/server.log');await\
+        \ once(serverLog,'open');\n const transport=new StdioClientTransport({command:process.execPath,args:[path.resolve('rea-tool/node_modules/rea-agents/scripts/rea.mjs'),'--mcp'],env:{...process.env,REA_MCP_MAX_RESPONSE_BYTES:'67108864',NODE_OPTIONS:'--max-old-space-size=6144'},stderr:serverLog,maxBufferSize:67108864});\n\
+        \ const client=new Client({name:'mobilelogic-targeted-analysis-profile-repair',version:'1.0.0'});let connected=false;let\
+        \ timedOut=false;\n async function record(v){if(!zip.write(JSON.stringify(v)+'\\n'))await once(zip,'drain');}\n async\
+        \ function call(name,args,timeout){\n  await fs.writeFile('evidence/active-call.json',JSON.stringify({name,args,timeout,started_utc:new\
+        \ Date().toISOString()}));console.log(JSON.stringify({event:'call',name,address:args.procedure??null}));\n  const\
+        \ controller=new AbortController();let timer;\n  try{\n   const response=await Promise.race([client.callTool({name,arguments:args},{timeout,resetTimeoutOnProgress:false,maxTotalTimeout:timeout,signal:controller.signal}),new\
+        \ Promise((_,reject)=>{timer=setTimeout(()=>{timedOut=true;controller.abort();reject(new Error('Hard request deadline\
+        \ exceeded: '+name));},timeout);})]);\n   let value=response.structuredContent;if(value===undefined){const text=response.content?.filter(c=>c.type==='text').map(c=>c.text).join('');value=JSON.parse(text);}\n\
+        \   await record({tool:name,arguments:args,result:value,isError:Boolean(response.isError)});\n   if(response.isError||value.error){let\
+        \ err=new Error(value.error?.message??'Provider error');err.details=value.error??value;throw err;}\n   const digest=value.subject?.digest?.sha256;if((name!=='open_binary'||digest!==undefined)&&digest!==target.sha256)throw\
+        \ new Error('Evidence subject SHA256 mismatch or missing identity');\n   return value.normalized_result;\n  }finally{clearTimeout(timer);}\n\
+        \ }\n try{\n  await client.connect(transport);connected=true;\n  const available=new Set((await client.listTools()).tools.map(t=>t.name));for(const\
+        \ name of ['open_binary','procedure_info','procedure_assembly','procedure_pseudo_code'])if(!available.has(name))throw\
+        \ new Error('Required REA tool absent: '+name);\n  await call('open_binary',{path:path.resolve('input/target.bin'),provider_id:'ghidra'},2400000);\n\
+        \  let info,assembly,pseudo;\n  try{info=await call('procedure_info',{procedure:target.address},2400000);await fs.writeFile('evidence/procedure-info.json',JSON.stringify(info,null,2));result.info='recovered';result.exact_entry=admitExact(info,target.address);await\
+        \ save();}\n  catch(e){result.info='failed';result.errors.push({tool:'procedure_info',message:e.message,details:e.details});await\
+        \ save();throw e;}\n  if(!result.exact_entry){result.status='not_an_exact_native_procedure';result.resolved_entry=info?.entrypoint??null;await\
+        \ save();return;}\n  // Preserve assembly before entering the decompiler, so a timeout cannot discard it.\n  try{assembly=await\
+        \ call('procedure_assembly',{procedure:target.address},120000);await fs.writeFile('evidence/assembly.txt',typeof assembly==='string'?assembly:JSON.stringify(assembly));result.assembly=typeof\
+        \ assembly==='string'&&assembly.trim()?'recovered':'empty';await save();}\n  catch(e){result.assembly='failed';result.errors.push({tool:'procedure_assembly',message:e.message,details:e.details});await\
+        \ save();if(timedOut)throw e;}\n  try{pseudo=await call('procedure_pseudo_code',{procedure:target.address},360000);result.pseudocode=typeof\
+        \ pseudo==='string'&&pseudo.trim()?'recovered':'empty';await fs.writeFile('evidence/pseudocode.c',typeof pseudo==='string'?pseudo:JSON.stringify(pseudo));result.usable_candidate=usablePseudo(pseudo,assembly,result.exact_entry);await\
+        \ save();}\n  catch(e){result.pseudocode='failed';result.errors.push({tool:'procedure_pseudo_code',message:e.message,details:e.details});await\
+        \ save();}\n  result.status=result.usable_candidate?'pseudocode_candidate_recovered':'unresolved';\n }catch(e){result.status='unresolved';if(!result.errors.some(x=>x.message===e.message))result.errors.push({tool:'session',message:e.message});}\n\
+        \ finally{\n  result.finished_utc=new Date().toISOString();await save();\n  if(connected&&!timedOut){try{await client.callTool({name:'close_binary',arguments:{}},{timeout:5000});}catch{}}\n\
+        \  await Promise.race([client.close().catch(()=>{}),new Promise(r=>setTimeout(r,10000))]);serverLog.end();zip.end();await\
+        \ completed;\n  const unchanged=createHash('sha256').update(await fs.readFile('input/target.bin')).digest('hex')===target.sha256;result.input_sha256_unchanged=unchanged;if(!unchanged)result.status='input_identity_failure';await\
+        \ save();\n  await fs.appendFile(process.env.GITHUB_STEP_SUMMARY,'Target '+target.image+' '+target.address+': '+result.status+'\\\
+        n\\nPseudocode candidates require semantic verification.\\n');\n  console.log(JSON.stringify({image:target.image,address:target.address,status:result.status}));if(!result.usable_candidate||!unchanged)process.exitCode=1;\n\
+        \ }\n}\n\nSOURCE\nnode --check recovery/one.mjs\n"
+    - name: Attempt one exact unresolved function with alternate analysis profile
+      env:
+        TARGET_ROW: ${{ toJSON(matrix.target) }}
+      run: timeout --signal=TERM --kill-after=30s 48m node recovery/one.mjs
+    - name: Record profile admission
+      id: status
+      if: always()
+      run: 'python - <<''PY''
+
+        import json,pathlib,os
+
+        p=pathlib.Path(''evidence/result.json'');r=json.loads(p.read_text()) if p.exists() else {}
+
+        ready=r.get(''info'')==''recovered'' and r.get(''exact_entry'') is True
+
+        with open(os.environ[''GITHUB_OUTPUT''],''a'') as f:print(''profile_ready=''+str(ready).lower(),file=f)
+
+        PY
+
+        '
+    - name: Retain address-specific evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: rea-final-profile-${{ matrix.target.slug }}
+        path: evidence/
+        if-no-files-found: error
+        retention-days: 90
+    if: ${{ github.run_attempt == 1 }}
+    name: final-profile ${{ matrix.target.slug }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        target:
+        - image: Frameworks/MAPlugInGUI.framework/MAPlugInGUI
+          sha256: 74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4
+          address: '0x25210'
+          short: maplugingui
+          slug: maplugingui-25210
+        - image: Frameworks/MAPlugInGUI.framework/MAPlugInGUI
+          sha256: 74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4
+          address: '0x26390'
+          short: maplugingui
+          slug: maplugingui-26390
+        - image: Frameworks/MACore.framework/MACore
+          sha256: 88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5
+          address: '0x3c144'
+          short: macore
+          slug: macore-3c144
+        - image: Frameworks/MACore.framework/MACore
+          sha256: 88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5
+          address: '0xc6d64'
+          short: macore
+          slug: macore-c6d64
+        - image: Frameworks/MADSP.framework/MADSP
+          sha256: 8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8
+          address: '0x449cf0'
+          short: madsp
+          slug: madsp-449cf0
+        - image: Frameworks/MADSP.framework/MADSP
+          sha256: 8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8
+          address: '0x8961a8'
+          short: madsp
+          slug: madsp-8961a8
+        - image: Frameworks/MADSP.framework/MADSP
+          sha256: 8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8
+          address: '0x8cb148'
+          short: madsp
+          slug: madsp-8cb148
+        - image: Frameworks/MADSP.framework/MADSP
+          sha256: 8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8
+          address: '0xa946c'
+          short: madsp
+          slug: madsp-a946c
+        - image: Frameworks/Logic.framework/Logic
+          sha256: 8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287
+          address: '0x8b493c'
+          short: logic
+          slug: logic-8b493c
+        - image: Frameworks/MAGenerativeInstruments.framework/MAGenerativeInstruments
+          sha256: cf2e3dc0b233e6e1a878a4040095494d57b0ab97b8ed461b16960d232d6d10d7
+          address: '0x77858'
+          short: magenerativeinstruments
+          slug: magenerativeinstruments-77858
+        - image: Frameworks/MAGenerativeInstruments.framework/MAGenerativeInstruments
+          sha256: cf2e3dc0b233e6e1a878a4040095494d57b0ab97b8ed461b16960d232d6d10d7
+          address: '0xeecb8'
+          short: magenerativeinstruments
+          slug: magenerativeinstruments-eecb8
