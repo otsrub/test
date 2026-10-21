@@ -140,7 +140,6 @@ jobs:
         if (![2, 30, 60, 180, 300].includes(minutes)) throw new Error('Invalid session length');
         if (!password || password.length < 24) throw new Error('Create the BOTXRAY_SESSION_PASSWORD repository secret first');
         const auth = 'Basic ' + Buffer.from(`botxray:${password}`).toString('base64');
-        console.log(`::add-mask::${auth}`);
         const childEnv = { PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR || '/tmp', HOST: '127.0.0.1', PORT: '3797', BOTXRAY_NO_OPEN: '1', BOTXRAY_BROKER: 'stub', BOTXRAY_KEY_MODE: 'paper' };
         fs.mkdirSync('session-results', { recursive: true });
         const log = fs.openSync('session-results/server.log', 'a');
@@ -350,7 +349,36 @@ jobs:
     - name: Open the protected full app (link appears in summary)
       env:
         SESSION_PASSWORD: ${{ secrets.BOTXRAY_SESSION_PASSWORD }}
-      run: node bot-x-ray-actions/session.mjs
+      run: |-
+        set -euo pipefail
+        mkdir -p session-results
+        (
+          set +e
+          node bot-x-ray-actions/session.mjs > session-results/session.log 2>&1
+          echo $? > session-results/session.exit
+        ) &
+        for attempt in $(seq 1 180); do
+          if [ -f session-results/session.json ]; then
+            node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync("session-results/session.json")); console.log("Open Bot X-Ray: " + s.url); console.log("Session ends: " + s.end);'
+            exit 0
+          fi
+          if [ -f session-results/session.exit ]; then
+            cat session-results/session.log
+            exit 1
+          fi
+          sleep 1
+        done
+        cat session-results/session.log
+        exit 1
+    - name: Keep the app open until the session ends
+      shell: bash
+      run: |
+        set -euo pipefail
+        while [ ! -f session-results/session.exit ]; do
+          sleep 10
+        done
+        cat session-results/session.log
+        exit "$(cat session-results/session.exit)"
     - name: Encrypt and save settings, paper trades, and session logs
       if: always()
       env:
