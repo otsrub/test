@@ -1,0 +1,52 @@
+name: Start the $15 simulated account
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: bot-x-ray-paper-budget
+  cancel-in-progress: false
+jobs:
+  restart-paper-session:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Save the current paper session before starting its replacement
+        env:
+          SESSION_PASSWORD: ${{ secrets.BOTXRAY_SESSION_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node --input-type=module <<'SAVE'
+          const api = `https://api.github.com/repos/${process.env.REPOSITORY}/actions/runs/39663049700`;
+          const headers = { authorization: `Bearer ${process.env.GH_TOKEN}`, accept: 'application/vnd.github+json' };
+          async function currentRun() {
+            const r = await fetch(api, { headers, signal: AbortSignal.timeout(15000) });
+            if (!r.ok) throw new Error(`Could not check current session (HTTP ${r.status})`);
+            return r.json();
+          }
+          let state = await currentRun();
+          if (state.status !== 'completed') {
+            const origin = 'https://seen-occupied-oil-transit.trycloudflare.com';
+            const password = process.env.SESSION_PASSWORD;
+            if (!password || password.length < 24) throw new Error('The app session password is missing');
+            const r = await fetch(origin + '/__session', { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15000), headers: { authorization: 'Basic ' + Buffer.from(`botxray:${password}`).toString('base64'), origin, 'x-bx': '1' } });
+            if (!r.ok) throw new Error(`Could not save the current session (HTTP ${r.status})`);
+            console.log('Current paper session is finishing and saving.');
+          }
+          for (let attempt = 0; state.status !== 'completed' && attempt < 120; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            state = await currentRun();
+          }
+          if (state.status !== 'completed' || state.conclusion !== 'success') throw new Error('Previous session did not save successfully; replacement was not started');
+          console.log('Previous paper session saved successfully.');
+          SAVE
+      - name: Start Bot X-Ray with a $15 simulated account
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run bot-x-ray.yml --repo "$GITHUB_REPOSITORY" --ref main -f minutes=330

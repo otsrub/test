@@ -146,6 +146,7 @@ jobs:
         import { once } from 'node:events';
         import { createGateway } from './gateway.mjs';
         import { createClient } from './polymarket-us.mjs';
+        import { initialisePaperAccount } from './paper-bankroll.mjs';
 
         const password = process.env.SESSION_PASSWORD;
         const minutes = Number(process.env.SESSION_MINUTES || 30);
@@ -162,6 +163,7 @@ jobs:
         process.once('SIGINT', finish);
         const accountClient = createClient({ keyId: process.env.POLYMARKET_US_KEY_ID, secretKey: process.env.POLYMARKET_US_SECRET_KEY });
         const appEnv = { ...childEnv, BOTXRAY_BROKER: 'polymarket-us', BOTXRAY_KEY_MODE: 'live', BOTXRAY_KEY_ID: process.env.POLYMARKET_US_KEY_ID || '', BOTXRAY_SECRET: process.env.POLYMARKET_US_SECRET_KEY || '' };
+        initialisePaperAccount('bot-x-ray', 15);
         const server = spawn(process.execPath, ['server.js'], { cwd: 'bot-x-ray', env: appEnv, stdio: ['ignore', log, log] });
         let tunnel;
         let lastAccountCheck = 0;
@@ -196,6 +198,7 @@ jobs:
           if (!healthy) throw new Error('Bot X-Ray did not start');
           const status = await (await get('http://127.0.0.1:3797/api/strategy')).json();
           if (status.broker.armed || status.broker.adapterLive || !['stub', 'polymarket-us'].includes(status.broker.adapter)) throw new Error('Expected a session with automated orders disabled');
+          if (status.stats.paperAccount?.startingBalance !== 15 || status.config.stake !== 1) throw new Error('The $15 paper account is not configured');
           const accountVerification = await checkAccount();
           console.log(accountVerification.connected
             ? 'Polymarket US connection verified: balances and positions accessible. Automated orders disabled.'
@@ -236,7 +239,7 @@ jobs:
           }
           if (!verified) throw new Error('Could not verify the protected app');
           const end = new Date(Date.now() + minutes * 60000).toISOString();
-          fs.writeFileSync('session-results/session.json', JSON.stringify({ url, end, paperOnly: true }, null, 2));
+          fs.writeFileSync('session-results/session.json', JSON.stringify({ url, end, paperOnly: true, paperStartingBalance: 15, paperTradeSize: 1 }, null, 2));
           console.log(`Bot X-Ray is ready: ${url}`);
           console.log(`Username: botxray. Password: the session password supplied in chat. Ends at ${end}.`);
           if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Bot X-Ray is open\n\n[Open the full app](${url}) · [Finish session and save](${url}/__session)\n\nUsername: **botxray**. Use the password supplied in chat; it is stored as a repository secret.\n\nSession ends at **${end}**. Paper trading only. Settings and paper records restore from the previous encrypted backup.\n\nFor another session: Actions → Bot X-Ray paper run → Run workflow.\n`);
@@ -423,6 +426,121 @@ jobs:
           await assert.rejects(adapter.submit({}, {}), /No order was sent/);
         });
         BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/paper-bankroll.mjs <<'BOTXRAY_SOURCE'
+        import fs from 'node:fs';
+        import path from 'node:path';
+        import { pathToFileURL } from 'node:url';
+
+        export function paperFunds(book, startingBalance) {
+          if (!Number.isFinite(startingBalance) || startingBalance <= 0) throw new Error('Invalid paper starting balance');
+          const pnl = book.closed.reduce((sum, p) => sum + p.pnl, 0);
+          const atRisk = book.open.reduce((sum, p) => sum + p.stake, 0);
+          if (![pnl, atRisk].every(Number.isFinite)) throw new Error('Invalid paper records');
+          // Floor to cents: never spend an extra cent because of floating point rounding.
+          const equity = Math.floor((startingBalance + pnl + 1e-9) * 100) / 100;
+          const available = Math.floor((equity - atRisk + 1e-9) * 100) / 100;
+          return { startingBalance, equity, available };
+        }
+
+        export function canAffordPaperTrade(book, stake, startingBalance) {
+          return Number.isFinite(stake) && stake > 0 && stake <= paperFunds(book, startingBalance).available;
+        }
+
+        function replaceOnce(source, needle, replacement) {
+          if (source.split(needle).length !== 2) throw new Error('Paper account patch does not match this app release');
+          return source.replace(needle, replacement);
+        }
+
+        export function patchApp(root) {
+          const enginePath = path.join(root, 'lib/strategy/engine.js');
+          let engine = fs.readFileSync(enginePath, 'utf8');
+          if (!engine.includes('// Bounded paper account')) {
+            engine = replaceOnce(engine, 'import * as brokers from "../brokers/index.js";', 'import * as brokers from "../brokers/index.js";\n// Bounded paper account\nimport { paperFunds, canAffordPaperTrade } from "./paper-bankroll.js";');
+            engine = replaceOnce(engine, '  const live = brokers.armedState().armed;', '  const live = brokers.armedState().armed;\n  const startingBalance = read("paper-bankroll.json", {}).startingBalance;');
+            engine = replaceOnce(engine, '    const s = c.best;', '    if (!live && startingBalance !== undefined && !canAffordPaperTrade(b, cfg.stake, startingBalance)) {\n      scanOut.notes.push("Not enough available paper balance for another trade.");\n      continue;\n    }\n    const s = c.best;');
+            engine = replaceOnce(engine, '    expectedPnl: expected,', '    expectedPnl: expected,\n    paperAccount: read("paper-bankroll.json", {}).startingBalance === undefined ? null : paperFunds(b, read("paper-bankroll.json", {}).startingBalance),');
+            fs.writeFileSync(enginePath, engine);
+            const uiPath = path.join(root, 'public/js/app.js');
+            const ui = replaceOnce(fs.readFileSync(uiPath, 'utf8'), '${stat(st.open, "Open positions")}', '${st.paperAccount ? stat(usd(st.paperAccount.startingBalance), "Starting paper balance") + stat(usd(st.paperAccount.equity), "Paper balance including open stakes") + stat(usd(st.paperAccount.available), "Available paper cash") : ""}\n        ${stat(st.open, "Open positions")}');
+            fs.writeFileSync(uiPath, ui);
+          }
+        }
+
+        export function initialisePaperAccount(root, startingBalance = 15) {
+          const dir = path.join(root, 'data/strategy');
+          fs.mkdirSync(dir, { recursive: true });
+          const marker = path.join(dir, 'paper-bankroll.json');
+          if (fs.existsSync(marker)) {
+            const existing = JSON.parse(fs.readFileSync(marker, 'utf8'));
+            if (existing.startingBalance !== startingBalance) throw new Error('A different paper starting balance already exists');
+            return;
+          }
+          const archive = path.join(dir, 'history', `before-paper-account-${Date.now()}`);
+          fs.mkdirSync(archive, { recursive: true });
+          for (const name of ['book.json', 'config.json', 'journal.jsonl']) {
+            const file = path.join(dir, name);
+            if (fs.existsSync(file)) fs.copyFileSync(file, path.join(archive, name));
+          }
+          // Record before replacing files. Repeated session starts never refill the account.
+          fs.writeFileSync(path.join(dir, 'book.json'), JSON.stringify({ open: [], closed: [] }));
+          fs.writeFileSync(path.join(dir, 'journal.jsonl'), '');
+          let config = {};
+          try { config = JSON.parse(fs.readFileSync(path.join(dir, 'config.json'), 'utf8')); } catch {}
+          Object.assign(config, { stake: 1, maxOpen: startingBalance, maxPerClose: startingBalance, dailyLossStop: startingBalance });
+          fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(config, null, 2));
+          fs.writeFileSync(marker, JSON.stringify({ startingBalance, createdAt: new Date().toISOString(), archivedRecords: path.relative(dir, archive) }, null, 2));
+        }
+
+        if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+          const [action, root] = process.argv.slice(2);
+          if (action === 'patch') patchApp(root);
+          else if (action === 'init') initialisePaperAccount(root);
+          else throw new Error('Use patch or init followed by the app folder');
+        }
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/paper-bankroll.test.mjs <<'BOTXRAY_SOURCE'
+        import test from 'node:test';
+        import assert from 'node:assert/strict';
+        import fs from 'node:fs';
+        import os from 'node:os';
+        import path from 'node:path';
+        import { paperFunds, canAffordPaperTrade, initialisePaperAccount } from './paper-bankroll.mjs';
+
+        test('$15 account reserves open stakes and permanently accounts for settled losses', () => {
+          const book = { open: Array.from({ length: 15 }, () => ({ stake: 1 })), closed: [] };
+          assert.equal(canAffordPaperTrade(book, 1, 15), false);
+          book.open.pop();
+          assert.equal(canAffordPaperTrade(book, 1, 15), true);
+          book.closed.push({ pnl: -1 });
+          assert.equal(canAffordPaperTrade(book, 1, 15), false);
+          assert.deepEqual(paperFunds(book, 15), { startingBalance: 15, equity: 14, available: 0 });
+          book.open = [];
+          book.closed = [{ pnl: -15 }];
+          assert.equal(canAffordPaperTrade(book, 0.01, 15), false);
+          book.closed = [{ pnl: 2 }];
+          assert.equal(paperFunds(book, 15).available, 17);
+          assert.equal(canAffordPaperTrade(book, NaN, 15), false);
+        });
+
+        test('starting the next session preserves paper P&L and archived earlier records', () => {
+          const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bankroll-'));
+          try {
+            const dir = path.join(root, 'data/strategy');
+            fs.mkdirSync(dir, { recursive: true });
+            const oldBook = { open: [{ stake: 25 }], closed: [] };
+            fs.writeFileSync(path.join(dir, 'book.json'), JSON.stringify(oldBook));
+            initialisePaperAccount(root);
+            const marker = JSON.parse(fs.readFileSync(path.join(dir, 'paper-bankroll.json')));
+            assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, marker.archivedRecords, 'book.json'))), oldBook);
+            const after = { open: [], closed: [{ pnl: -3 }] };
+            fs.writeFileSync(path.join(dir, 'book.json'), JSON.stringify(after));
+            initialisePaperAccount(root);
+            assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'book.json'))), after);
+            assert.equal(paperFunds(after, 15).available, 12);
+            assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'config.json'))).stake, 1);
+          } finally { fs.rmSync(root, { recursive: true, force: true }); }
+        });
+        BOTXRAY_SOURCE
     - name: Download the verified Bot X-Ray release
       shell: bash
       run: |
@@ -443,6 +561,8 @@ jobs:
         PY
 
         cp bot-x-ray-actions/polymarket-us.mjs bot-x-ray/lib/brokers/polymarket-us.js
+        cp bot-x-ray-actions/paper-bankroll.mjs bot-x-ray/lib/strategy/paper-bankroll.js
+        node bot-x-ray-actions/paper-bankroll.mjs patch bot-x-ray
     - name: Test app and password protection
       run: |-
         node --test bot-x-ray-actions/*.test.mjs
@@ -597,6 +717,7 @@ jobs:
         import { once } from 'node:events';
         import { createGateway } from './gateway.mjs';
         import { createClient } from './polymarket-us.mjs';
+        import { initialisePaperAccount } from './paper-bankroll.mjs';
 
         const password = process.env.SESSION_PASSWORD;
         const minutes = Number(process.env.SESSION_MINUTES || 30);
@@ -613,6 +734,7 @@ jobs:
         process.once('SIGINT', finish);
         const accountClient = createClient({ keyId: process.env.POLYMARKET_US_KEY_ID, secretKey: process.env.POLYMARKET_US_SECRET_KEY });
         const appEnv = { ...childEnv, BOTXRAY_BROKER: 'polymarket-us', BOTXRAY_KEY_MODE: 'live', BOTXRAY_KEY_ID: process.env.POLYMARKET_US_KEY_ID || '', BOTXRAY_SECRET: process.env.POLYMARKET_US_SECRET_KEY || '' };
+        initialisePaperAccount('bot-x-ray', 15);
         const server = spawn(process.execPath, ['server.js'], { cwd: 'bot-x-ray', env: appEnv, stdio: ['ignore', log, log] });
         let tunnel;
         let lastAccountCheck = 0;
@@ -647,6 +769,7 @@ jobs:
           if (!healthy) throw new Error('Bot X-Ray did not start');
           const status = await (await get('http://127.0.0.1:3797/api/strategy')).json();
           if (status.broker.armed || status.broker.adapterLive || !['stub', 'polymarket-us'].includes(status.broker.adapter)) throw new Error('Expected a session with automated orders disabled');
+          if (status.stats.paperAccount?.startingBalance !== 15 || status.config.stake !== 1) throw new Error('The $15 paper account is not configured');
           const accountVerification = await checkAccount();
           console.log(accountVerification.connected
             ? 'Polymarket US connection verified: balances and positions accessible. Automated orders disabled.'
@@ -687,7 +810,7 @@ jobs:
           }
           if (!verified) throw new Error('Could not verify the protected app');
           const end = new Date(Date.now() + minutes * 60000).toISOString();
-          fs.writeFileSync('session-results/session.json', JSON.stringify({ url, end, paperOnly: true }, null, 2));
+          fs.writeFileSync('session-results/session.json', JSON.stringify({ url, end, paperOnly: true, paperStartingBalance: 15, paperTradeSize: 1 }, null, 2));
           console.log(`Bot X-Ray is ready: ${url}`);
           console.log(`Username: botxray. Password: the session password supplied in chat. Ends at ${end}.`);
           if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Bot X-Ray is open\n\n[Open the full app](${url}) · [Finish session and save](${url}/__session)\n\nUsername: **botxray**. Use the password supplied in chat; it is stored as a repository secret.\n\nSession ends at **${end}**. Paper trading only. Settings and paper records restore from the previous encrypted backup.\n\nFor another session: Actions → Bot X-Ray paper run → Run workflow.\n`);
@@ -874,6 +997,121 @@ jobs:
           await assert.rejects(adapter.submit({}, {}), /No order was sent/);
         });
         BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/paper-bankroll.mjs <<'BOTXRAY_SOURCE'
+        import fs from 'node:fs';
+        import path from 'node:path';
+        import { pathToFileURL } from 'node:url';
+
+        export function paperFunds(book, startingBalance) {
+          if (!Number.isFinite(startingBalance) || startingBalance <= 0) throw new Error('Invalid paper starting balance');
+          const pnl = book.closed.reduce((sum, p) => sum + p.pnl, 0);
+          const atRisk = book.open.reduce((sum, p) => sum + p.stake, 0);
+          if (![pnl, atRisk].every(Number.isFinite)) throw new Error('Invalid paper records');
+          // Floor to cents: never spend an extra cent because of floating point rounding.
+          const equity = Math.floor((startingBalance + pnl + 1e-9) * 100) / 100;
+          const available = Math.floor((equity - atRisk + 1e-9) * 100) / 100;
+          return { startingBalance, equity, available };
+        }
+
+        export function canAffordPaperTrade(book, stake, startingBalance) {
+          return Number.isFinite(stake) && stake > 0 && stake <= paperFunds(book, startingBalance).available;
+        }
+
+        function replaceOnce(source, needle, replacement) {
+          if (source.split(needle).length !== 2) throw new Error('Paper account patch does not match this app release');
+          return source.replace(needle, replacement);
+        }
+
+        export function patchApp(root) {
+          const enginePath = path.join(root, 'lib/strategy/engine.js');
+          let engine = fs.readFileSync(enginePath, 'utf8');
+          if (!engine.includes('// Bounded paper account')) {
+            engine = replaceOnce(engine, 'import * as brokers from "../brokers/index.js";', 'import * as brokers from "../brokers/index.js";\n// Bounded paper account\nimport { paperFunds, canAffordPaperTrade } from "./paper-bankroll.js";');
+            engine = replaceOnce(engine, '  const live = brokers.armedState().armed;', '  const live = brokers.armedState().armed;\n  const startingBalance = read("paper-bankroll.json", {}).startingBalance;');
+            engine = replaceOnce(engine, '    const s = c.best;', '    if (!live && startingBalance !== undefined && !canAffordPaperTrade(b, cfg.stake, startingBalance)) {\n      scanOut.notes.push("Not enough available paper balance for another trade.");\n      continue;\n    }\n    const s = c.best;');
+            engine = replaceOnce(engine, '    expectedPnl: expected,', '    expectedPnl: expected,\n    paperAccount: read("paper-bankroll.json", {}).startingBalance === undefined ? null : paperFunds(b, read("paper-bankroll.json", {}).startingBalance),');
+            fs.writeFileSync(enginePath, engine);
+            const uiPath = path.join(root, 'public/js/app.js');
+            const ui = replaceOnce(fs.readFileSync(uiPath, 'utf8'), '${stat(st.open, "Open positions")}', '${st.paperAccount ? stat(usd(st.paperAccount.startingBalance), "Starting paper balance") + stat(usd(st.paperAccount.equity), "Paper balance including open stakes") + stat(usd(st.paperAccount.available), "Available paper cash") : ""}\n        ${stat(st.open, "Open positions")}');
+            fs.writeFileSync(uiPath, ui);
+          }
+        }
+
+        export function initialisePaperAccount(root, startingBalance = 15) {
+          const dir = path.join(root, 'data/strategy');
+          fs.mkdirSync(dir, { recursive: true });
+          const marker = path.join(dir, 'paper-bankroll.json');
+          if (fs.existsSync(marker)) {
+            const existing = JSON.parse(fs.readFileSync(marker, 'utf8'));
+            if (existing.startingBalance !== startingBalance) throw new Error('A different paper starting balance already exists');
+            return;
+          }
+          const archive = path.join(dir, 'history', `before-paper-account-${Date.now()}`);
+          fs.mkdirSync(archive, { recursive: true });
+          for (const name of ['book.json', 'config.json', 'journal.jsonl']) {
+            const file = path.join(dir, name);
+            if (fs.existsSync(file)) fs.copyFileSync(file, path.join(archive, name));
+          }
+          // Record before replacing files. Repeated session starts never refill the account.
+          fs.writeFileSync(path.join(dir, 'book.json'), JSON.stringify({ open: [], closed: [] }));
+          fs.writeFileSync(path.join(dir, 'journal.jsonl'), '');
+          let config = {};
+          try { config = JSON.parse(fs.readFileSync(path.join(dir, 'config.json'), 'utf8')); } catch {}
+          Object.assign(config, { stake: 1, maxOpen: startingBalance, maxPerClose: startingBalance, dailyLossStop: startingBalance });
+          fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(config, null, 2));
+          fs.writeFileSync(marker, JSON.stringify({ startingBalance, createdAt: new Date().toISOString(), archivedRecords: path.relative(dir, archive) }, null, 2));
+        }
+
+        if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+          const [action, root] = process.argv.slice(2);
+          if (action === 'patch') patchApp(root);
+          else if (action === 'init') initialisePaperAccount(root);
+          else throw new Error('Use patch or init followed by the app folder');
+        }
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/paper-bankroll.test.mjs <<'BOTXRAY_SOURCE'
+        import test from 'node:test';
+        import assert from 'node:assert/strict';
+        import fs from 'node:fs';
+        import os from 'node:os';
+        import path from 'node:path';
+        import { paperFunds, canAffordPaperTrade, initialisePaperAccount } from './paper-bankroll.mjs';
+
+        test('$15 account reserves open stakes and permanently accounts for settled losses', () => {
+          const book = { open: Array.from({ length: 15 }, () => ({ stake: 1 })), closed: [] };
+          assert.equal(canAffordPaperTrade(book, 1, 15), false);
+          book.open.pop();
+          assert.equal(canAffordPaperTrade(book, 1, 15), true);
+          book.closed.push({ pnl: -1 });
+          assert.equal(canAffordPaperTrade(book, 1, 15), false);
+          assert.deepEqual(paperFunds(book, 15), { startingBalance: 15, equity: 14, available: 0 });
+          book.open = [];
+          book.closed = [{ pnl: -15 }];
+          assert.equal(canAffordPaperTrade(book, 0.01, 15), false);
+          book.closed = [{ pnl: 2 }];
+          assert.equal(paperFunds(book, 15).available, 17);
+          assert.equal(canAffordPaperTrade(book, NaN, 15), false);
+        });
+
+        test('starting the next session preserves paper P&L and archived earlier records', () => {
+          const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bankroll-'));
+          try {
+            const dir = path.join(root, 'data/strategy');
+            fs.mkdirSync(dir, { recursive: true });
+            const oldBook = { open: [{ stake: 25 }], closed: [] };
+            fs.writeFileSync(path.join(dir, 'book.json'), JSON.stringify(oldBook));
+            initialisePaperAccount(root);
+            const marker = JSON.parse(fs.readFileSync(path.join(dir, 'paper-bankroll.json')));
+            assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, marker.archivedRecords, 'book.json'))), oldBook);
+            const after = { open: [], closed: [{ pnl: -3 }] };
+            fs.writeFileSync(path.join(dir, 'book.json'), JSON.stringify(after));
+            initialisePaperAccount(root);
+            assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'book.json'))), after);
+            assert.equal(paperFunds(after, 15).available, 12);
+            assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'config.json'))).stake, 1);
+          } finally { fs.rmSync(root, { recursive: true, force: true }); }
+        });
+        BOTXRAY_SOURCE
     - name: Download the verified Bot X-Ray release
       shell: bash
       run: |
@@ -894,6 +1132,8 @@ jobs:
         PY
 
         cp bot-x-ray-actions/polymarket-us.mjs bot-x-ray/lib/brokers/polymarket-us.js
+        cp bot-x-ray-actions/paper-bankroll.mjs bot-x-ray/lib/strategy/paper-bankroll.js
+        node bot-x-ray-actions/paper-bankroll.mjs patch bot-x-ray
     - name: Restore the latest saved paper records
       env:
         GH_TOKEN: ${{ github.token }}
@@ -965,7 +1205,7 @@ jobs:
         ) &
         for attempt in $(seq 1 180); do
           if [ -f session-results/session.json ]; then
-            node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync("session-results/session.json")); console.log("Open Bot X-Ray: " + s.url); console.log("Session ends: " + s.end);'
+            node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync("session-results/session.json")); console.log("Open Bot X-Ray: " + s.url); console.log("Session ends: " + s.end); console.log("Starting paper balance: $" + s.paperStartingBalance + "; simulated trade size: $" + s.paperTradeSize + ". Real orders disabled.");'
             exit 0
           fi
           if [ -f session-results/session.exit ]; then
