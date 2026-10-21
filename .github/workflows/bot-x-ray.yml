@@ -13,6 +13,7 @@ name: Bot X-Ray paper run
         - '60'
         - '180'
         - '300'
+        - '330'
   push:
     branches:
     - main
@@ -21,27 +22,15 @@ name: Bot X-Ray paper run
 permissions:
   contents: read
   actions: read
-concurrency:
-  group: bot-x-ray-paper
-  cancel-in-progress: false
 jobs:
-  paper:
+  checks:
     runs-on: ubuntu-24.04
-    timeout-minutes: 350
-    env:
-      BOTXRAY_BROKER: stub
-      BOTXRAY_KEY_MODE: paper
-      BOTXRAY_NO_OPEN: '1'
-      SESSION_MINUTES: ${{ inputs.minutes || '2' }}
+    timeout-minutes: 10
     steps:
     - uses: actions/setup-node@v6
       with:
         node-version: '24'
         package-manager-cache: false
-    - name: Validate session password
-      env:
-        SESSION_PASSWORD: ${{ secrets.BOTXRAY_SESSION_PASSWORD }}
-      run: node --input-type=module -e 'if ((process.env.SESSION_PASSWORD || "").length < 24) throw new Error("Create BOTXRAY_SESSION_PASSWORD first");'
     - name: Prepare the protected session helper
       shell: bash
       run: |
@@ -53,10 +42,10 @@ jobs:
 
         const hash = value => createHash('sha256').update(value).digest();
 
-        export function createGateway({ password, upstreamPort = 3797, onFinish = () => {} }) {
+        export function createGateway({ password, upstreamPort = 3797, onFinish = () => {}, onAccountCheck = async () => ({ connected: false, note: 'Account credentials have not been configured.' }) }) {
           if (!password || password.length < 24) throw new Error('A strong session password is required');
           const expected = hash('Basic ' + Buffer.from(`botxray:${password}`).toString('base64'));
-          return http.createServer((req, res) => {
+          return http.createServer(async (req, res) => {
             res.setHeader('Cache-Control', 'no-store');
             res.setHeader('X-Content-Type-Options', 'nosniff');
             res.setHeader('X-Frame-Options', 'DENY');
@@ -73,6 +62,16 @@ jobs:
                 res.writeHead(403);
                 return res.end('This action must come from your Bot X-Ray page.');
               }
+            }
+            if (req.url === '/__account/check') {
+              if (req.method !== 'POST') { res.writeHead(405, { Allow: 'POST' }); return res.end('Use the Check account button.'); }
+              res.setHeader('Content-Type', 'application/json');
+              try { return res.end(JSON.stringify(await onAccountCheck())); }
+              catch { res.writeHead(502); return res.end(JSON.stringify({ connected: false, liveTrading: false, note: 'The account check could not finish. Try again in a moment.' })); }
+            }
+            if (req.url === '/__account') {
+              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+              return res.end(`<!doctype html><meta name="viewport" content="width=device-width"><title>Polymarket US account · Bot X-Ray</title><style>body{font:18px system-ui;max-width:800px;margin:6vh auto;padding:24px;background:#f8f7f4;color:#1c2529}button{font:inherit;padding:12px;cursor:pointer}pre{font:14px ui-monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:20px}a{color:#075b73}</style><p><a href="/">Back to Bot X-Ray</a></p><h1>Your Polymarket US account</h1><p>Check the connection to your real account and view its balances and positions. Automated orders are disabled. The app's strategy continues using simulated money on its existing Kalshi and ETF option markets.</p><button id="check">Check account</button><p id="note">Credentials are read from encrypted GitHub secrets when a new session starts.</p><pre id="result" hidden></pre><h2>Connect your account</h2><ol><li>Open <a href="https://polymarket.us/developer" target="_blank" rel="noreferrer">Polymarket US's developer portal</a>, sign in using the same method as your app, and create an API key.</li><li>In <a href="https://github.com/otsrub/test/settings/secrets/actions" target="_blank" rel="noreferrer">your GitHub repository's encrypted secrets</a>, add <code>POLYMARKET_US_KEY_ID</code> and <code>POLYMARKET_US_SECRET_KEY</code>. Enter each value there, never in chat or in repository files.</li><li>Start a new Bot X-Ray session, then return here and select Check account.</li></ol><p>Account values below are returned by Polymarket US's API. They are not saved in paper-trade backups. Keep your account credentials separate from the password used to open this page.</p><script>document.querySelector('#check').onclick=async()=>{const b=document.querySelector('#check'),n=document.querySelector('#note'),p=document.querySelector('#result');b.disabled=true;n.textContent='Checking Polymarket US…';p.hidden=true;try{const r=await fetch('/__account/check',{method:'POST',headers:{'x-bx':'1'}});const j=await r.json();n.textContent=j.note||'Account check complete';if(j.connected){p.textContent=JSON.stringify({balances:j.balances,positions:j.positions,morePositionsAvailable:j.morePositionsAvailable},null,2);p.hidden=false;}}catch{n.textContent='The account check did not finish. Try again.';}finally{b.disabled=false;}}</script>`);
             }
             if (req.url === '/__session') {
               if (req.method === 'POST') {
@@ -93,8 +92,20 @@ jobs:
             const upstream = http.request({ hostname: '127.0.0.1', port: upstreamPort, path: req.url, method: req.method, headers }, incoming => {
               const out = { ...incoming.headers, 'cache-control': 'no-store', 'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer' };
               delete out['www-authenticate'];
-              res.writeHead(incoming.statusCode, out);
-              incoming.pipe(res);
+              if (incoming.headers['content-type']?.startsWith('text/html')) {
+                delete out['content-length'];
+                let html = '';
+                incoming.setEncoding('utf8');
+                incoming.on('data', chunk => { html += chunk; });
+                incoming.on('end', () => {
+                  const link = '<a href="/__account" style="position:fixed;right:16px;bottom:16px;z-index:1000;background:#173b49;color:white;padding:12px 16px;border-radius:8px;text-decoration:none;font:15px system-ui">Polymarket US account</a>';
+                  res.writeHead(incoming.statusCode, out);
+                  res.end(html.includes('</body>') ? html.replace('</body>', link + '</body>') : html + link);
+                });
+              } else {
+                res.writeHead(incoming.statusCode, out);
+                incoming.pipe(res);
+              }
             });
             upstream.on('error', () => {
               if (!res.headersSent) res.writeHead(502);
@@ -134,10 +145,11 @@ jobs:
         import { spawn } from 'node:child_process';
         import { once } from 'node:events';
         import { createGateway } from './gateway.mjs';
+        import { createClient } from './polymarket-us.mjs';
 
         const password = process.env.SESSION_PASSWORD;
         const minutes = Number(process.env.SESSION_MINUTES || 30);
-        if (![2, 30, 60, 180, 300].includes(minutes)) throw new Error('Invalid session length');
+        if (![2, 30, 60, 180, 300, 330].includes(minutes)) throw new Error('Invalid session length');
         if (!password || password.length < 24) throw new Error('Create the BOTXRAY_SESSION_PASSWORD repository secret first');
         const auth = 'Basic ' + Buffer.from(`botxray:${password}`).toString('base64');
         const childEnv = { PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR || '/tmp', HOST: '127.0.0.1', PORT: '3797', BOTXRAY_NO_OPEN: '1', BOTXRAY_BROKER: 'stub', BOTXRAY_KEY_MODE: 'paper' };
@@ -148,9 +160,29 @@ jobs:
         const done = new Promise(resolve => { finish = () => { stopped = true; resolve(); }; });
         process.once('SIGTERM', finish);
         process.once('SIGINT', finish);
-        const server = spawn(process.execPath, ['server.js'], { cwd: 'bot-x-ray', env: childEnv, stdio: ['ignore', log, log] });
+        const accountClient = createClient({ keyId: process.env.POLYMARKET_US_KEY_ID, secretKey: process.env.POLYMARKET_US_SECRET_KEY });
+        const appEnv = { ...childEnv, BOTXRAY_BROKER: 'polymarket-us', BOTXRAY_KEY_MODE: 'live', BOTXRAY_KEY_ID: process.env.POLYMARKET_US_KEY_ID || '', BOTXRAY_SECRET: process.env.POLYMARKET_US_SECRET_KEY || '' };
+        const server = spawn(process.execPath, ['server.js'], { cwd: 'bot-x-ray', env: appEnv, stdio: ['ignore', log, log] });
         let tunnel;
-        const gateway = createGateway({ password, onFinish: finish });
+        let lastAccountCheck = 0;
+        let accountCheckInProgress = null;
+        async function checkAccount() {
+          if (accountCheckInProgress) return accountCheckInProgress;
+          if (Date.now() - lastAccountCheck < 15000) return { connected: false, liveTrading: false, note: 'Wait 15 seconds before checking again.' };
+          lastAccountCheck = Date.now();
+          accountCheckInProgress = (async () => {
+            try {
+              const status = await accountClient.account();
+              if (!status.ok) return { connected: false, liveTrading: false, note: status.note };
+              const positionData = await accountClient.positions();
+              return { connected: true, liveTrading: false, note: status.note, balances: status.balances, positions: positionData.positions, morePositionsAvailable: positionData.moreAvailable };
+            } catch (error) {
+              return { connected: false, liveTrading: false, note: error.message };
+            }
+          })();
+          try { return await accountCheckInProgress; } finally { accountCheckInProgress = null; }
+        }
+        const gateway = createGateway({ password, onFinish: finish, onAccountCheck: checkAccount });
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         const get = (url, options = {}) => fetch(url, { ...options, signal: AbortSignal.timeout(15000) });
         try {
@@ -163,7 +195,7 @@ jobs:
           }
           if (!healthy) throw new Error('Bot X-Ray did not start');
           const status = await (await get('http://127.0.0.1:3797/api/strategy')).json();
-          if (status.broker.armed || status.broker.adapter !== 'stub' || status.broker.keysFound) throw new Error('Expected a paper-only session');
+          if (status.broker.armed || status.broker.adapterLive || !['stub', 'polymarket-us'].includes(status.broker.adapter)) throw new Error('Expected a session with automated orders disabled');
           gateway.listen(8080, '127.0.0.1');
           await once(gateway, 'listening');
           tunnel = spawn('./cloudflared', ['tunnel', '--no-autoupdate', '--protocol', 'http2', '--url', 'http://127.0.0.1:8080'], { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -247,12 +279,15 @@ jobs:
           const authorization = 'Basic ' + Buffer.from(`botxray:${password}`).toString('base64');
           try {
             assert.equal((await fetch(base)).status, 401);
+            assert.equal((await fetch(base + '/__account')).status, 401);
             assert.equal((await fetch(base, { headers: { authorization: 'Basic wrong' } })).status, 401);
             const read = await (await fetch(base, { headers: { authorization } })).json();
             assert.equal(read.auth, undefined);
             const headers = { authorization, 'x-bx': '1', origin: 'https://another.example' };
             assert.equal((await fetch(base, { method: 'POST', headers })).status, 403);
             headers.origin = base;
+            assert.equal((await fetch(base + '/__account/check', { method: 'POST', headers })).status, 200);
+            assert.equal((await fetch(base + '/__account/check', { headers })).status, 405);
             const write = await (await fetch(base, { method: 'POST', headers })).json();
             assert.equal(write.origin, `http://127.0.0.1:${upstream.address().port}`);
             assert.equal((await fetch(base + '/api/shutdown', { method: 'POST', headers })).status, 403);
@@ -266,6 +301,122 @@ jobs:
           assert.throws(() => decryptState(encrypted, 'different-password'));
           encrypted[encrypted.length - 1] ^= 1;
           assert.throws(() => decryptState(encrypted, password));
+        });
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us.mjs <<'BOTXRAY_SOURCE'
+        // Official Polymarket US account API. Account viewing only; no order endpoint exists here.
+        import { createPrivateKey, sign } from 'node:crypto';
+
+        const ORIGIN = 'https://api.polymarket.us';
+        const PKCS8_PREFIX = Buffer.from('302e020100300506032b657004220420', 'hex');
+
+        export function signingHeaders({ keyId, secretKey }, path, timestamp = Date.now()) {
+          if (!keyId || !secretKey) throw new Error('Polymarket US credentials are missing');
+          if (!['/v1/account/balances', '/v1/portfolio/positions'].includes(path)) throw new Error('Only account-viewing requests are supported');
+          const text = secretKey.trim();
+          if (!/^[A-Za-z0-9+/]+={0,2}$/.test(text)) throw new Error('The Polymarket US Secret Key must be base64');
+          const bytes = Buffer.from(text, 'base64');
+          if (![32, 64].includes(bytes.length)) throw new Error('The Polymarket US Secret Key must contain a 32-byte seed or 64-byte key');
+          const key = createPrivateKey({ key: Buffer.concat([PKCS8_PREFIX, bytes.subarray(0, 32)]), format: 'der', type: 'pkcs8' });
+          const time = String(timestamp);
+          return {
+            'X-PM-Access-Key': keyId,
+            'X-PM-Timestamp': time,
+            'X-PM-Signature': sign(null, Buffer.from(time + 'GET' + path), key).toString('base64'),
+            Accept: 'application/json',
+          };
+        }
+
+        export function createClient({ keyId, secretKey, fetchImpl = globalThis.fetch, now = Date.now } = {}) {
+          const configured = Boolean(keyId && secretKey);
+          async function read(path) {
+            const headers = signingHeaders({ keyId, secretKey }, path, now());
+            let response;
+            try {
+              response = await fetchImpl(ORIGIN + path, { method: 'GET', headers, redirect: 'error', signal: AbortSignal.timeout(10000) });
+            } catch {
+              throw new Error('Polymarket US did not answer. Try the account check again.');
+            }
+            if (!response.ok) {
+              const status = response.status;
+              const message = status === 401 || status === 403
+                ? 'Polymarket US did not accept these credentials. Check the Key ID, Secret Key, and API access in its developer portal.'
+                : status === 429 ? 'Polymarket US is limiting requests. Try again in a moment.'
+                : `Polymarket US account request failed (HTTP ${status}).`;
+              throw new Error(message);
+            }
+            try { return await response.json(); }
+            catch { throw new Error('Polymarket US returned an unreadable account response.'); }
+          }
+          return {
+            configured,
+            async account() {
+              if (!configured) return { ok: false, configured: false, mode: null, liveTrading: false, note: 'Add POLYMARKET_US_KEY_ID and POLYMARKET_US_SECRET_KEY to the repository secrets, then start a new session.' };
+              const data = await read('/v1/account/balances');
+              if (!Array.isArray(data.balances)) throw new Error('Polymarket US returned an unexpected balance format.');
+              return {
+                ok: true, configured: true, mode: 'live', liveTrading: false,
+                note: 'Real Polymarket US account verified. Account viewing is connected; automated orders are disabled.',
+                balances: data.balances.map(b => ({ currency: b.currency, currentBalance: b.currentBalance, buyingPower: b.buyingPower, lastUpdated: b.lastUpdated })),
+              };
+            },
+            async positions() {
+              if (!configured) throw new Error('Polymarket US credentials are missing');
+              const data = await read('/v1/portfolio/positions');
+              if (!data.positions || typeof data.positions !== 'object') throw new Error('Polymarket US returned an unexpected positions format.');
+              return { positions: data.positions, eof: data.eof === true, moreAvailable: data.eof !== true && Boolean(data.nextCursor) };
+            },
+          };
+        }
+
+        export default {
+          name: 'polymarket-us', title: 'Polymarket US', live: false, venues: ['polymarket-us'],
+          note: 'Polymarket US account viewing is prepared. Open the Polymarket US account link to verify credentials and view balances and positions. Automated orders are disabled. The strategy currently runs on paper on Kalshi and ETF options.',
+          account: keys => createClient({ keyId: keys.keyId, secretKey: keys.secret }).account(),
+          positions: keys => createClient({ keyId: keys.keyId, secretKey: keys.secret }).positions(),
+          async submit() { throw new Error('Polymarket US automated orders are disabled. No order was sent.'); },
+        };
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us.test.mjs <<'BOTXRAY_SOURCE'
+        import test from 'node:test';
+        import assert from 'node:assert/strict';
+        import { createPublicKey, createPrivateKey, verify } from 'node:crypto';
+        import adapter, { createClient, signingHeaders } from './polymarket-us.mjs';
+
+        // RFC 8032 Ed25519 test seed and public key, independent of the account credentials.
+        const seed = Buffer.from('9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60', 'hex');
+        const secretKey = seed.toString('base64');
+        const publicKey = createPublicKey({ key: Buffer.from('302a300506032b6570032100d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a', 'hex'), format: 'der', type: 'spki' });
+
+        test('official signature format uses timestamp + GET + fixed path', () => {
+          const path = '/v1/account/balances', timestamp = 1792600000123;
+          const headers = signingHeaders({ keyId: 'test-key-id', secretKey }, path, timestamp);
+          assert.equal(headers['X-PM-Timestamp'], String(timestamp));
+          assert.equal(verify(null, Buffer.from(String(timestamp) + 'GET' + path), publicKey, Buffer.from(headers['X-PM-Signature'], 'base64')), true);
+          assert.throws(() => signingHeaders({ keyId: 'id', secretKey }, '/v1/orders'), /Only account-viewing/);
+          assert.throws(() => signingHeaders({ keyId: 'id', secretKey: 'not-a-key' }, path), /base64/);
+        });
+        test('missing credentials never make a request; connected status never returns keys', async () => {
+          const calls = [];
+          const fetchImpl = async (url, options) => {
+            calls.push({ url, options });
+            return { ok: true, json: async () => ({ balances: [{ currency: 'USD', currentBalance: 20, buyingPower: 10 }] }) };
+          };
+          assert.equal((await createClient({ fetchImpl }).account()).configured, false);
+          assert.equal(calls.length, 0);
+          const status = await createClient({ keyId: 'test-key-id', secretKey, fetchImpl }).account();
+          assert.equal(status.ok, true);
+          assert.equal(status.liveTrading, false);
+          assert.ok(!JSON.stringify(status).includes(secretKey));
+          assert.ok(!JSON.stringify(status).includes('test-key-id'));
+          assert.equal(calls[0].url, 'https://api.polymarket.us/v1/account/balances');
+          assert.equal(calls[0].options.redirect, 'error');
+        });
+        test('account failures are sanitized and the adapter cannot submit orders', async () => {
+          const fetchImpl = async () => ({ ok: false, status: 401, text: async () => secretKey });
+          await assert.rejects(createClient({ keyId: 'id', secretKey, fetchImpl }).account(), error => !error.message.includes(secretKey) && /did not accept/.test(error.message));
+          assert.equal(adapter.live, false);
+          await assert.rejects(adapter.submit({}, {}), /No order was sent/);
         });
         BOTXRAY_SOURCE
     - name: Download the verified Bot X-Ray release
@@ -286,10 +437,437 @@ jobs:
                     raise SystemExit('Unexpected archive entry: ' + member.name)
             archive.extractall('.', filter='data')
         PY
+
+        cp bot-x-ray-actions/polymarket-us.mjs bot-x-ray/lib/brokers/polymarket-us.js
     - name: Test app and password protection
       run: |-
-        node --test bot-x-ray-actions/gateway.test.mjs
+        node --test bot-x-ray-actions/*.test.mjs
         (cd bot-x-ray && node scripts/test.js)
+  paper:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    env:
+      BOTXRAY_BROKER: stub
+      BOTXRAY_KEY_MODE: paper
+      BOTXRAY_NO_OPEN: '1'
+      SESSION_MINUTES: ${{ inputs.minutes || '2' }}
+    steps:
+    - uses: actions/setup-node@v6
+      with:
+        node-version: '24'
+        package-manager-cache: false
+    - name: Validate session password
+      env:
+        SESSION_PASSWORD: ${{ secrets.BOTXRAY_SESSION_PASSWORD }}
+      run: node --input-type=module -e 'if ((process.env.SESSION_PASSWORD || "").length < 24) throw new Error("Create BOTXRAY_SESSION_PASSWORD first");'
+    - name: Prepare the protected session helper
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p bot-x-ray-actions
+        cat > bot-x-ray-actions/gateway.mjs <<'BOTXRAY_SOURCE'
+        import http from 'node:http';
+        import { createHash, timingSafeEqual } from 'node:crypto';
+
+        const hash = value => createHash('sha256').update(value).digest();
+
+        export function createGateway({ password, upstreamPort = 3797, onFinish = () => {}, onAccountCheck = async () => ({ connected: false, note: 'Account credentials have not been configured.' }) }) {
+          if (!password || password.length < 24) throw new Error('A strong session password is required');
+          const expected = hash('Basic ' + Buffer.from(`botxray:${password}`).toString('base64'));
+          return http.createServer(async (req, res) => {
+            res.setHeader('Cache-Control', 'no-store');
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('X-Frame-Options', 'DENY');
+            res.setHeader('Referrer-Policy', 'no-referrer');
+            if (!timingSafeEqual(hash(req.headers.authorization || ''), expected)) {
+              res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Bot X-Ray", charset="UTF-8"' });
+              return res.end('Sign in with your Bot X-Ray session password.');
+            }
+            const writes = !['GET', 'HEAD'].includes(req.method);
+            if (writes) {
+              const origin = req.headers.origin;
+              const ownOrigin = origin === `https://${req.headers.host}` || origin === `http://${req.headers.host}`;
+              if (req.headers['x-bx'] !== '1' || !ownOrigin) {
+                res.writeHead(403);
+                return res.end('This action must come from your Bot X-Ray page.');
+              }
+            }
+            if (req.url === '/__account/check') {
+              if (req.method !== 'POST') { res.writeHead(405, { Allow: 'POST' }); return res.end('Use the Check account button.'); }
+              res.setHeader('Content-Type', 'application/json');
+              try { return res.end(JSON.stringify(await onAccountCheck())); }
+              catch { res.writeHead(502); return res.end(JSON.stringify({ connected: false, liveTrading: false, note: 'The account check could not finish. Try again in a moment.' })); }
+            }
+            if (req.url === '/__account') {
+              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+              return res.end(`<!doctype html><meta name="viewport" content="width=device-width"><title>Polymarket US account · Bot X-Ray</title><style>body{font:18px system-ui;max-width:800px;margin:6vh auto;padding:24px;background:#f8f7f4;color:#1c2529}button{font:inherit;padding:12px;cursor:pointer}pre{font:14px ui-monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:20px}a{color:#075b73}</style><p><a href="/">Back to Bot X-Ray</a></p><h1>Your Polymarket US account</h1><p>Check the connection to your real account and view its balances and positions. Automated orders are disabled. The app's strategy continues using simulated money on its existing Kalshi and ETF option markets.</p><button id="check">Check account</button><p id="note">Credentials are read from encrypted GitHub secrets when a new session starts.</p><pre id="result" hidden></pre><h2>Connect your account</h2><ol><li>Open <a href="https://polymarket.us/developer" target="_blank" rel="noreferrer">Polymarket US's developer portal</a>, sign in using the same method as your app, and create an API key.</li><li>In <a href="https://github.com/otsrub/test/settings/secrets/actions" target="_blank" rel="noreferrer">your GitHub repository's encrypted secrets</a>, add <code>POLYMARKET_US_KEY_ID</code> and <code>POLYMARKET_US_SECRET_KEY</code>. Enter each value there, never in chat or in repository files.</li><li>Start a new Bot X-Ray session, then return here and select Check account.</li></ol><p>Account values below are returned by Polymarket US's API. They are not saved in paper-trade backups. Keep your account credentials separate from the password used to open this page.</p><script>document.querySelector('#check').onclick=async()=>{const b=document.querySelector('#check'),n=document.querySelector('#note'),p=document.querySelector('#result');b.disabled=true;n.textContent='Checking Polymarket US…';p.hidden=true;try{const r=await fetch('/__account/check',{method:'POST',headers:{'x-bx':'1'}});const j=await r.json();n.textContent=j.note||'Account check complete';if(j.connected){p.textContent=JSON.stringify({balances:j.balances,positions:j.positions,morePositionsAvailable:j.morePositionsAvailable},null,2);p.hidden=false;}}catch{n.textContent='The account check did not finish. Try again.';}finally{b.disabled=false;}}</script>`);
+            }
+            if (req.url === '/__session') {
+              if (req.method === 'POST') {
+                res.end('Session ending. Your paper records are being saved to GitHub.');
+                setTimeout(onFinish, 250);
+                return;
+              }
+              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+              return res.end(`<!doctype html><meta name="viewport" content="width=device-width"><title>Bot X-Ray session</title><style>body{font:18px system-ui;max-width:650px;margin:10vh auto;padding:24px}button{font:inherit;padding:12px}</style><h1>Bot X-Ray session</h1><p>End this session to save your settings and paper trades for the next run.</p><button id="finish">Finish and save</button><p><a href="/">Back to Bot X-Ray</a></p><script>document.querySelector('#finish').onclick=async()=>{const r=await fetch('/__session',{method:'POST',headers:{'x-bx':'1'}});document.body.textContent=await r.text();}</script>`);
+            }
+            if (req.url.split('?')[0] === '/api/shutdown') {
+              res.writeHead(403);
+              return res.end('Use /__session to finish and save.');
+            }
+            const headers = { ...req.headers, host: `127.0.0.1:${upstreamPort}` };
+            for (const name of ['authorization', 'proxy-authorization', 'connection', 'forwarded', 'x-forwarded-host', 'x-forwarded-proto', 'cookie']) delete headers[name];
+            if (headers.origin) headers.origin = `http://127.0.0.1:${upstreamPort}`;
+            const upstream = http.request({ hostname: '127.0.0.1', port: upstreamPort, path: req.url, method: req.method, headers }, incoming => {
+              const out = { ...incoming.headers, 'cache-control': 'no-store', 'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer' };
+              delete out['www-authenticate'];
+              if (incoming.headers['content-type']?.startsWith('text/html')) {
+                delete out['content-length'];
+                let html = '';
+                incoming.setEncoding('utf8');
+                incoming.on('data', chunk => { html += chunk; });
+                incoming.on('end', () => {
+                  const link = '<a href="/__account" style="position:fixed;right:16px;bottom:16px;z-index:1000;background:#173b49;color:white;padding:12px 16px;border-radius:8px;text-decoration:none;font:15px system-ui">Polymarket US account</a>';
+                  res.writeHead(incoming.statusCode, out);
+                  res.end(html.includes('</body>') ? html.replace('</body>', link + '</body>') : html + link);
+                });
+              } else {
+                res.writeHead(incoming.statusCode, out);
+                incoming.pipe(res);
+              }
+            });
+            upstream.on('error', () => {
+              if (!res.headersSent) res.writeHead(502);
+              res.end('Bot X-Ray is starting or this session has ended.');
+            });
+            req.on('aborted', () => upstream.destroy());
+            req.pipe(upstream);
+          });
+        }
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/state.mjs <<'BOTXRAY_SOURCE'
+        import fs from 'node:fs';
+        import { randomBytes, scryptSync, createCipheriv, createDecipheriv } from 'node:crypto';
+
+        export function encryptState(bytes, password) {
+          if (!password || password.length < 24) throw new Error('Session password is missing');
+          const salt = randomBytes(16), iv = randomBytes(12);
+          const cipher = createCipheriv('aes-256-gcm', scryptSync(password, salt, 32), iv);
+          const encrypted = Buffer.concat([cipher.update(bytes), cipher.final()]);
+          return Buffer.concat([Buffer.from('BXR1'), salt, iv, cipher.getAuthTag(), encrypted]);
+        }
+        export function decryptState(bytes, password) {
+          if (bytes.subarray(0, 4).toString() !== 'BXR1') throw new Error('Unrecognized state backup');
+          const decipher = createDecipheriv('aes-256-gcm', scryptSync(password, bytes.subarray(4, 20), 32), bytes.subarray(20, 32));
+          decipher.setAuthTag(bytes.subarray(32, 48));
+          return Buffer.concat([decipher.update(bytes.subarray(48)), decipher.final()]);
+        }
+        if (process.argv[1]?.endsWith('/state.mjs')) {
+          const [mode, input, output] = process.argv.slice(2);
+          if (!['save', 'restore'].includes(mode) || !input || !output) throw new Error('Use state.mjs save|restore INPUT OUTPUT');
+          const transform = mode === 'save' ? encryptState : decryptState;
+          fs.writeFileSync(output, transform(fs.readFileSync(input), process.env.SESSION_PASSWORD), { mode: 0o600 });
+        }
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/session.mjs <<'BOTXRAY_SOURCE'
+        import fs from 'node:fs';
+        import { spawn } from 'node:child_process';
+        import { once } from 'node:events';
+        import { createGateway } from './gateway.mjs';
+        import { createClient } from './polymarket-us.mjs';
+
+        const password = process.env.SESSION_PASSWORD;
+        const minutes = Number(process.env.SESSION_MINUTES || 30);
+        if (![2, 30, 60, 180, 300, 330].includes(minutes)) throw new Error('Invalid session length');
+        if (!password || password.length < 24) throw new Error('Create the BOTXRAY_SESSION_PASSWORD repository secret first');
+        const auth = 'Basic ' + Buffer.from(`botxray:${password}`).toString('base64');
+        const childEnv = { PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR || '/tmp', HOST: '127.0.0.1', PORT: '3797', BOTXRAY_NO_OPEN: '1', BOTXRAY_BROKER: 'stub', BOTXRAY_KEY_MODE: 'paper' };
+        fs.mkdirSync('session-results', { recursive: true });
+        const log = fs.openSync('session-results/server.log', 'a');
+        let stopped = false;
+        let finish;
+        const done = new Promise(resolve => { finish = () => { stopped = true; resolve(); }; });
+        process.once('SIGTERM', finish);
+        process.once('SIGINT', finish);
+        const accountClient = createClient({ keyId: process.env.POLYMARKET_US_KEY_ID, secretKey: process.env.POLYMARKET_US_SECRET_KEY });
+        const appEnv = { ...childEnv, BOTXRAY_BROKER: 'polymarket-us', BOTXRAY_KEY_MODE: 'live', BOTXRAY_KEY_ID: process.env.POLYMARKET_US_KEY_ID || '', BOTXRAY_SECRET: process.env.POLYMARKET_US_SECRET_KEY || '' };
+        const server = spawn(process.execPath, ['server.js'], { cwd: 'bot-x-ray', env: appEnv, stdio: ['ignore', log, log] });
+        let tunnel;
+        let lastAccountCheck = 0;
+        let accountCheckInProgress = null;
+        async function checkAccount() {
+          if (accountCheckInProgress) return accountCheckInProgress;
+          if (Date.now() - lastAccountCheck < 15000) return { connected: false, liveTrading: false, note: 'Wait 15 seconds before checking again.' };
+          lastAccountCheck = Date.now();
+          accountCheckInProgress = (async () => {
+            try {
+              const status = await accountClient.account();
+              if (!status.ok) return { connected: false, liveTrading: false, note: status.note };
+              const positionData = await accountClient.positions();
+              return { connected: true, liveTrading: false, note: status.note, balances: status.balances, positions: positionData.positions, morePositionsAvailable: positionData.moreAvailable };
+            } catch (error) {
+              return { connected: false, liveTrading: false, note: error.message };
+            }
+          })();
+          try { return await accountCheckInProgress; } finally { accountCheckInProgress = null; }
+        }
+        const gateway = createGateway({ password, onFinish: finish, onAccountCheck: checkAccount });
+        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+        const get = (url, options = {}) => fetch(url, { ...options, signal: AbortSignal.timeout(15000) });
+        try {
+          let healthy = false;
+          for (let i = 0; i < 40; i++) {
+            try { healthy = (await (await get('http://127.0.0.1:3797/api/health')).json()).app === 'bot-x-ray'; } catch {}
+            if (healthy) break;
+            if (server.exitCode !== null) throw new Error('Bot X-Ray exited during startup');
+            await delay(500);
+          }
+          if (!healthy) throw new Error('Bot X-Ray did not start');
+          const status = await (await get('http://127.0.0.1:3797/api/strategy')).json();
+          if (status.broker.armed || status.broker.adapterLive || !['stub', 'polymarket-us'].includes(status.broker.adapter)) throw new Error('Expected a session with automated orders disabled');
+          gateway.listen(8080, '127.0.0.1');
+          await once(gateway, 'listening');
+          tunnel = spawn('./cloudflared', ['tunnel', '--no-autoupdate', '--protocol', 'http2', '--url', 'http://127.0.0.1:8080'], { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
+          let tunnelLog = '';
+          tunnel.on('error', error => { console.error(error.message); finish(); });
+          const collect = chunk => { tunnelLog = (tunnelLog + chunk.toString()).slice(-20000); };
+          tunnel.stdout.on('data', collect);
+          tunnel.stderr.on('data', collect);
+          let url;
+          for (let i = 0; i < 120; i++) {
+            url = tunnelLog.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)?.[0];
+            if (url) break;
+            if (tunnel.exitCode !== null) throw new Error(`Tunnel exited: ${tunnelLog.slice(-2000)}`);
+            await delay(500);
+          }
+          if (!url) throw new Error(`No tunnel address appeared: ${tunnelLog.slice(-2000)}`);
+          let verified = false;
+          for (let i = 0; i < 24; i++) {
+            try {
+              const anonymous = await get(url + '/api/health');
+              if (anonymous.status !== 401) throw new Error('Password gate did not reject anonymous access');
+              const page = await get(url, { headers: { authorization: auth } });
+              if (!page.ok || !(await page.text()).includes('Bot X-Ray')) throw new Error('App page not ready');
+              const presets = await get(url + '/api/presets', { headers: { authorization: auth } });
+              if (!(await presets.json()).wallets?.length) throw new Error('App data not ready');
+              const update = await get(url + '/api/strategy/config', { method: 'POST', headers: { authorization: auth, origin: url, 'x-bx': '1', 'content-type': 'application/json' }, body: '{}' });
+              if (!update.ok) throw new Error('App settings could not be saved through the tunnel');
+              verified = true;
+              break;
+            } catch (error) {
+              if (i === 23) throw error;
+              await delay(2000);
+            }
+          }
+          if (!verified) throw new Error('Could not verify the protected app');
+          const end = new Date(Date.now() + minutes * 60000).toISOString();
+          fs.writeFileSync('session-results/session.json', JSON.stringify({ url, end, paperOnly: true }, null, 2));
+          console.log(`Bot X-Ray is ready: ${url}`);
+          console.log(`Username: botxray. Password: the session password supplied in chat. Ends at ${end}.`);
+          if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Bot X-Ray is open\n\n[Open the full app](${url}) · [Finish session and save](${url}/__session)\n\nUsername: **botxray**. Use the password supplied in chat; it is stored as a repository secret.\n\nSession ends at **${end}**. Paper trading only. Settings and paper records restore from the previous encrypted backup.\n\nFor another session: Actions → Bot X-Ray paper run → Run workflow.\n`);
+          const timer = setTimeout(finish, minutes * 60000);
+          const monitor = setInterval(() => {
+            if (server.exitCode !== null || tunnel.exitCode !== null) {
+              console.error('The app or tunnel stopped unexpectedly');
+              process.exitCode = 1;
+              finish();
+            }
+          }, 5000);
+          await done;
+          clearTimeout(timer);
+          clearInterval(monitor);
+          try {
+            const state = await (await get('http://127.0.0.1:3797/api/strategy')).json();
+            fs.writeFileSync('session-results/strategy-final.json', JSON.stringify(state, null, 2));
+          } catch {}
+        } finally {
+          tunnel?.kill('SIGTERM');
+          gateway.closeAllConnections();
+          gateway.close();
+          server.kill('SIGTERM');
+          fs.closeSync(log);
+        }
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/gateway.test.mjs <<'BOTXRAY_SOURCE'
+        import test from 'node:test';
+        import assert from 'node:assert/strict';
+        import http from 'node:http';
+        import { once } from 'node:events';
+        import { createGateway } from './gateway.mjs';
+        import { encryptState, decryptState } from './state.mjs';
+
+        test('password gate, same-origin writes, and shutdown protection', async () => {
+          const password = 'test-password-for-isolated-tests-only';
+          const upstream = http.createServer((req, res) => res.end(JSON.stringify({ host: req.headers.host, origin: req.headers.origin, auth: req.headers.authorization })));
+          upstream.listen(0, '127.0.0.1');
+          await once(upstream, 'listening');
+          const gateway = createGateway({ password, upstreamPort: upstream.address().port });
+          gateway.listen(0, '127.0.0.1');
+          await once(gateway, 'listening');
+          const base = `http://127.0.0.1:${gateway.address().port}`;
+          const authorization = 'Basic ' + Buffer.from(`botxray:${password}`).toString('base64');
+          try {
+            assert.equal((await fetch(base)).status, 401);
+            assert.equal((await fetch(base + '/__account')).status, 401);
+            assert.equal((await fetch(base, { headers: { authorization: 'Basic wrong' } })).status, 401);
+            const read = await (await fetch(base, { headers: { authorization } })).json();
+            assert.equal(read.auth, undefined);
+            const headers = { authorization, 'x-bx': '1', origin: 'https://another.example' };
+            assert.equal((await fetch(base, { method: 'POST', headers })).status, 403);
+            headers.origin = base;
+            assert.equal((await fetch(base + '/__account/check', { method: 'POST', headers })).status, 200);
+            assert.equal((await fetch(base + '/__account/check', { headers })).status, 405);
+            const write = await (await fetch(base, { method: 'POST', headers })).json();
+            assert.equal(write.origin, `http://127.0.0.1:${upstream.address().port}`);
+            assert.equal((await fetch(base + '/api/shutdown', { method: 'POST', headers })).status, 403);
+          } finally { gateway.closeAllConnections(); gateway.close(); upstream.closeAllConnections(); upstream.close(); }
+        });
+        test('state encryption restores bytes and rejects a wrong password or tampered backup', () => {
+          const original = Buffer.from('saved paper trades and settings');
+          const password = 'test-password-for-isolated-tests-only';
+          const encrypted = encryptState(original, password);
+          assert.deepEqual(decryptState(encrypted, password), original);
+          assert.throws(() => decryptState(encrypted, 'different-password'));
+          encrypted[encrypted.length - 1] ^= 1;
+          assert.throws(() => decryptState(encrypted, password));
+        });
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us.mjs <<'BOTXRAY_SOURCE'
+        // Official Polymarket US account API. Account viewing only; no order endpoint exists here.
+        import { createPrivateKey, sign } from 'node:crypto';
+
+        const ORIGIN = 'https://api.polymarket.us';
+        const PKCS8_PREFIX = Buffer.from('302e020100300506032b657004220420', 'hex');
+
+        export function signingHeaders({ keyId, secretKey }, path, timestamp = Date.now()) {
+          if (!keyId || !secretKey) throw new Error('Polymarket US credentials are missing');
+          if (!['/v1/account/balances', '/v1/portfolio/positions'].includes(path)) throw new Error('Only account-viewing requests are supported');
+          const text = secretKey.trim();
+          if (!/^[A-Za-z0-9+/]+={0,2}$/.test(text)) throw new Error('The Polymarket US Secret Key must be base64');
+          const bytes = Buffer.from(text, 'base64');
+          if (![32, 64].includes(bytes.length)) throw new Error('The Polymarket US Secret Key must contain a 32-byte seed or 64-byte key');
+          const key = createPrivateKey({ key: Buffer.concat([PKCS8_PREFIX, bytes.subarray(0, 32)]), format: 'der', type: 'pkcs8' });
+          const time = String(timestamp);
+          return {
+            'X-PM-Access-Key': keyId,
+            'X-PM-Timestamp': time,
+            'X-PM-Signature': sign(null, Buffer.from(time + 'GET' + path), key).toString('base64'),
+            Accept: 'application/json',
+          };
+        }
+
+        export function createClient({ keyId, secretKey, fetchImpl = globalThis.fetch, now = Date.now } = {}) {
+          const configured = Boolean(keyId && secretKey);
+          async function read(path) {
+            const headers = signingHeaders({ keyId, secretKey }, path, now());
+            let response;
+            try {
+              response = await fetchImpl(ORIGIN + path, { method: 'GET', headers, redirect: 'error', signal: AbortSignal.timeout(10000) });
+            } catch {
+              throw new Error('Polymarket US did not answer. Try the account check again.');
+            }
+            if (!response.ok) {
+              const status = response.status;
+              const message = status === 401 || status === 403
+                ? 'Polymarket US did not accept these credentials. Check the Key ID, Secret Key, and API access in its developer portal.'
+                : status === 429 ? 'Polymarket US is limiting requests. Try again in a moment.'
+                : `Polymarket US account request failed (HTTP ${status}).`;
+              throw new Error(message);
+            }
+            try { return await response.json(); }
+            catch { throw new Error('Polymarket US returned an unreadable account response.'); }
+          }
+          return {
+            configured,
+            async account() {
+              if (!configured) return { ok: false, configured: false, mode: null, liveTrading: false, note: 'Add POLYMARKET_US_KEY_ID and POLYMARKET_US_SECRET_KEY to the repository secrets, then start a new session.' };
+              const data = await read('/v1/account/balances');
+              if (!Array.isArray(data.balances)) throw new Error('Polymarket US returned an unexpected balance format.');
+              return {
+                ok: true, configured: true, mode: 'live', liveTrading: false,
+                note: 'Real Polymarket US account verified. Account viewing is connected; automated orders are disabled.',
+                balances: data.balances.map(b => ({ currency: b.currency, currentBalance: b.currentBalance, buyingPower: b.buyingPower, lastUpdated: b.lastUpdated })),
+              };
+            },
+            async positions() {
+              if (!configured) throw new Error('Polymarket US credentials are missing');
+              const data = await read('/v1/portfolio/positions');
+              if (!data.positions || typeof data.positions !== 'object') throw new Error('Polymarket US returned an unexpected positions format.');
+              return { positions: data.positions, eof: data.eof === true, moreAvailable: data.eof !== true && Boolean(data.nextCursor) };
+            },
+          };
+        }
+
+        export default {
+          name: 'polymarket-us', title: 'Polymarket US', live: false, venues: ['polymarket-us'],
+          note: 'Polymarket US account viewing is prepared. Open the Polymarket US account link to verify credentials and view balances and positions. Automated orders are disabled. The strategy currently runs on paper on Kalshi and ETF options.',
+          account: keys => createClient({ keyId: keys.keyId, secretKey: keys.secret }).account(),
+          positions: keys => createClient({ keyId: keys.keyId, secretKey: keys.secret }).positions(),
+          async submit() { throw new Error('Polymarket US automated orders are disabled. No order was sent.'); },
+        };
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us.test.mjs <<'BOTXRAY_SOURCE'
+        import test from 'node:test';
+        import assert from 'node:assert/strict';
+        import { createPublicKey, createPrivateKey, verify } from 'node:crypto';
+        import adapter, { createClient, signingHeaders } from './polymarket-us.mjs';
+
+        // RFC 8032 Ed25519 test seed and public key, independent of the account credentials.
+        const seed = Buffer.from('9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60', 'hex');
+        const secretKey = seed.toString('base64');
+        const publicKey = createPublicKey({ key: Buffer.from('302a300506032b6570032100d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a', 'hex'), format: 'der', type: 'spki' });
+
+        test('official signature format uses timestamp + GET + fixed path', () => {
+          const path = '/v1/account/balances', timestamp = 1792600000123;
+          const headers = signingHeaders({ keyId: 'test-key-id', secretKey }, path, timestamp);
+          assert.equal(headers['X-PM-Timestamp'], String(timestamp));
+          assert.equal(verify(null, Buffer.from(String(timestamp) + 'GET' + path), publicKey, Buffer.from(headers['X-PM-Signature'], 'base64')), true);
+          assert.throws(() => signingHeaders({ keyId: 'id', secretKey }, '/v1/orders'), /Only account-viewing/);
+          assert.throws(() => signingHeaders({ keyId: 'id', secretKey: 'not-a-key' }, path), /base64/);
+        });
+        test('missing credentials never make a request; connected status never returns keys', async () => {
+          const calls = [];
+          const fetchImpl = async (url, options) => {
+            calls.push({ url, options });
+            return { ok: true, json: async () => ({ balances: [{ currency: 'USD', currentBalance: 20, buyingPower: 10 }] }) };
+          };
+          assert.equal((await createClient({ fetchImpl }).account()).configured, false);
+          assert.equal(calls.length, 0);
+          const status = await createClient({ keyId: 'test-key-id', secretKey, fetchImpl }).account();
+          assert.equal(status.ok, true);
+          assert.equal(status.liveTrading, false);
+          assert.ok(!JSON.stringify(status).includes(secretKey));
+          assert.ok(!JSON.stringify(status).includes('test-key-id'));
+          assert.equal(calls[0].url, 'https://api.polymarket.us/v1/account/balances');
+          assert.equal(calls[0].options.redirect, 'error');
+        });
+        test('account failures are sanitized and the adapter cannot submit orders', async () => {
+          const fetchImpl = async () => ({ ok: false, status: 401, text: async () => secretKey });
+          await assert.rejects(createClient({ keyId: 'id', secretKey, fetchImpl }).account(), error => !error.message.includes(secretKey) && /did not accept/.test(error.message));
+          assert.equal(adapter.live, false);
+          await assert.rejects(adapter.submit({}, {}), /No order was sent/);
+        });
+        BOTXRAY_SOURCE
+    - name: Download the verified Bot X-Ray release
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p results
+        curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 \
+          https://part-timequant.com/kit/bot-x-ray.tar.gz -o bot-x-ray.tar.gz
+        echo '3073d5071c70b868c62e327a717917b6b40d5ee238803a4a161f5a132ae20910  bot-x-ray.tar.gz' | sha256sum --check
+        python3 - <<'PY'
+        import tarfile
+        from pathlib import PurePosixPath
+        with tarfile.open('bot-x-ray.tar.gz') as archive:
+            for member in archive.getmembers():
+                p = PurePosixPath(member.name)
+                if p.is_absolute() or '..' in p.parts or not p.parts or p.parts[0] != 'bot-x-ray' or not (member.isfile() or member.isdir()):
+                    raise SystemExit('Unexpected archive entry: ' + member.name)
+            archive.extractall('.', filter='data')
+        PY
+
+        cp bot-x-ray-actions/polymarket-us.mjs bot-x-ray/lib/brokers/polymarket-us.js
     - name: Restore the latest saved paper records
       env:
         GH_TOKEN: ${{ github.token }}
@@ -346,9 +924,11 @@ jobs:
         case "$expected" in sha256:*) ;; *) echo 'Release digest is missing'; exit 1 ;; esac
         printf '%s  cloudflared\n' "${expected#sha256:}" | sha256sum --check
         chmod +x cloudflared
-    - name: Open the protected full app (link appears in summary)
+    - name: Open the protected app (expand this step for the link)
       env:
         SESSION_PASSWORD: ${{ secrets.BOTXRAY_SESSION_PASSWORD }}
+        POLYMARKET_US_KEY_ID: ${{ secrets.POLYMARKET_US_KEY_ID }}
+        POLYMARKET_US_SECRET_KEY: ${{ secrets.POLYMARKET_US_SECRET_KEY }}
       run: |-
         set -euo pipefail
         mkdir -p session-results
@@ -401,3 +981,8 @@ jobs:
         path: session-backup/state.enc
         retention-days: 90
         if-no-files-found: error
+    concurrency:
+      group: bot-x-ray-paper
+      cancel-in-progress: false
+    needs: checks
+    if: github.event_name == 'workflow_dispatch'
