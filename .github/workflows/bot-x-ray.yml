@@ -1,143 +1,375 @@
 name: Bot X-Ray paper run
-
-on:
+'on':
   workflow_dispatch:
     inputs:
-      wallet:
-        description: Polymarket wallet or username to inspect
-        default: coinman2
-        required: true
-        type: string
       minutes:
-        description: Paper session length (1–15 minutes)
-        default: '5'
+        description: Full app session length in minutes
+        default: '30'
         required: true
         type: choice
-        options: ['1', '5', '10', '15']
+        options:
+        - '2'
+        - '30'
+        - '60'
+        - '180'
+        - '300'
   push:
-    branches: [main]
-    paths: [.github/workflows/bot-x-ray.yml]
-
+    branches:
+    - main
+    paths:
+    - .github/workflows/bot-x-ray.yml
 permissions:
   contents: read
-
+  actions: read
 concurrency:
   group: bot-x-ray-paper
   cancel-in-progress: false
-
 jobs:
   paper:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
     env:
       BOTXRAY_BROKER: stub
       BOTXRAY_KEY_MODE: paper
       BOTXRAY_NO_OPEN: '1'
-      WALLET: ${{ inputs.wallet || 'coinman2' }}
-      SESSION_MINUTES: ${{ inputs.minutes || '1' }}
+      SESSION_MINUTES: ${{ inputs.minutes || '2' }}
     steps:
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
+    - uses: actions/setup-node@v6
+      with:
+        node-version: '24'
+        package-manager-cache: false
+    - name: Validate session password
+      env:
+        SESSION_PASSWORD: ${{ secrets.BOTXRAY_SESSION_PASSWORD }}
+      run: node --input-type=module -e 'if ((process.env.SESSION_PASSWORD || "").length < 24) throw new Error("Create BOTXRAY_SESSION_PASSWORD first");'
+    - name: Prepare the protected session helper
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p bot-x-ray-actions
+        cat > bot-x-ray-actions/gateway.mjs <<'BOTXRAY_SOURCE'
+        import http from 'node:http';
+        import { createHash, timingSafeEqual } from 'node:crypto';
 
-      - name: Download the verified Bot X-Ray release
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p results
-          curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 \
-            https://part-timequant.com/kit/bot-x-ray.tar.gz -o bot-x-ray.tar.gz
-          echo '3073d5071c70b868c62e327a717917b6b40d5ee238803a4a161f5a132ae20910  bot-x-ray.tar.gz' | sha256sum --check
-          python3 - <<'PY'
-          import tarfile
-          from pathlib import PurePosixPath
-          with tarfile.open('bot-x-ray.tar.gz') as archive:
-              for member in archive.getmembers():
-                  p = PurePosixPath(member.name)
-                  if p.is_absolute() or '..' in p.parts or not p.parts or p.parts[0] != 'bot-x-ray' or not (member.isfile() or member.isdir()):
-                      raise SystemExit('Unexpected archive entry: ' + member.name)
-              archive.extractall('.', filter='data')
-          PY
+        const hash = value => createHash('sha256').update(value).digest();
 
-      - name: Run offline tests
-        working-directory: bot-x-ray
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/test.js 2>&1 | tee ../results/offline-tests.txt
+        export function createGateway({ password, upstreamPort = 3797, onFinish = () => {} }) {
+          if (!password || password.length < 24) throw new Error('A strong session password is required');
+          const expected = hash('Basic ' + Buffer.from(`botxray:${password}`).toString('base64'));
+          return http.createServer((req, res) => {
+            res.setHeader('Cache-Control', 'no-store');
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('X-Frame-Options', 'DENY');
+            res.setHeader('Referrer-Policy', 'no-referrer');
+            if (!timingSafeEqual(hash(req.headers.authorization || ''), expected)) {
+              res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Bot X-Ray", charset="UTF-8"' });
+              return res.end('Sign in with your Bot X-Ray session password.');
+            }
+            const writes = !['GET', 'HEAD'].includes(req.method);
+            if (writes) {
+              const origin = req.headers.origin;
+              const ownOrigin = origin === `https://${req.headers.host}` || origin === `http://${req.headers.host}`;
+              if (req.headers['x-bx'] !== '1' || !ownOrigin) {
+                res.writeHead(403);
+                return res.end('This action must come from your Bot X-Ray page.');
+              }
+            }
+            if (req.url === '/__session') {
+              if (req.method === 'POST') {
+                res.end('Session ending. Your paper records are being saved to GitHub.');
+                setTimeout(onFinish, 250);
+                return;
+              }
+              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+              return res.end(`<!doctype html><meta name="viewport" content="width=device-width"><title>Bot X-Ray session</title><style>body{font:18px system-ui;max-width:650px;margin:10vh auto;padding:24px}button{font:inherit;padding:12px}</style><h1>Bot X-Ray session</h1><p>End this session to save your settings and paper trades for the next run.</p><button id="finish">Finish and save</button><p><a href="/">Back to Bot X-Ray</a></p><script>document.querySelector('#finish').onclick=async()=>{const r=await fetch('/__session',{method:'POST',headers:{'x-bx':'1'}});document.body.textContent=await r.text();}</script>`);
+            }
+            if (req.url.split('?')[0] === '/api/shutdown') {
+              res.writeHead(403);
+              return res.end('Use /__session to finish and save.');
+            }
+            const headers = { ...req.headers, host: `127.0.0.1:${upstreamPort}` };
+            for (const name of ['authorization', 'proxy-authorization', 'connection', 'forwarded', 'x-forwarded-host', 'x-forwarded-proto', 'cookie']) delete headers[name];
+            if (headers.origin) headers.origin = `http://127.0.0.1:${upstreamPort}`;
+            const upstream = http.request({ hostname: '127.0.0.1', port: upstreamPort, path: req.url, method: req.method, headers }, incoming => {
+              const out = { ...incoming.headers, 'cache-control': 'no-store', 'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer' };
+              delete out['www-authenticate'];
+              res.writeHead(incoming.statusCode, out);
+              incoming.pipe(res);
+            });
+            upstream.on('error', () => {
+              if (!res.headersSent) res.writeHead(502);
+              res.end('Bot X-Ray is starting or this session has ended.');
+            });
+            req.on('aborted', () => upstream.destroy());
+            req.pipe(upstream);
+          });
+        }
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/state.mjs <<'BOTXRAY_SOURCE'
+        import fs from 'node:fs';
+        import { randomBytes, scryptSync, createCipheriv, createDecipheriv } from 'node:crypto';
 
-      - name: Check public data connections
-        working-directory: bot-x-ray
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/doctor.js 2>&1 | tee ../results/data-sources.txt
+        export function encryptState(bytes, password) {
+          if (!password || password.length < 24) throw new Error('Session password is missing');
+          const salt = randomBytes(16), iv = randomBytes(12);
+          const cipher = createCipheriv('aes-256-gcm', scryptSync(password, salt, 32), iv);
+          const encrypted = Buffer.concat([cipher.update(bytes), cipher.final()]);
+          return Buffer.concat([Buffer.from('BXR1'), salt, iv, cipher.getAuthTag(), encrypted]);
+        }
+        export function decryptState(bytes, password) {
+          if (bytes.subarray(0, 4).toString() !== 'BXR1') throw new Error('Unrecognized state backup');
+          const decipher = createDecipheriv('aes-256-gcm', scryptSync(password, bytes.subarray(4, 20), 32), bytes.subarray(20, 32));
+          decipher.setAuthTag(bytes.subarray(32, 48));
+          return Buffer.concat([decipher.update(bytes.subarray(48)), decipher.final()]);
+        }
+        if (process.argv[1]?.endsWith('/state.mjs')) {
+          const [mode, input, output] = process.argv.slice(2);
+          if (!['save', 'restore'].includes(mode) || !input || !output) throw new Error('Use state.mjs save|restore INPUT OUTPUT');
+          const transform = mode === 'save' ? encryptState : decryptState;
+          fs.writeFileSync(output, transform(fs.readFileSync(input), process.env.SESSION_PASSWORD), { mode: 0o600 });
+        }
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/session.mjs <<'BOTXRAY_SOURCE'
+        import fs from 'node:fs';
+        import { spawn } from 'node:child_process';
+        import { once } from 'node:events';
+        import { createGateway } from './gateway.mjs';
 
-      - name: Inspect the selected wallet
-        working-directory: bot-x-ray
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout 300 node scripts/xray.js "$WALLET" --recent > ../results/wallet-report.txt 2> ../results/wallet-progress.txt
-          cat ../results/wallet-report.txt
+        const password = process.env.SESSION_PASSWORD;
+        const minutes = Number(process.env.SESSION_MINUTES || 30);
+        if (![2, 30, 60, 180, 300].includes(minutes)) throw new Error('Invalid session length');
+        if (!password || password.length < 24) throw new Error('Create the BOTXRAY_SESSION_PASSWORD repository secret first');
+        const auth = 'Basic ' + Buffer.from(`botxray:${password}`).toString('base64');
+        console.log(`::add-mask::${auth}`);
+        const childEnv = { PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR || '/tmp', HOST: '127.0.0.1', PORT: '3797', BOTXRAY_NO_OPEN: '1', BOTXRAY_BROKER: 'stub', BOTXRAY_KEY_MODE: 'paper' };
+        fs.mkdirSync('session-results', { recursive: true });
+        const log = fs.openSync('session-results/server.log', 'a');
+        let stopped = false;
+        let finish;
+        const done = new Promise(resolve => { finish = () => { stopped = true; resolve(); }; });
+        process.once('SIGTERM', finish);
+        process.once('SIGINT', finish);
+        const server = spawn(process.execPath, ['server.js'], { cwd: 'bot-x-ray', env: childEnv, stdio: ['ignore', log, log] });
+        let tunnel;
+        const gateway = createGateway({ password, onFinish: finish });
+        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+        const get = (url, options = {}) => fetch(url, { ...options, signal: AbortSignal.timeout(15000) });
+        try {
+          let healthy = false;
+          for (let i = 0; i < 40; i++) {
+            try { healthy = (await (await get('http://127.0.0.1:3797/api/health')).json()).app === 'bot-x-ray'; } catch {}
+            if (healthy) break;
+            if (server.exitCode !== null) throw new Error('Bot X-Ray exited during startup');
+            await delay(500);
+          }
+          if (!healthy) throw new Error('Bot X-Ray did not start');
+          const status = await (await get('http://127.0.0.1:3797/api/strategy')).json();
+          if (status.broker.armed || status.broker.adapter !== 'stub' || status.broker.keysFound) throw new Error('Expected a paper-only session');
+          gateway.listen(8080, '127.0.0.1');
+          await once(gateway, 'listening');
+          tunnel = spawn('./cloudflared', ['tunnel', '--no-autoupdate', '--protocol', 'http2', '--url', 'http://127.0.0.1:8080'], { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
+          let tunnelLog = '';
+          tunnel.on('error', error => { console.error(error.message); finish(); });
+          const collect = chunk => { tunnelLog = (tunnelLog + chunk.toString()).slice(-20000); };
+          tunnel.stdout.on('data', collect);
+          tunnel.stderr.on('data', collect);
+          let url;
+          for (let i = 0; i < 120; i++) {
+            url = tunnelLog.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)?.[0];
+            if (url) break;
+            if (tunnel.exitCode !== null) throw new Error(`Tunnel exited: ${tunnelLog.slice(-2000)}`);
+            await delay(500);
+          }
+          if (!url) throw new Error(`No tunnel address appeared: ${tunnelLog.slice(-2000)}`);
+          let verified = false;
+          for (let i = 0; i < 24; i++) {
+            try {
+              const anonymous = await get(url + '/api/health');
+              if (anonymous.status !== 401) throw new Error('Password gate did not reject anonymous access');
+              const page = await get(url, { headers: { authorization: auth } });
+              if (!page.ok || !(await page.text()).includes('Bot X-Ray')) throw new Error('App page not ready');
+              const presets = await get(url + '/api/presets', { headers: { authorization: auth } });
+              if (!(await presets.json()).wallets?.length) throw new Error('App data not ready');
+              const update = await get(url + '/api/strategy/config', { method: 'POST', headers: { authorization: auth, origin: url, 'x-bx': '1', 'content-type': 'application/json' }, body: '{}' });
+              if (!update.ok) throw new Error('App settings could not be saved through the tunnel');
+              verified = true;
+              break;
+            } catch (error) {
+              if (i === 23) throw error;
+              await delay(2000);
+            }
+          }
+          if (!verified) throw new Error('Could not verify the protected app');
+          const end = new Date(Date.now() + minutes * 60000).toISOString();
+          fs.writeFileSync('session-results/session.json', JSON.stringify({ url, end, paperOnly: true }, null, 2));
+          console.log(`Bot X-Ray is ready: ${url}`);
+          console.log(`Username: botxray. Password: the session password supplied in chat. Ends at ${end}.`);
+          if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Bot X-Ray is open\n\n[Open the full app](${url}) · [Finish session and save](${url}/__session)\n\nUsername: **botxray**. Use the password supplied in chat; it is stored as a repository secret.\n\nSession ends at **${end}**. Paper trading only. Settings and paper records restore from the previous encrypted backup.\n\nFor another session: Actions → Bot X-Ray paper run → Run workflow.\n`);
+          const timer = setTimeout(finish, minutes * 60000);
+          const monitor = setInterval(() => {
+            if (server.exitCode !== null || tunnel.exitCode !== null) {
+              console.error('The app or tunnel stopped unexpectedly');
+              process.exitCode = 1;
+              finish();
+            }
+          }, 5000);
+          await done;
+          clearTimeout(timer);
+          clearInterval(monitor);
+          try {
+            const state = await (await get('http://127.0.0.1:3797/api/strategy')).json();
+            fs.writeFileSync('session-results/strategy-final.json', JSON.stringify(state, null, 2));
+          } catch {}
+        } finally {
+          tunnel?.kill('SIGTERM');
+          gateway.closeAllConnections();
+          gateway.close();
+          server.kill('SIGTERM');
+          fs.closeSync(log);
+        }
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/gateway.test.mjs <<'BOTXRAY_SOURCE'
+        import test from 'node:test';
+        import assert from 'node:assert/strict';
+        import http from 'node:http';
+        import { once } from 'node:events';
+        import { createGateway } from './gateway.mjs';
+        import { encryptState, decryptState } from './state.mjs';
 
-      - name: Run a US paper session and save its state
-        working-directory: bot-x-ray
-        shell: bash
-        run: |
-          set -euo pipefail
-          case "$SESSION_MINUTES" in 1|5|10|15) ;; *) exit 1 ;; esac
-          node scripts/setup.js --country US | tee ../results/setup.txt
-          node server.js > ../results/server.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:3797/api/health > ../results/health.json; then break; fi
-            sleep 1
-          done
-          curl --fail --silent http://127.0.0.1:3797/api/strategy > ../results/strategy-start.json
-          node --input-type=module -e 'import fs from "node:fs"; const s = JSON.parse(fs.readFileSync("../results/strategy-start.json")); if (s.broker.armed || s.broker.adapter !== "stub" || s.broker.keysFound) throw new Error("Expected an unconnected paper broker");'
-          for tick in $(seq 1 "$((SESSION_MINUTES * 6))"); do
-            kill -0 "$server_pid"
-            sleep 10
-          done
-          curl --fail --silent http://127.0.0.1:3797/api/strategy > ../results/strategy-end.json
-          node scripts/stop.js
-          wait "$server_pid" || true
-          trap - EXIT
-
-      - name: Save paper records and explain the results
-        if: always()
-        shell: bash
-        run: |
-          mkdir -p results
-          if [ -d bot-x-ray/data/strategy ]; then
-            cp -r bot-x-ray/data/strategy results/paper-records
+        test('password gate, same-origin writes, and shutdown protection', async () => {
+          const password = 'test-password-for-isolated-tests-only';
+          const upstream = http.createServer((req, res) => res.end(JSON.stringify({ host: req.headers.host, origin: req.headers.origin, auth: req.headers.authorization })));
+          upstream.listen(0, '127.0.0.1');
+          await once(upstream, 'listening');
+          const gateway = createGateway({ password, upstreamPort: upstream.address().port });
+          gateway.listen(0, '127.0.0.1');
+          await once(gateway, 'listening');
+          const base = `http://127.0.0.1:${gateway.address().port}`;
+          const authorization = 'Basic ' + Buffer.from(`botxray:${password}`).toString('base64');
+          try {
+            assert.equal((await fetch(base)).status, 401);
+            assert.equal((await fetch(base, { headers: { authorization: 'Basic wrong' } })).status, 401);
+            const read = await (await fetch(base, { headers: { authorization } })).json();
+            assert.equal(read.auth, undefined);
+            const headers = { authorization, 'x-bx': '1', origin: 'https://another.example' };
+            assert.equal((await fetch(base, { method: 'POST', headers })).status, 403);
+            headers.origin = base;
+            const write = await (await fetch(base, { method: 'POST', headers })).json();
+            assert.equal(write.origin, `http://127.0.0.1:${upstream.address().port}`);
+            assert.equal((await fetch(base + '/api/shutdown', { method: 'POST', headers })).status, 403);
+          } finally { gateway.closeAllConnections(); gateway.close(); upstream.closeAllConnections(); upstream.close(); }
+        });
+        test('state encryption restores bytes and rejects a wrong password or tampered backup', () => {
+          const original = Buffer.from('saved paper trades and settings');
+          const password = 'test-password-for-isolated-tests-only';
+          const encrypted = encryptState(original, password);
+          assert.deepEqual(decryptState(encrypted, password), original);
+          assert.throws(() => decryptState(encrypted, 'different-password'));
+          encrypted[encrypted.length - 1] ^= 1;
+          assert.throws(() => decryptState(encrypted, password));
+        });
+        BOTXRAY_SOURCE
+    - name: Download the verified Bot X-Ray release
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p results
+        curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 \
+          https://part-timequant.com/kit/bot-x-ray.tar.gz -o bot-x-ray.tar.gz
+        echo '3073d5071c70b868c62e327a717917b6b40d5ee238803a4a161f5a132ae20910  bot-x-ray.tar.gz' | sha256sum --check
+        python3 - <<'PY'
+        import tarfile
+        from pathlib import PurePosixPath
+        with tarfile.open('bot-x-ray.tar.gz') as archive:
+            for member in archive.getmembers():
+                p = PurePosixPath(member.name)
+                if p.is_absolute() or '..' in p.parts or not p.parts or p.parts[0] != 'bot-x-ray' or not (member.isfile() or member.isdir()):
+                    raise SystemExit('Unexpected archive entry: ' + member.name)
+            archive.extractall('.', filter='data')
+        PY
+    - name: Test app and password protection
+      run: |-
+        node --test bot-x-ray-actions/gateway.test.mjs
+        (cd bot-x-ray && node scripts/test.js)
+    - name: Restore the latest saved paper records
+      env:
+        GH_TOKEN: ${{ github.token }}
+        SESSION_PASSWORD: ${{ secrets.BOTXRAY_SESSION_PASSWORD }}
+      shell: bash
+      run: |-
+        set -euo pipefail
+        mkdir -p previous-state
+        saved_run=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=bot-x-ray-state&per_page=100" --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "main")][0].workflow_run.id // empty')
+        if [ -n "$saved_run" ]; then
+          gh run download "$saved_run" --repo "$GITHUB_REPOSITORY" --name bot-x-ray-state --dir previous-state
+          node bot-x-ray-actions/state.mjs restore previous-state/state.enc previous-state/state.tar.gz
+          python3 - <<'RESTORE'
+        import tarfile
+        from pathlib import PurePosixPath
+        with tarfile.open('previous-state/state.tar.gz') as archive:
+            for member in archive.getmembers():
+                p = PurePosixPath(member.name)
+                if p.is_absolute() or '..' in p.parts or not p.parts or p.parts[0] not in ('data', 'session-results') or not (member.isfile() or member.isdir()):
+                    raise SystemExit('Unexpected state archive entry: ' + member.name)
+            archive.extractall('bot-x-ray', members=[m for m in archive.getmembers() if PurePosixPath(m.name).parts[0] == 'data'], filter='data')
+        RESTORE
+          echo "Restored encrypted state from run $saved_run"
+        else
+          legacy_run=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=bot-x-ray-results&per_page=100" --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "main")][0].workflow_run.id // empty')
+          if [ -n "$legacy_run" ]; then
+            gh run download "$legacy_run" --repo "$GITHUB_REPOSITORY" --name bot-x-ray-results --dir previous-state
+            if [ -d previous-state/paper-records ]; then
+              mkdir -p bot-x-ray/data/strategy
+              cp -r previous-state/paper-records/. bot-x-ray/data/strategy/
+              echo "Imported paper records from the original test run $legacy_run"
+            fi
           fi
-          cat > results/READ-ME.txt <<'TXT'
-          Bot X-Ray runs on simulated money only, with no broker connected.
-          wallet-report.txt contains the requested wallet analysis.
-          data-sources.txt shows which services were reachable from this runner.
-          strategy-end.json and paper-records contain the paper session results.
-          No trades can be a valid result: the model may find no qualifying prices.
-          Each workflow run starts a new paper book. Download records to retain them.
-          This workflow does not publish an interactive website or run continuously.
-          Re-run from Actions > Bot X-Ray paper run > Run workflow.
-          TXT
-          cat >> "$GITHUB_STEP_SUMMARY" <<'MD'
-          ## Bot X-Ray paper session
-          Download **bot-x-ray-results** below for the wallet report, connection checks, logs, and paper records.
-
-          **Paper only.** No broker keys, live orders, or public web server. Each run starts a fresh paper book.
-
-          To run again, open **Actions → Bot X-Ray paper run → Run workflow**, then choose a wallet and session length.
-          MD
-
-      - name: Upload reports and paper records
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: bot-x-ray-results
-          path: results/
-          retention-days: 30
-          if-no-files-found: error
+        fi
+        rm -f bot-x-ray/data/strategy/armed.json
+        if [ ! -f bot-x-ray/data/strategy/config.json ]; then
+          (cd bot-x-ray && node scripts/setup.js --country US)
+        fi
+    - name: Check public data connections
+      working-directory: bot-x-ray
+      shell: bash
+      run: |-
+        set -euo pipefail
+        mkdir -p ../session-results
+        node scripts/doctor.js 2>&1 | tee ../session-results/data-sources.txt
+    - name: Download Cloudflare tunnel client
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: |-
+        set -euo pipefail
+        curl --fail --location --retry 2 --max-time 120 https://github.com/cloudflare/cloudflared/releases/download/2026.10.3/cloudflared-linux-amd64 -o cloudflared
+        expected=$(gh api repos/cloudflare/cloudflared/releases/tags/2026.10.3 --jq '.assets[] | select(.name == "cloudflared-linux-amd64") | .digest')
+        case "$expected" in sha256:*) ;; *) echo 'Release digest is missing'; exit 1 ;; esac
+        printf '%s  cloudflared\n' "${expected#sha256:}" | sha256sum --check
+        chmod +x cloudflared
+    - name: Open the protected full app (link appears in summary)
+      env:
+        SESSION_PASSWORD: ${{ secrets.BOTXRAY_SESSION_PASSWORD }}
+      run: node bot-x-ray-actions/session.mjs
+    - name: Encrypt and save settings, paper trades, and session logs
+      if: always()
+      env:
+        SESSION_PASSWORD: ${{ secrets.BOTXRAY_SESSION_PASSWORD }}
+      shell: bash
+      run: |-
+        set -euo pipefail
+        if [ -d bot-x-ray/data/strategy ] && [ -n "$SESSION_PASSWORD" ]; then
+          mkdir -p session-results session-backup
+          (cd bot-x-ray && node scripts/stop.js)
+          tar -czf state.tar.gz -C "$GITHUB_WORKSPACE/bot-x-ray" data -C "$GITHUB_WORKSPACE" session-results
+          node bot-x-ray-actions/state.mjs save state.tar.gz session-backup/state.enc
+          echo 'Encrypted settings and paper records saved. The next session restores this backup.' >> "$GITHUB_STEP_SUMMARY"
+        fi
+    - name: Upload encrypted session backup
+      if: always() && hashFiles('session-backup/state.enc') != ''
+      uses: actions/upload-artifact@v5
+      with:
+        name: bot-x-ray-state
+        path: session-backup/state.enc
+        retention-days: 90
+        if-no-files-found: error
