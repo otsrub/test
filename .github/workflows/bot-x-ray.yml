@@ -1,0 +1,143 @@
+name: Bot X-Ray paper run
+
+on:
+  workflow_dispatch:
+    inputs:
+      wallet:
+        description: Polymarket wallet or username to inspect
+        default: coinman2
+        required: true
+        type: string
+      minutes:
+        description: Paper session length (1–15 minutes)
+        default: '5'
+        required: true
+        type: choice
+        options: ['1', '5', '10', '15']
+  push:
+    branches: [main]
+    paths: [.github/workflows/bot-x-ray.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bot-x-ray-paper
+  cancel-in-progress: false
+
+jobs:
+  paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BOTXRAY_BROKER: stub
+      BOTXRAY_KEY_MODE: paper
+      BOTXRAY_NO_OPEN: '1'
+      WALLET: ${{ inputs.wallet || 'coinman2' }}
+      SESSION_MINUTES: ${{ inputs.minutes || '1' }}
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Download the verified Bot X-Ray release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p results
+          curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 \
+            https://part-timequant.com/kit/bot-x-ray.tar.gz -o bot-x-ray.tar.gz
+          echo '3073d5071c70b868c62e327a717917b6b40d5ee238803a4a161f5a132ae20910  bot-x-ray.tar.gz' | sha256sum --check
+          python3 - <<'PY'
+          import tarfile
+          from pathlib import PurePosixPath
+          with tarfile.open('bot-x-ray.tar.gz') as archive:
+              for member in archive.getmembers():
+                  p = PurePosixPath(member.name)
+                  if p.is_absolute() or '..' in p.parts or not p.parts or p.parts[0] != 'bot-x-ray' or not (member.isfile() or member.isdir()):
+                      raise SystemExit('Unexpected archive entry: ' + member.name)
+              archive.extractall('.', filter='data')
+          PY
+
+      - name: Run offline tests
+        working-directory: bot-x-ray
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/test.js 2>&1 | tee ../results/offline-tests.txt
+
+      - name: Check public data connections
+        working-directory: bot-x-ray
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/doctor.js 2>&1 | tee ../results/data-sources.txt
+
+      - name: Inspect the selected wallet
+        working-directory: bot-x-ray
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 300 node scripts/xray.js "$WALLET" --recent > ../results/wallet-report.txt 2> ../results/wallet-progress.txt
+          cat ../results/wallet-report.txt
+
+      - name: Run a US paper session and save its state
+        working-directory: bot-x-ray
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$SESSION_MINUTES" in 1|5|10|15) ;; *) exit 1 ;; esac
+          node scripts/setup.js --country US | tee ../results/setup.txt
+          node server.js > ../results/server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3797/api/health > ../results/health.json; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:3797/api/strategy > ../results/strategy-start.json
+          node --input-type=module -e 'import fs from "node:fs"; const s = JSON.parse(fs.readFileSync("../results/strategy-start.json")); if (s.broker.armed || s.broker.adapter !== "stub" || s.broker.keysFound) throw new Error("Expected an unconnected paper broker");'
+          for tick in $(seq 1 "$((SESSION_MINUTES * 6))"); do
+            kill -0 "$server_pid"
+            sleep 10
+          done
+          curl --fail --silent http://127.0.0.1:3797/api/strategy > ../results/strategy-end.json
+          node scripts/stop.js
+          wait "$server_pid" || true
+          trap - EXIT
+
+      - name: Save paper records and explain the results
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p results
+          if [ -d bot-x-ray/data/strategy ]; then
+            cp -r bot-x-ray/data/strategy results/paper-records
+          fi
+          cat > results/READ-ME.txt <<'TXT'
+          Bot X-Ray runs on simulated money only, with no broker connected.
+          wallet-report.txt contains the requested wallet analysis.
+          data-sources.txt shows which services were reachable from this runner.
+          strategy-end.json and paper-records contain the paper session results.
+          No trades can be a valid result: the model may find no qualifying prices.
+          Each workflow run starts a new paper book. Download records to retain them.
+          This workflow does not publish an interactive website or run continuously.
+          Re-run from Actions > Bot X-Ray paper run > Run workflow.
+          TXT
+          cat >> "$GITHUB_STEP_SUMMARY" <<'MD'
+          ## Bot X-Ray paper session
+          Download **bot-x-ray-results** below for the wallet report, connection checks, logs, and paper records.
+
+          **Paper only.** No broker keys, live orders, or public web server. Each run starts a fresh paper book.
+
+          To run again, open **Actions → Bot X-Ray paper run → Run workflow**, then choose a wallet and session length.
+          MD
+
+      - name: Upload reports and paper records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bot-x-ray-results
+          path: results/
+          retention-days: 30
+          if-no-files-found: error
