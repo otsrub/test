@@ -196,6 +196,10 @@ jobs:
           if (!healthy) throw new Error('Bot X-Ray did not start');
           const status = await (await get('http://127.0.0.1:3797/api/strategy')).json();
           if (status.broker.armed || status.broker.adapterLive || !['stub', 'polymarket-us'].includes(status.broker.adapter)) throw new Error('Expected a session with automated orders disabled');
+          const accountVerification = await checkAccount();
+          console.log(accountVerification.connected
+            ? 'Polymarket US connection verified: balances and positions accessible. Automated orders disabled.'
+            : `Polymarket US connection not verified: ${accountVerification.note}`);
           gateway.listen(8080, '127.0.0.1');
           await once(gateway, 'listening');
           tunnel = spawn('./cloudflared', ['tunnel', '--no-autoupdate', '--protocol', 'http2', '--url', 'http://127.0.0.1:8080'], { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -625,6 +629,10 @@ jobs:
           if (!healthy) throw new Error('Bot X-Ray did not start');
           const status = await (await get('http://127.0.0.1:3797/api/strategy')).json();
           if (status.broker.armed || status.broker.adapterLive || !['stub', 'polymarket-us'].includes(status.broker.adapter)) throw new Error('Expected a session with automated orders disabled');
+          const accountVerification = await checkAccount();
+          console.log(accountVerification.connected
+            ? 'Polymarket US connection verified: balances and positions accessible. Automated orders disabled.'
+            : `Polymarket US connection not verified: ${accountVerification.note}`);
           gateway.listen(8080, '127.0.0.1');
           await once(gateway, 'listening');
           tunnel = spawn('./cloudflared', ['tunnel', '--no-autoupdate', '--protocol', 'http2', '--url', 'http://127.0.0.1:8080'], { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
