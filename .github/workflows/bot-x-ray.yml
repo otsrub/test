@@ -447,6 +447,24 @@ jobs:
       run: |-
         node --test bot-x-ray-actions/*.test.mjs
         (cd bot-x-ray && node scripts/test.js)
+    - name: Verify Polymarket US account access without displaying account data
+      env:
+        POLYMARKET_US_KEY_ID: ${{ secrets.POLYMARKET_US_KEY_ID }}
+        POLYMARKET_US_SECRET_KEY: ${{ secrets.POLYMARKET_US_SECRET_KEY }}
+      run: |-
+        node --input-type=module <<'VERIFY'
+        import { createClient } from './bot-x-ray-actions/polymarket-us.mjs';
+        const client = createClient({ keyId: process.env.POLYMARKET_US_KEY_ID, secretKey: process.env.POLYMARKET_US_SECRET_KEY });
+        try {
+          const account = await client.account();
+          if (!account.ok) throw new Error(account.note);
+          await client.positions();
+          console.log('Polymarket US connection verified: balances and positions accessible. Automated orders disabled.');
+        } catch (error) {
+          console.error(error.message);
+          process.exitCode = 1;
+        }
+        VERIFY
   paper:
     runs-on: ubuntu-24.04
     timeout-minutes: 350
