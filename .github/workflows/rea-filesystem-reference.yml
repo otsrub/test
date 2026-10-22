@@ -1,0 +1,47 @@
+name: REA original filesystem manifest and payload acceptance gate
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-filesystem-reference.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: rea-filesystem-reference-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  filesystem-reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    if: ${{ github.run_attempt == 1 }}
+    steps:
+    - name: Download immutable original release archive
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: 'mkdir -p original-archive
+
+        gh release download mobilelogic-3.4-archive --repo otsrub/test --pattern MobileLogic.zip --dir original-archive'
+    - name: Stage original inventory and future assembly validator
+      shell: python
+      run: 'import pathlib,json
+
+        a=json.loads(''{"inventory_payload_fs.py": "\\"\\"\\"Immutable original ZIP inventory. No archive modification or binary recovery.\\"\\"\\"\\nimport pathlib,zipfile,hashlib,stat,json,collections\\np=pathlib.Path;archive=p(\''original-archive/MobileLogic.zip\'');expected=\''f2a650fd7a51a7bb2bc5e8e5cc35a95236c02723ab3faeb162cca64ee62a744e\''\\nh=hashlib.sha256()\\nwith archive.open(\''rb\'') as f:\\n for b in iter(lambda:f.read(1024*1024),b\''\''):h.update(b)\\nassert h.hexdigest()==expected\\nout=p(\''filesystem-reference\'');out.mkdir(exist_ok=True);entries=[];tree={};duplicates=[];case_groups=collections.defaultdict(list)\\nmagic={bytes.fromhex(x) for x in [\''cffaedfe\'',\''feedfacf\'',\''cefaedfe\'',\''feedface\'',\''cafebabe\'',\''bebafeca\'',\''cafebabf\'',\''bfbafeca\'']}\\nwith zipfile.ZipFile(archive) as z:\\n for info in z.infolist():\\n  name=info.filename;parts=pathlib.PurePosixPath(name).parts;assert parts and not name.startswith(\''/\'') and \''..\'' not in parts and \''\\\\x00\'' not in name\\n  name=name.rstrip(\''/\'');mode=(info.external_attr>>16)&0xffff;kind=\''directory\'' if info.is_dir() else \''symlink\'' if stat.S_ISLNK(mode) else \''file\''\\n  row={\''path\'':name,\''kind\'':kind,\''mode\'':oct(stat.S_IMODE(mode)) if mode else None,\''mode_source\'':\''ZIP external_attr\'' if mode else \''not recorded\'',\''size\'':info.file_size,\''archive_crc32\'':hex(info.CRC),\''zip_created_system\'':info.create_system}\\n  if kind!=\''directory\'':\\n   digest=hashlib.sha256();first=b\''\'';link=b\''\''\\n   with z.open(info) as f:\\n    for b in iter(lambda:f.read(1024*1024),b\''\''):\\n     if not first:first=b[:8]\\n     digest.update(b)\\n     if kind==\''symlink\'':link+=b\\n   row[\''sha256\'']=digest.hexdigest();row[\''content_kind\'']=\''mach_o\'' if first[:4] in magic else \''native_archive\'' if first==b\''!<arch>\\\\n\'' else \''preserved_content\''\\n   if kind==\''symlink\'':row[\''symlink_target\'']=link.decode(\''utf-8\'',\''surrogateescape\'')\\n  entries.append(row)\\n  if name in tree and tree[name].get(\''explicit\'',False):duplicates.append(name)\\n  tree[name]={**row,\''explicit\'':True};case_groups[name.casefold()].append(name)\\n  for parent in pathlib.PurePosixPath(name).parents:\\n   if str(parent)==\''.\'':continue\\n   tree.setdefault(str(parent),{\''path\'':str(parent),\''kind\'':\''directory\'',\''mode\'':None,\''mode_source\'':\''implicit parent directory\'',\''explicit\'':False})\\nrows=[tree[k] for k in sorted(tree)]\\nmanifest={\''original_archive_sha256\'':expected,\''source_release_tag\'':\''mobilelogic-3.4-archive\'',\''source_asset\'':\''MobileLogic.zip\'',\''scope\'':\''all archive-relative filesystem entries; Payload subset available by exact path prefix\'',\''entries\'':rows,\''archive_entries\'':entries,\''duplicate_paths\'':duplicates,\''case_sensitive_collisions\'':[sorted(set(v)) for v in case_groups.values() if len(set(v))>1]}\\n(out/\''ORIGINAL_FILESYSTEM.json\'').write_text(json.dumps(manifest,indent=2,ensure_ascii=True)+\''\\\\n\'')\\n(out/\''ORIGINAL_PATHS.txt\'').write_text(\''\\\\n\''.join(r[\''path\'']+(\''/\'' if r[\''kind\'']==\''directory\'' else \''\'') for r in rows)+\''\\\\n\'')\\ncode=[r for r in rows if r.get(\''content_kind\'') in [\''mach_o\'',\''native_archive\'']]\\n(out/\''EXECUTABLE_REPLACEMENT_LEDGER.json\'').write_text(json.dumps({\''scope\'':\''Detected original native code; resource/interpreted-code classification still needs review. No entries are marked rebuilt by inventory alone.\'',\''entries\'':[{\''original_path\'':r[\''path\''],\''original_sha256\'':r[\''sha256\''],\''status\'':\''requires_source_rebuild_and_equivalence\'',\''rebuilt_sha256\'':None,\''source_ref\'':None,\''build_ref\'':None,\''equivalence_ref\'':None} for r in code]},indent=2)+\''\\\\n\'')\\nsummary={\''archive_sha256\'':expected,\''explicit_zip_entries\'':len(entries),\''logical_filesystem_entries\'':len(rows),\''kinds\'':dict(collections.Counter(r[\''kind\''] for r in rows)),\''detected_native_code_files\'':len(code),\''duplicate_path_count\'':len(duplicates),\''top_level_paths\'':sorted(set(r[\''path\''].split(\''/\'')[0] for r in rows)),\''rebuilt_payload_assembled\'':False,\''full_filesystem_parity_verified\'':False,\''whole_payload_source_rebuild_complete\'':False}\\n(out/\''SUMMARY.json\'').write_text(json.dumps(summary,indent=2)+\''\\\\n\'');print(json.dumps(summary,indent=2))\\n", "validate_payload_fs.py": "\\"\\"\\"Compare an assembled tree with original paths/types and preserved bytes.\\nEvidence references are required but not themselves proof; review their artifacts.\\nNo compiled payload is assembled by this tool.\\n\\"\\"\\"\\nimport pathlib,os,stat,hashlib,json,sys\\nmanifest=json.loads(pathlib.Path(sys.argv[1]).read_text());root=pathlib.Path(sys.argv[2]);ledger=json.loads(pathlib.Path(sys.argv[3]).read_text())\\nexpected={r[\''path\'']:r for r in manifest[\''entries\'']};actual={};problems=[];replacements={r[\''original_path\'']:r for r in ledger[\''entries\'']}\\ndef walk(folder,prefix=\''\''):\\n for e in os.scandir(folder):\\n  path=prefix+e.name;s=e.stat(follow_symlinks=False);kind=\''symlink\'' if stat.S_ISLNK(s.st_mode) else \''directory\'' if stat.S_ISDIR(s.st_mode) else \''file\'' if stat.S_ISREG(s.st_mode) else \''unsupported\''\\n  r={\''kind\'':kind,\''mode\'':oct(stat.S_IMODE(s.st_mode))}\\n  if kind==\''symlink\'':r[\''symlink_target\'']=os.readlink(e.path)\\n  if kind==\''file\'':\\n   h=hashlib.sha256()\\n   with open(e.path,\''rb\'') as f:\\n    for b in iter(lambda:f.read(1024*1024),b\''\''):h.update(b)\\n   r[\''sha256\'']=h.hexdigest()\\n  actual[path]=r\\n  if kind==\''directory\'':walk(e.path,path+\''/\'')\\nwalk(root)\\nfor name in sorted(set(expected)-set(actual)):problems.append({\''path\'':name,\''issue\'':\''missing_original_path\''})\\nfor name in sorted(set(actual)-set(expected)):problems.append({\''path\'':name,\''issue\'':\''unexpected_path_in_payload_tree\''})\\nfor name in sorted(set(actual)&set(expected)):\\n e=expected[name];a=actual[name]\\n if a[\''kind\'']!=e[\''kind\'']:problems.append({\''path\'':name,\''issue\'':\''file_type_changed\''});continue\\n if e.get(\''mode\'') is not None and a[\''mode\'']!=e[\''mode\'']:problems.append({\''path\'':name,\''issue\'':\''mode_changed\''})\\n if a[\''kind\'']==\''symlink\'' and a[\''symlink_target\'']!=e[\''symlink_target\'']:problems.append({\''path\'':name,\''issue\'':\''symlink_target_changed\''})\\n if a[\''kind\'']!=\''file\'':continue\\n if e.get(\''content_kind\'') in [\''mach_o\'',\''native_archive\'']:\\n  r=replacements.get(name,{})\\n  if r.get(\''original_sha256\'')!=e[\''sha256\''] or r.get(\''rebuilt_sha256\'')!=a[\''sha256\''] or r.get(\''status\'')!=\''verified_source_rebuild\'':problems.append({\''path\'':name,\''issue\'':\''native_binary_not_verified_as_source_rebuilt\''})\\n  if a[\''sha256\'']==e[\''sha256\''] and not r.get(\''byte_identical_rebuild_evidence_ref\''):problems.append({\''path\'':name,\''issue\'':\''original_native_bytes_remain_without_rebuild_evidence\''})\\n  for key in [\''source_ref\'',\''build_ref\'',\''equivalence_ref\'']:\\n   if not r.get(key):problems.append({\''path\'':name,\''issue\'':\''missing_\''+key})\\n elif a[\''sha256\'']!=e.get(\''sha256\''):problems.append({\''path\'':name,\''issue\'':\''preserved_content_bytes_changed\''})\\nreport={\''paths_and_types_match\'':not any(r[\''issue\''] in [\''missing_original_path\'',\''unexpected_path_in_payload_tree\'',\''file_type_changed\''] for r in problems),\''full_acceptance_checks_pass\'':not problems,\''issues\'':problems,\''limits\'':\''Acceptance checks reference external build/equivalence evidence; passing this structural validator alone does not prove semantic equivalence. Exact all-code classification still requires review.\''}\\npathlib.Path(sys.argv[4]).write_text(json.dumps(report,indent=2)+\''\\\\n\'');print(json.dumps({k:v for k,v in report.items() if k!=\''issues\''}));sys.exit(bool(problems))\\n"}'')
+
+        for n,s in a.items():pathlib.Path(n).write_text(s)
+
+        '
+    - name: Hash original paths types links modes and content
+      run: python inventory_payload_fs.py
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: rea-original-filesystem-reference
+        path: 'filesystem-reference/
+
+          inventory_payload_fs.py
+
+          validate_payload_fs.py
+
+          '
+        retention-days: 90
+        if-no-files-found: error
