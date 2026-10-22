@@ -1,0 +1,91 @@
+name: REA CStepSync tail closure analysis
+'on':
+  push:
+    paths:
+      - .github/workflows/rea-sync-tail-closure.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-sync-tail-closure-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  bounded-tail-closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    if: ${{ github.run_attempt == 1 }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-body-evidence
+          run-id: '39762599173'
+          github-token: ${{ github.token }}
+          path: prior-readonly
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned decoder
+        run: python -m pip install capstone==5.0.6
+      - name: Analyze untouched original finalization tail
+        shell: python
+        run: |
+          import pathlib,json,hashlib,struct
+          from capstone import Cs,CS_ARCH_ARM64,CS_MODE_ARM
+          from capstone.arm64 import ARM64_OP_IMM
+          blob=next(pathlib.Path('prior-readonly').rglob('madsp-input/target.bin')).read_bytes()
+          image_sha=hashlib.sha256(blob).hexdigest()
+          assert image_sha=='8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8'
+          pos=32;segments=[]
+          for _ in range(struct.unpack_from('<I',blob,16)[0]):
+            cmd,size=struct.unpack_from('<II',blob,pos)
+            assert size>=8 and pos+size<=len(blob)
+            if cmd==25:
+              vm,vmsz,off,filesz=struct.unpack_from('<QQQQ',blob,pos+24)
+              segments.append((vm,off,filesz))
+            pos+=size
+          start,end=0x432b60,0x432c98
+          code=None
+          for vm,off,n in segments:
+            if vm<=start and end<=vm+n:code=blob[off+start-vm:off+end-vm]
+          assert code is not None and len(code)==end-start
+          cs=Cs(CS_ARCH_ARM64,CS_MODE_ARM);cs.detail=True
+          ins=list(cs.disasm(code,start));assert len(ins)*4==len(code)
+          byaddr={i.address:i for i in ins};reachable=set();todo=[start];edges=[];calls=[];exits=[]
+          while todo:
+            pc=todo.pop()
+            if pc in reachable:continue
+            i=byaddr.get(pc)
+            if i is None:
+              exits.append({'from':hex(pc),'kind':'outside_range'});continue
+            reachable.add(pc);mn=i.mnemonic
+            if mn in ('ret','retaa','retab'):
+              exits.append({'from':hex(pc),'kind':mn});continue
+            if mn=='bl':
+              t=i.operands[-1].imm;calls.append({'site':hex(pc),'instruction':mn+' '+i.op_str,'target':hex(t),'dependency_behavior_verified':False});todo.append(pc+4);continue
+            if mn in ('blr','blraa','blrab'):
+              calls.append({'site':hex(pc),'instruction':mn+' '+i.op_str,'target':'indirect','dependency_behavior_verified':False});todo.append(pc+4);continue
+            if mn in ('br','braa','brab','braaz','brabz'):
+              exits.append({'from':hex(pc),'kind':'indirect_branch'});continue
+            if mn=='b':
+              t=i.operands[-1].imm;edges.append({'from':hex(pc),'to':hex(t),'kind':'unconditional'})
+              if start<=t<end:todo.append(t)
+              else:exits.append({'from':hex(pc),'to':hex(t),'kind':'external_branch'})
+              continue
+            if mn.startswith('b.') or mn in ('cbz','cbnz','tbz','tbnz'):
+              op=i.operands[-1];assert op.type==ARM64_OP_IMM;t=op.imm
+              edges.append({'from':hex(pc),'to':hex(t),'kind':'conditional_taken'})
+              if start<=t<end:todo.append(t)
+              else:exits.append({'from':hex(pc),'to':hex(t),'kind':'conditional_external'})
+            todo.append(pc+4)
+          assembly=[f'{i.address:#x}: {i.mnemonic} {i.op_str}' for i in ins]
+          report={'original_image_sha256':image_sha,'function':'MADSP CStepSync::Process 0x432868','range':[hex(start),hex(end)],'range_bytes':len(code),'range_sha256':hashlib.sha256(code).hexdigest(),'instruction_count':len(ins),'reachable_instruction_count':len(reachable),'unreachable_addresses':[hex(i.address) for i in ins if i.address not in reachable],'calls':calls,'edges':edges,'exits':exits,'assembly':assembly,'source_recovered':False,'semantic_equivalence_verified':False,'limits':'Original-byte tail closure only. No destructor, TLS, constructor or other dependency is stubbed or counted as recovered.'}
+          out=pathlib.Path('tail-closure');out.mkdir();(out/'analysis.json').write_text(json.dumps(report,indent=2)+'\n');(out/'assembly.txt').write_text('\n'.join(assembly)+'\n');(out/'original.bin').write_bytes(code)
+          print(json.dumps({k:v for k,v in report.items() if k not in ('assembly','edges','unreachable_addresses')},indent=2));print('ASSEMBLY_BEGIN');print('\n'.join(assembly));print('ASSEMBLY_END')
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-sync-tail-closure-evidence
+          path: tail-closure/
+          retention-days: 90
+          if-no-files-found: error
