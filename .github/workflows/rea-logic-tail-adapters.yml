@@ -1,0 +1,50 @@
+name: REA Logic tail adapters source
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/rea-logic-tail-adapters.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-logic-tail-adapters:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install bounded verifier dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+          python -m pip install --disable-pip-version-check unicorn==2.1.4
+      - name: Download immutable original release archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download mobilelogic-3.4-archive --repo "$GITHUB_REPOSITORY" --pattern MobileLogic.zip
+      - name: Stage verifier
+        run: |
+          printf '%s' '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' | base64 -d | gzip -d > verify_logic_tail_adapters.py
+          sha256sum verify_logic_tail_adapters.py
+      - name: Recover source and differentially verify tail adapters
+        run: python verify_logic_tail_adapters.py
+      - name: Assemble immutable evidence
+        if: always()
+        run: |
+          mkdir -p evidence
+          cp verify_logic_tail_adapters.py evidence/
+          cp -a logic-tail-adapters evidence/ 2>/dev/null || true
+          sha256sum MobileLogic.zip > evidence/ORIGINAL_ARCHIVE_SHA256.txt
+          find evidence -type f -print0 | sort -z | xargs -0 sha256sum > evidence/SHA256SUMS
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rea-logic-tail-adapters-evidence
+          path: evidence
+          if-no-files-found: error
+          retention-days: 90
