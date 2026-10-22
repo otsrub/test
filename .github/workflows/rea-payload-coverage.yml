@@ -1,0 +1,46 @@
+name: REA all-image source and filesystem coverage ledger
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-payload-coverage.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-payload-coverage-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  coverage-ledger:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    if: ${{ github.run_attempt == 1 }}
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-final-verification
+        run-id: '38656204534'
+        github-token: ${{ github.token }}
+        path: baseline-audit
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-original-filesystem-reference
+        run-id: '39764726102'
+        github-token: ${{ github.token }}
+        path: filesystem-reference
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-continuation-dossiers-evidence
+        run-id: '38815798247'
+        github-token: ${{ github.token }}
+        path: target-dossiers
+    - name: Reconcile immutable image hashes and structural counts
+      shell: python
+      run: "\"\"\"Join original filesystem/native SHA identities with preserved structural audit.\nNo decompilation, candidate rerun, or semantic-coverage inference.\n\"\"\"\nimport pathlib,json,collections\np=pathlib.Path;out=p('payload-coverage-ledger');out.mkdir(exist_ok=True)\nbase=p('baseline-audit');fs=p('filesystem-reference/filesystem-reference');dossiers=p('target-dossiers/remaining-target-dossiers')\ns=json.loads((base/'summary.json').read_text());native=json.loads((fs/'EXECUTABLE_REPLACEMENT_LEDGER.json').read_text());bysha={r['image_sha256']:r for r in s['images']}\ncounts=collections.defaultdict(collections.Counter);flags=collections.defaultdict(collections.Counter);seen=set();duplicates=0;review_queue=[]\nfor line in (base/'function-audit.jsonl').open():\n r=json.loads(line);sha=r['image_sha256'];addr=hex(int(r['address'],16));key=(sha,addr)\n if key in seen:duplicates+=1;continue\n seen.add(key);c=counts[sha];c['normalized_records']+=1;f=set(r.get('flags',[]))\n if f & {'synthetic_external_alias_candidate','halt_baddata'}:c['excluded_alias_or_halt_placeholder']+=1;continue\n if not r.get('pseudocode'):c['missing_pseudocode']+=1;continue\n if int(addr,16)%4:c['excluded_unaligned_arm64_address']+=1;continue\n c['aligned_nonplaceholder_pseudocode_records']+=1;flags[sha].update(f)\n if f & {'bad_stack_model','decompiler_warning','missing_assembly'}:review_queue.append({'image_sha256':sha,'address':addr,'name':r.get('name'),'artifact_id':r.get('artifact_id'),'flags':sorted(f),'instruction_count':r.get('instruction_count'),'status':'requires_original_byte_and_source_review'})\n if r.get('subject_sha_matches') is not True:c['original_subject_hash_unconfirmed']+=1\n if r.get('instruction_count')!=r.get('independently_decoded_instructions'):c['instruction_count_not_independently_matched']+=1\nremaining=collections.defaultdict(list)\nfor q in dossiers.glob('*/*/result.json'):\n r=json.loads(q.read_text());remaining[r['image_sha256']].append({'address':hex(int(r['address'],16)),'label':r['label'],'status':'automatic_recovery_record_still_open; source phases do not close whole function'})\nimages=[]\nfor r in native['entries']:\n sha=r['original_sha256'];prior=bysha.get(sha);assert prior is not None and prior['path']==r['original_path']\n images.append({'original_path':r['original_path'],'original_image_sha256':sha,'baseline_structural_counts':dict(counts[sha]),'baseline_review_flags':dict(flags[sha]),'baseline_inventory_records':prior['native_inventory'],'baseline_compiler_starts_outside_inventory':prior['compiler_starts_outside_inventory'],'later_remaining_automatic_records':sorted(remaining[sha],key=lambda x:int(x['address'],16)),'whole_image_source_rebuilt':False,'whole_image_semantic_equivalence_verified':False,'source_rebuild_status':'open; partial source evidence only where separate checkpoint says so'})\nreport={'kind':'All-image identity and structural-candidate reconciliation, not semantic coverage','original_native_images':len(images),'baseline_unique_keys':len(seen),'deduplicated_rows':duplicates,'baseline_global_flags':s['flag_counts'],'images':images,'source_phase_checkpoints':[{'image_sha256':'8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8','original_function':'0xa946c','phase':'0xa9550..0xa9c44','run':39762599173,'artifact':12418377195,'comparisons':2304,'mismatches':0,'whole_function_verified':False},{'image_sha256':'8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8','original_function':'0x432868','phase':'0x4328c8..0x432980/0x432c68','run':39764726199,'artifact':12419911191,'comparisons':12288,'mismatches':0,'whole_function_verified':False}],'limits':['Baseline counts predate later target repairs; do not subtract or sum snapshots as current percentages.','Every original native image matches the baseline audit by exact path and SHA256.','Aligned non-placeholder pseudocode is still a candidate, not compiled source or equivalence evidence.','Imported aliases, halt_baddata placeholders and unaligned ARM64 addresses are excluded from candidate counts.','Earlier verified source modules remain in separate historical checkpoints; this report does not downgrade or recount their claims.','No whole native image has a source rebuild/equivalence proof in this assembled ledger.','Interpreted code and compiled resource classification still require review.'],'parent_artifacts':{'baseline_run':38656204534,'baseline_artifact':11939090190,'filesystem_run':39764726102,'filesystem_artifact':12419891565,'dossiers_run':38815798247,'dossiers_artifact':12009754156}}\n(out/'FLAGGED_CANDIDATE_REVIEW_QUEUE.jsonl').write_text(''.join(json.dumps(r)+'\\n' for r in sorted(review_queue,key=lambda r:('bad_stack_model' not in r['flags'],r['image_sha256'],int(r['address'],16)))))\n(out/'ALL_IMAGE_RECONSTRUCTION_LEDGER.json').write_text(json.dumps(report,indent=2)+'\\n')\nsummary={'native_images_matched':len(images),'unmatched_original_images':0,'baseline_normalized_keys':len(seen),'excluded_alias_or_placeholder':sum(v['excluded_alias_or_halt_placeholder'] for v in counts.values()),'aligned_nonplaceholder_baseline_candidates':sum(v['aligned_nonplaceholder_pseudocode_records'] for v in counts.values()),'later_open_automatic_records':sum(map(len,remaining.values())),'whole_payload_source_rebuilt':False,'whole_payload_semantic_equivalence_verified':False,'filesystem_parity_of_rebuilt_payload_verified':False}\n(out/'SUMMARY.json').write_text(json.dumps(summary,indent=2)+'\\n');print(json.dumps(summary,indent=2))\n"
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: rea-all-image-coverage-ledger
+        path: payload-coverage-ledger/
+        retention-days: 90
+        if-no-files-found: error
