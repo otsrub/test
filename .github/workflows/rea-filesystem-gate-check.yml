@@ -1,0 +1,40 @@
+name: REA original-tree acceptance gate checks
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-filesystem-gate-check.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-filesystem-gate-check-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  filesystem-gate-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    if: ${{ github.run_attempt == 1 }}
+    steps:
+    - name: Download immutable original release archive
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: 'mkdir -p original-archive
+
+        gh release download mobilelogic-3.4-archive --repo otsrub/test --pattern MobileLogic.zip --dir original-archive'
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-original-filesystem-reference
+        run-id: '39764726102'
+        github-token: ${{ github.token }}
+        path: reference
+    - name: Check original tree and reject native passthrough/extra source
+      shell: python
+      run: "\"\"\"Acceptance-gate checks on a private original-tree fixture, never a rebuilt payload.\"\"\"\nimport pathlib,zipfile,json,hashlib,stat,os,subprocess,shutil\np=pathlib.Path;archive=p('original-archive/MobileLogic.zip');manifest=p('reference/filesystem-reference/ORIGINAL_FILESYSTEM.json');ledger=p('reference/filesystem-reference/EXECUTABLE_REPLACEMENT_LEDGER.json');expected='f2a650fd7a51a7bb2bc5e8e5cc35a95236c02723ab3faeb162cca64ee62a744e'\nh=hashlib.sha256()\nwith archive.open('rb') as f:\n for b in iter(lambda:f.read(1024*1024),b''):h.update(b)\nassert h.hexdigest()==expected\nm=json.loads(manifest.read_text());assert not any(r['kind']=='symlink' for r in m['entries'])\nroot=p('gate-fixture-original-tree');root.mkdir();out=p('gate-proof');out.mkdir()\nwith zipfile.ZipFile(archive) as z:\n for info in z.infolist():\n  name=info.filename;assert not name.startswith('/') and '..' not in pathlib.PurePosixPath(name).parts\n  dest=root/name\n  if info.is_dir():dest.mkdir(parents=True,exist_ok=True)\n  else:\n   dest.parent.mkdir(parents=True,exist_ok=True)\n   with z.open(info) as src,dest.open('wb') as dst:shutil.copyfileobj(src,dst,1024*1024)\n# Apply recorded modes after all writes. Implicit-parent modes were not in original ZIP.\nfor r in sorted(m['entries'],key=lambda r:(r['kind']=='directory',-len(r['path']))):\n if r.get('mode') is not None:os.chmod(root/r['path'],int(r['mode'],8))\nvalidator=p('reference/validate_payload_fs.py')\ndef check(report_name):\n args=['python',str(validator),str(manifest),str(root),str(ledger),str(out/report_name)]\n r=subprocess.run(args,capture_output=True,text=True);print(r.stdout,r.stderr);assert r.returncode==1\n return json.loads((out/report_name).read_text())\nbaseline=check('original-tree-gate-report.json');assert baseline['paths_and_types_match'] is True and baseline['full_acceptance_checks_pass'] is False\nallowed={'native_binary_not_verified_as_source_rebuilt','original_native_bytes_remain_without_rebuild_evidence','missing_source_ref','missing_build_ref','missing_equivalence_ref'}\nassert all(v['issue'] in allowed for v in baseline['issues']),baseline['issues'][:5]\nnative={r['path'] for r in m['entries'] if r.get('content_kind') in ['mach_o','native_archive']}\nassert {v['path'] for v in baseline['issues'] if v['issue']=='native_binary_not_verified_as_source_rebuilt'}==native\nprobe='__rea_analysis_output_probe__.c';assert probe not in {r['path'] for r in m['entries']}\n(root/probe).write_text('/* gate-negative-check fixture, not recovered or shipping source */\\n')\nextra=check('extra-analysis-file-gate-report.json');assert not extra['paths_and_types_match'];assert {'path':probe,'issue':'unexpected_path_in_payload_tree'} in extra['issues']\nsummary={'original_archive_sha256':expected,'original_logical_entries':len(m['entries']),'original_listing_types_modes_and_preserved_content_accepted':True,'unrebuilt_original_native_files_rejected':len(native),'extra_analysis_file_rejected':True,'fixture_is_rebuilt_payload':False,'compiled_payload_filesystem_parity_verified':False,'whole_payload_decompiled_or_equivalent':False,'limits':'These are acceptance-gate checks against the original fixture, not evidence that a rebuilt full payload exists.'}\n(out/'SUMMARY.json').write_text(json.dumps(summary,indent=2)+'\\n');print(json.dumps(summary,indent=2))\n"
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: rea-filesystem-gate-proof
+        path: gate-proof/
+        retention-days: 90
+        if-no-files-found: error
