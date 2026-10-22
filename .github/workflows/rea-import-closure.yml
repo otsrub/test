@@ -1,0 +1,165 @@
+name: REA exact import and call-dependency closure
+'on':
+  push:
+    paths:
+    - .github/workflows/rea-import-closure.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-import-closure-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  bounded-import-closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    if: ${{ github.run_attempt == 1 }}
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-continuation-dossiers-evidence
+        run-id: '38815798247'
+        github-token: ${{ github.token }}
+        path: prior-dossiers
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install pinned analysis dependencies
+      run: python -m pip install capstone==5.0.6
+    - name: Stage bounded source task and immutable checkpoint reference
+      shell: python
+      run: 'import pathlib,json
+
+        a=json.loads(''{"payload_inventory.py": "\\"\\"\\"Read-only original archive inventory and conservative compiler extent review.\\nNo binary patching, stubs, type invention, or source-equivalence claims.\\n\\"\\"\\"\\nimport pathlib,struct,hashlib,json,zipfile,sys,collections,plistlib\\nfrom capstone import Cs,CS_ARCH_ARM64,CS_MODE_ARM\\nfrom capstone.arm64 import ARM64_OP_IMM\\nEXPECTED=\''f2a650fd7a51a7bb2bc5e8e5cc35a95236c02723ab3faeb162cca64ee62a744e\''\\ndef sha(b):return hashlib.sha256(b).hexdigest()\\ndef cstr(b,o=0):return b[o:].split(b\''\\\\0\'',1)[0].decode(\''utf-8\'',\''replace\'')\\ndef macho(b):\\n assert b[:4]==bytes.fromhex(\''cffaedfe\'')\\n pos=32;segments=[];sections=[];deps=[];rpaths=[];symtab=None;startdata=None;uuid=None;crypt=[];base=None\\n for _ in range(struct.unpack_from(\''<I\'',b,16)[0]):\\n  cmd,size=struct.unpack_from(\''<II\'',b,pos);assert size>=8 and pos+size<=len(b)\\n  if cmd==25:\\n   name=cstr(b[pos+8:pos+24]);vm,vmsz,off,fs=struct.unpack_from(\''<QQQQ\'',b,pos+24);segments.append((vm,off,fs))\\n   if name==\''__TEXT\'':base=vm\\n   for j in range(struct.unpack_from(\''<I\'',b,pos+64)[0]):\\n    p=pos+72+80*j;va,n,fo=struct.unpack_from(\''<QQI\'',b,p+32);sections.append({\''name\'':cstr(b[p:p+16]),\''segment\'':name,\''address\'':va,\''bytes\'':n,\''fileoff\'':fo,\''flags\'':struct.unpack_from(\''<I\'',b,p+64)[0]})\\n  elif cmd in [12,0x80000018,0x8000001f,0x80000023,0x20,13]:\\n   no,ts,cur,compat=struct.unpack_from(\''<IIII\'',b,pos+8);deps.append({\''kind\'':hex(cmd),\''name\'':cstr(b[pos:pos+size],no),\''current_version\'':cur,\''compatibility_version\'':compat})\\n  elif cmd==0x8000001c:rpaths.append(cstr(b[pos:pos+size],struct.unpack_from(\''<I\'',b,pos+8)[0]))\\n  elif cmd==2:symtab=struct.unpack_from(\''<IIII\'',b,pos+8)\\n  elif cmd==0x26:\\n   off,n=struct.unpack_from(\''<II\'',b,pos+8);startdata=b[off:off+n]\\n  elif cmd==0x1b:uuid=b[pos+8:pos+24].hex()\\n  elif cmd in [0x21,0x2c]:crypt.append({\''offset\'':struct.unpack_from(\''<I\'',b,pos+8)[0],\''size\'':struct.unpack_from(\''<I\'',b,pos+12)[0],\''cryptid\'':struct.unpack_from(\''<I\'',b,pos+16)[0]})\\n  pos+=size\\n starts=[]\\n if startdata is not None:\\n  assert base is not None\\n  a=base;v=shift=0\\n  for byte in startdata:\\n   v|=(byte&127)<<shift\\n   if byte&128:shift+=7;continue\\n   if v==0:break\\n   a+=v;starts.append(a);v=shift=0\\n symbols=[]\\n if symtab:\\n  off,n,so,sz=symtab;strings=b[so:so+sz]\\n  for i in range(n):\\n   si,kind,sec,desc,value=struct.unpack_from(\''<IBBHQ\'',b,off+16*i)\\n   if kind&0xe0 or not si:continue\\n   symbols.append({\''name\'':cstr(strings,si),\''address\'':hex(value),\''n_type\'':kind,\''section_index\'':sec,\''description_bits\'':desc,\''external\'':bool(kind&1),\''undefined\'':kind&14==0})\\n return {\''segments\'':segments,\''sections\'':sections,\''dependencies\'':deps,\''rpaths\'':rpaths,\''uuid\'':uuid,\''encryption\'':crypt,\''starts\'':starts,\''symbols\'':symbols}\\ndef review(b,m,row):\\n a=int(row[\''compiler_start\''],16);starts=m[\''starts\''];r={\''image\'':row[\''image\''],\''image_sha256\'':sha(b),\''address\'':hex(a),\''exact_contiguous_extent_verified\'':False,\''semantic_equivalence_verified\'':False}\\n if a not in starts:r[\''status\'']=\''compiler_start_not_in_original_metadata\'';return r\\n index=starts.index(a)\\n if index+1==len(starts):r[\''status\'']=\''last_start_has_no_metadata_upper_bound\'';return r\\n end=starts[index+1];r[\''next_compiler_start\'']=hex(end);code=None\\n for vm,off,n in m[\''segments\'']:\\n  if vm<=a and end<=vm+n:code=b[off+a-vm:off+end-vm]\\n if code is None:r[\''status\'']=\''extent_not_file_backed\'';return r\\n r.update({\''extent_bytes\'':len(code),\''extent_sha256\'':sha(code)})\\n if len(code)>1024*1024:r[\''status\'']=\''extent_exceeds_bounded_review\'';return r\\n cs=Cs(CS_ARCH_ARM64,CS_MODE_ARM);cs.detail=True;ins=list(cs.disasm(code,a));byaddr={i.address:i for i in ins}\\n reasons=[];tails=[];calls=[]\\n if len(ins)*4!=len(code):reasons.append(\''not_all_extent_bytes_decode\'')\\n reachable=set();todo=[a]\\n while todo:\\n  pc=todo.pop()\\n  if pc in reachable:continue\\n  if pc not in byaddr:reasons.append(\''control_flow_outside_decoded_extent\'');continue\\n  reachable.add(pc);i=byaddr[pc];mn=i.mnemonic\\n  if mn in [\''ret\'',\''retaa\'',\''retab\'']:continue\\n  if mn in [\''br\'',\''braa\'',\''brab\'',\''braaz\'',\''brabz\'',\''eret\'',\''brk\'',\''hlt\'',\''udf\'']:reasons.append(\''indirect_or_exception_exit_requires_review\'');continue\\n  if mn==\''b\'':\\n   target=i.operands[-1].imm\\n   if a<=target<end:todo.append(target)\\n   elif target in starts:tails.append(hex(target))\\n   else:reasons.append(\''external_branch_not_known_compiler_start\'')\\n   continue\\n  if mn.startswith(\''b.\'') or mn in [\''cbz\'',\''cbnz\'',\''tbz\'',\''tbnz\'']:\\n   target=i.operands[-1]\\n   if target.type==ARM64_OP_IMM and a<=target.imm<end:todo.append(target.imm)\\n   else:reasons.append(\''conditional_branch_outside_extent\'')\\n  if mn in [\''bl\'',\''blr\'',\''blraa\'',\''blrab\'']:calls.append({\''address\'':hex(pc),\''instruction\'':mn+\'' \''+i.op_str,\''behavior_verified\'':False})\\n  todo.append(pc+4)\\n if reachable!=set(byaddr):reasons.append(\''unreachable_bytes_or_extra_function_fragments\'')\\n if ins and ins[-1].mnemonic not in [\''ret\'',\''retaa\'',\''retab\'',\''b\'']:reasons.append(\''no_terminal_return_or_tail_at_metadata_end\'')\\n reasons=sorted(set(reasons));r.update({\''status\'':\''requires_exact_boundary_review\'' if reasons else \''contiguous_extent_resolved\'',\''exact_contiguous_extent_verified\'':not reasons,\''limitations\'':reasons,\''tail_targets\'':sorted(set(tails)),\''calls\'':calls,\''instruction_count\'':len(ins),\''reachable_instruction_count\'':len(reachable)})\\n # Only resolved extents get original instruction evidence; unknowns retain hashes.\\n if not reasons:r.update({\''original_hex\'':code.hex(),\''assembly\'':[f\''{i.address:#x}: {i.mnemonic} {i.op_str}\'' for i in ins],\''basis\'':\''Original LC_FUNCTION_STARTS adjacent entries; complete decoding; reachable local CFG; explicit return/tail; no inferred Ghidra ranges\''})\\n return r\\ndef main():\\n archive=pathlib.Path(sys.argv[1]);out=pathlib.Path(sys.argv[3]);out.mkdir(parents=True,exist_ok=True)\\n with archive.open(\''rb\'') as f:assert hashlib.file_digest(f,\''sha256\'').hexdigest()==EXPECTED\\n triage=json.loads(pathlib.Path(sys.argv[2]).read_text());wanted=collections.defaultdict(list)\\n for r in triage:wanted[r[\''image\'']].append(r)\\n images=[];resources=[];boundaries=[];seen=set();plists=[]\\n with zipfile.ZipFile(archive) as z,(out/\''symbols.jsonl\'').open(\''w\'') as symbolout:\\n  for member in z.infolist():\\n   if member.is_dir():continue\\n   name=member.filename\\n   with z.open(member) as f:\\n    prefix=f.read(4)\\n    if prefix==bytes.fromhex(\''cffaedfe\''):\\n     b=prefix+f.read();digest=sha(b);m=macho(b)\\n     row={\''path\'':name,\''sha256\'':digest,\''bytes\'':len(b),\''uuid\'':m[\''uuid\''],\''dependencies\'':m[\''dependencies\''],\''rpaths\'':m[\''rpaths\''],\''encryption\'':m[\''encryption\''],\''sections\'':m[\''sections\''],\''native_symbol_records\'':len(m[\''symbols\'']),\''compiler_start_count\'':len(m[\''starts\'']),\''source_types_recovered\'':False}\\n     images.append(row)\\n     for s in m[\''symbols\'']:print(json.dumps({\''image_sha256\'':digest,**s},separators=(\'',\'',\'':\'')),file=symbolout)\\n     if name in wanted:\\n      seen.add(name)\\n      for r in wanted[name]:\\n       assert digest==r[\''image_sha256\''];boundaries.append(review(b,m,r))\\n    else:\\n     h=hashlib.sha256();h.update(prefix);data=bytearray(prefix) if name.endswith(\''Info.plist\'') else None\\n     while chunk:=f.read(1024*1024):\\n      h.update(chunk)\\n      if data is not None:data.extend(chunk)\\n     resources.append({\''path\'':name,\''bytes\'':member.file_size,\''sha256\'':h.hexdigest(),\''kind\'':\''resource-or-metadata-not-reconstructed-source\''})\\n     if data is not None:\\n      try:\\n       p=plistlib.loads(data);plists.append({\''path\'':name,\''bundle_id\'':p.get(\''CFBundleIdentifier\''),\''executable\'':p.get(\''CFBundleExecutable\''),\''minimum_os\'':p.get(\''MinimumOSVersion\''),\''bundle_version\'':p.get(\''CFBundleVersion\''),\''package_type\'':p.get(\''CFBundlePackageType\'')})\\n      except Exception as e:plists.append({\''path\'':name,\''parse_error\'':str(e)})\\n assert seen==set(wanted) and len(boundaries)==353\\n resolved=sum(r[\''exact_contiguous_extent_verified\''] for r in boundaries)\\n for filename,content in [(\''native-images.json\'',images),(\''resources.json\'',resources),(\''bundles.json\'',plists),(\''compiler-boundaries.json\'',boundaries)]:\\n  (out/filename).write_text(json.dumps(content,indent=2)+\''\\\\n\'')\\n summary={\''archive_sha256\'':EXPECTED,\''archive_bytes\'':archive.stat().st_size,\''native_images\'':len(images),\''native_symbol_records\'':sum(x[\''native_symbol_records\''] for x in images),\''resource_records\'':len(resources),\''compiler_starts_examined\'':353,\''resolved_contiguous_extents\'':resolved,\''remaining_boundary_unknowns\'':353-resolved,\''source_types_recovered\'':False,\''whole_payload_decompiled\'':False,\''whole_application_build_verified\'':False,\''behavior_equivalence_verified\'':False}\\n (out/\''summary.json\'').write_text(json.dumps(summary,indent=2)+\''\\\\n\'');print(json.dumps(summary,indent=2))\\nif __name__==\''__main__\'':main()\\n", "audit_import_closure.py": "\\"\\"\\"Resolve original Mach-O call stubs with indirect symbol table, not guessed aliases.\\nTarget dossiers only; no decompiler retries or semantic recovery claims.\\n\\"\\"\\"\\nimport pathlib,struct,json,hashlib,collections\\nfrom payload_inventory import macho\\nfrom capstone import Cs,CS_ARCH_ARM64,CS_MODE_ARM\\nroot=pathlib.Path(\''prior-dossiers\'');out=pathlib.Path(\''import-closure\'');out.mkdir(exist_ok=True)\\ndef cstr(b,at):return b[at:].split(b\''\\\\0\'',1)[0].decode(\''utf-8\'',\''replace\'')\\ndef parse(b):\\n m=macho(b);pos=32;stubsections=[];deps=[];ind=None;sym=None\\n for _ in range(struct.unpack_from(\''<I\'',b,16)[0]):\\n  cmd,n=struct.unpack_from(\''<II\'',b,pos)\\n  if cmd==2:sym=struct.unpack_from(\''<IIII\'',b,pos+8)\\n  if cmd==11:ind=struct.unpack_from(\''<II\'',b,pos+56)\\n  if cmd in [12,0x80000018,0x8000001f,0x80000023,0x20]:deps.append(cstr(b,pos+struct.unpack_from(\''<I\'',b,pos+8)[0]))\\n  if cmd==25:\\n   for j in range(struct.unpack_from(\''<I\'',b,pos+64)[0]):\\n    at=pos+72+80*j;va,sz,off=struct.unpack_from(\''<QQI\'',b,at+32);flags,ri,stride=struct.unpack_from(\''<III\'',b,at+64)\\n    if flags&255==8:stubsections.append((va,sz,ri,stride))\\n  pos+=n\\n imports={}\\n if sym and ind:\\n  so,count,st,stsize=sym\\n  for va,sz,ri,stride in stubsections:\\n   assert stride>0 and sz%stride==0\\n   for j in range(sz//stride):\\n    assert ri+j<ind[1];idx=struct.unpack_from(\''<I\'',b,ind[0]+4*(ri+j))[0]\\n    if idx&0xc0000000:continue\\n    assert idx<count\\n    si,kind,sec,desc,value=struct.unpack_from(\''<IBBHQ\'',b,so+16*idx);assert si<stsize\\n    ordinal=desc>>8\\n    imports[va+j*stride]={\''symbol\'':cstr(b,st+si),\''nlist_index\'':idx,\''n_type\'':kind,\''n_desc\'':desc,\''dylib_ordinal\'':ordinal,\''dependency\'':deps[ordinal-1] if 1<=ordinal<=len(deps) else {0:\''self\'',0xfe:\''dynamic lookup\'',0xff:\''executable\''}.get(ordinal,\''special/unresolved\''),\''undefined\'':kind&14==0,\''stub_stride\'':stride}\\n return m,imports,deps\\nsummary=[];envelopes=[]\\nfor image in [\''logic\'',\''macore\'',\''madsp\'',\''magenerativeinstruments\'',\''maplugingui\'']:\\n b=(root/f\''{image}-input/target.bin\'').read_bytes();sha=hashlib.sha256(b).hexdigest();m,imports,deps=parse(b)\\n symbols=collections.defaultdict(list)\\n for n in m[\''symbols\'']:\\n  if not n[\''undefined\'']:symbols[int(n[\''address\''],16)].append(n[\''name\''])\\n rows=[]\\n for path in sorted((root/\''remaining-target-dossiers\''/sha).glob(\''*/result.json\'')):\\n  t=json.loads(path.read_text());assert t[\''image_sha256\'']==sha;calls=[]\\n  for edge in t[\''calls\'']:\\n   addr=int(edge[\''to\''],16);r=dict(edge)\\n   if addr in imports:r.update({\''kind\'':\''original_indirect_symbol_stub\'',\''original_import\'':imports[addr],\''recovered_function\'':False})\\n   elif addr in symbols:r.update({\''kind\'':\''original_native_symbol\'',\''original_symbols\'':symbols[addr],\''recovered_function\'':False})\\n   else:r.update({\''kind\'':\''internal_or_unresolved\'',\''recovered_function\'':False})\\n   calls.append(r)\\n  rows.append({\''image_sha256\'':sha,\''address\'':t[\''address\''],\''label\'':t[\''label\''],\''calls\'':calls,\''indirect_edges\'':t[\''indirect_edges\''],\''counts\'':dict(collections.Counter(c[\''kind\''] for c in calls)),\''semantic_equivalence_verified\'':False})\\n if image==\''madsp\'':\\n  addr=0x432868\\n  assert addr in m[\''starts\'']\\n  end=m[\''starts\''][m[\''starts\''].index(addr)+1];raw=None\\n  for vm,fo,n in m[\''segments\'']:\\n   if vm<=addr<end<=vm+n:raw=b[fo+addr-vm:fo+end-vm]\\n  assert raw is not None\\n  md=Cs(CS_ARCH_ARM64,CS_MODE_ARM);assembly=list(md.disasm(raw,addr));(out/\''CStepSync-432868-envelope.bin\'').write_bytes(raw)\\n  (out/\''CStepSync-432868-assembly.txt\'').write_text(\''\\\\n\''.join(f\''{i.address:#x}: {i.mnemonic} {i.op_str}\'' for i in assembly)+\''\\\\n\'')\\n  envelopes.append({\''image_sha256\'':sha,\''address\'':hex(addr),\''original_symbols\'':symbols[addr],\''adjacent_compiler_start\'':hex(end),\''envelope_bytes\'':len(raw),\''envelope_sha256\'':hashlib.sha256(raw).hexdigest(),\''exact_semantic_boundary_verified\'':False,\''all_bytes_decode\'':sum(i.size for i in assembly)==len(raw),\''direct_calls\'':[{\''from\'':hex(i.address),\''to\'':i.op_str,\''original_import\'':imports.get(int(i.op_str.lstrip(\''#\''),16)),\''native_symbols\'':symbols.get(int(i.op_str.lstrip(\''#\''),16),[])} for i in assembly if i.mnemonic==\''bl\'']})\\n (out/f\''{image}-calls.json\'').write_text(json.dumps(rows,indent=2)+\''\\\\n\'')\\n (out/f\''{image}-dependency-manifest.json\'').write_text(json.dumps({\''image_sha256\'':sha,\''uuid\'':m[\''uuid\''],\''dependencies\'':deps,\''rpaths\'':m[\''rpaths\''],\''encryption\'':m[\''encryption\''],\''import_stub_count\'':len(imports),\''scope\'':\''Original loader/symbol facts only; source types, resource completeness and semantic equivalence unverified.\''},indent=2)+\''\\\\n\'')\\n summary.extend({\''image\'':image,\''address\'':r[\''address\''],\''counts\'':r[\''counts\''],\''indirect_edges\'':len(r[\''indirect_edges\''])} for r in rows)\\n(out/\''new-dependency-envelopes.json\'').write_text(json.dumps(envelopes,indent=2)+\''\\\\n\'')\\nreport={\''targets\'':summary,\''target_records\'':len(summary),\''new_decompiler_attempts\'':0,\''synthetic_aliases_counted_as_recovery\'':0,\''resource_manifest_complete\'':False,\''whole_payload_equivalence_verified\'':False,\''checkpoint\'':{\''run\'':38815798247,\''artifact\'':12009754156,\''zip_sha256\'':\''9dea6c7b83c5ae92e0c1b52bfe6f63eb79c6ce80e36ccc42d1af89a2f3506830\''}}\\n(out/\''SUMMARY.json\'').write_text(json.dumps(report,indent=2)+\''\\\\n\'');print(json.dumps(report,indent=2))\\n"}'')
+
+        for n,s in a.items():pathlib.Path(n).write_text(s)
+
+        '
+    - name: Resolve exact imports for remaining targets
+      run: python audit_import_closure.py
+    - name: Preserve source originals diagnostics and explicit limits
+      if: always()
+      shell: python
+      run: "import pathlib,shutil,json,hashlib\np=pathlib.Path('evidence');p.mkdir(exist_ok=True)\nfor n in ['payload_inventory.py','audit_import_closure.py','import-closure']:\n q=pathlib.Path(n)\n if q.is_dir():shutil.copytree(q,p/n)\n elif q.is_file():shutil.copy2(q,p/n)\n(p/'SHA256.json').write_text(json.dumps([{'path':str(q.relative_to(p)),'sha256':hashlib.sha256(q.read_bytes()).hexdigest()} for q in sorted(p.rglob('*')) if q.is_file()],indent=2))\n"
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: rea-import-closure-evidence
+        path: evidence/
+        if-no-files-found: error
+        retention-days: 90
+  source-package:
+    needs:
+    - bounded-import-closure
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    if: ${{ github.run_attempt == 1 }}
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-import-closure-evidence
+        path: closure-evidence
+    - uses: actions/download-artifact@v4
+      with:
+        name: rea-continuation-body-evidence
+        run-id: '39762599173'
+        github-token: ${{ github.token }}
+        path: body-checkpoint
+    - name: Install official module toolchain
+      run: 'sudo apt-get update
+
+        sudo apt-get install -y clang-18 lld-18 make'
+    - name: Package source and clean-build real body module
+      shell: python
+      run: 'import pathlib,shutil,json,hashlib,subprocess,tarfile
+
+        p=pathlib.Path;parent=p(''body-checkpoint'');out=p(''source-package'');out.mkdir(exist_ok=True)
+
+        for f in parent.glob(''*.c''):shutil.copy2(f,out/f.name)
+
+        for n in [''verify_continuation_body.py'',''payload_inventory.py''] :shutil.copy2(parent/n,out/n)
+
+        shutil.copytree(parent/''madsp-input'',out/''madsp-input'')
+
+        shutil.copytree(p(''closure-evidence/import-closure''),out/''dependency-manifests'')
+
+        shutil.copy2(parent/''continuation-body/verification.json'',out/''PARENT_VERIFICATION.json'')
+
+        r=json.loads((out/''PARENT_VERIFICATION.json'').read_text());assert r[''mismatches'']==0 and r[''cases'']==768
+
+        for n,h in r[''source_sha256''].items():assert hashlib.sha256((out/n).read_bytes()).hexdigest()==h
+
+        assert hashlib.sha256((out/''madsp-input/target.bin'').read_bytes()).hexdigest()==''8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8''
+
+        (out/''Makefile'').write_text(''''''CLANG ?= clang-18
+
+        LD64 ?= ld64.lld-18
+
+        OPT ?= 2
+
+        all: build/libMobileLogicBody.dylib
+
+        build/body.o: continuation_body.c setup_steps.c setup_lanes.c setup_combined.c setup_note.c continuation_property.c continuation_step_properties.c
+
+        \tmkdir -p build
+
+        \t$(CLANG) -target arm64-apple-ios17.0 -O$(OPT) -ffreestanding -Wall -Wextra -Werror -c continuation_body.c -o $@
+
+        build/libMobileLogicBody.dylib: build/body.o
+
+        \t$(LD64) -arch arm64 -platform_version ios 17.0 17.0 -dylib -undefined error $< -o $@
+
+        clean:
+
+        \trm -rf build
+
+        .PHONY: all clean
+
+        '''''')
+
+        (out/''README.md'').write_text(''''''# MobileLogic recovered body source checkpoint
+
+
+        This package builds a real reconstructed source portion of MADSP CDS1Seq::GetAllEvents, originally starting at image address 0xa946c. The source covers the post-helper body from 0xa9550 through the return-value load ending at 0xa9c44. It preserves original image/address provenance in manifests; compiled module addresses differ.
+
+
+        Build on Ubuntu with official clang-18 and lld-18 installed: `make`. Set `OPT=0` or `OPT=3` for the other tested levels. This produces an ARM64 iOS dylib with no unresolved external symbols. It is an isolated source module, not a linked app or installable IPA.
+
+
+        PARENT_VERIFICATION.json records 768 synthetic post-helper states at each of O0/O2/O3: 2304 comparisons, zero mismatches, and 446 original instruction locations exercised. Comparisons use original ARM64 bytes under Unicorn, full modeled data memory, returned pointer and FPSR. Source fields/types are inferred offsets. These finite tests establish only the reported evidence and assumptions; they do not prove correctness for all inputs.
+
+
+        Reproduce the phase test using pinned Python dependencies unicorn==2.1.4 and capstone==5.0.6, then `python verify_continuation_body.py body`. This rebuilds and runs the parent suite. The immutable original MADSP image is included with its SHA256 manifest.
+
+
+        Unverified: function entry/prologue, capacity/allocator integration, external operator new[]/delete[] behavior, CStepSync/MACore runtime integration, epilogue integration, original application resources, whole-app linkage and runtime equivalence. Earlier capacity and source subsets remain in their independent checkpoints. The helper dependencies are preserved as original-byte facts, not replacement stubs. No full decompilation or whole-function equivalence claim is made.
+
+        '''''')
+
+        (out/''PROVENANCE.json'').write_text(json.dumps({''original_image_sha256'':r[''original_image_sha256''],''original_function'':''0xa946c'',''source_body_entry'':''0xa9550'',''source_body_stop'':''0xa9c44'',''parent_run'':39762599173,''parent_artifact'':12418377195,''parent_zip_sha256'':''1ed7850eb6ac4f59117c2ce92d1f8e530d065ccec9ecac68e19a8a9a075257eb'',''whole_payload_buildable'':False,''all_input_equivalence_proven'':False,''new_decompiler_attempts'':0},indent=2))
+
+        # Build from only the assembled package, so no analysis-tree files supply dependencies.
+
+        r=subprocess.run([''make'',''OPT=2''],cwd=out,text=True,capture_output=True)
+
+        (out/''CLEAN_BUILD_DIAGNOSTICS.json'').write_text(json.dumps({''argv'':[''make'',''OPT=2''],''exit_code'':r.returncode,''stdout'':r.stdout,''stderr'':r.stderr},indent=2));print(r.stdout,r.stderr);r.check_returncode()
+
+        (out/''SHA256.json'').write_text(json.dumps([{''path'':str(f.relative_to(out)),''sha256'':hashlib.sha256(f.read_bytes()).hexdigest()} for f in sorted(out.rglob(''*'')) if f.is_file()],indent=2))
+
+        with tarfile.open(''MobileLogic-recovered-body-source.tar.gz'',''w:gz'') as t:t.add(out,arcname=''MobileLogic-recovered-body-source'')
+
+        print(''Clean source package build passed; isolated source body only'')
+
+        '
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: rea-clean-body-source-package
+        path: 'source-package/
+
+          MobileLogic-recovered-body-source.tar.gz
+
+          '
+        retention-days: 90
+        if-no-files-found: error
