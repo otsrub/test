@@ -1,0 +1,62 @@
+name: REA Logic composed source lanes
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/rea-logic-composed.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  original-source-comparison:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [composed-tail, prehelper]
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-logic-tail-adapters-evidence
+          run-id: '39845208071'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-dossiers-evidence
+          run-id: '38815798247'
+          github-token: ${{ github.token }}
+          path: dossiers
+      - name: Install bounded verifier dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          python -m pip install unicorn==2.1.4
+      - name: Stage source verifier
+        run: |
+          mkdir -p logic-input
+          cp dossiers/logic-input/target.bin logic-input/target.bin
+          printf '%s' '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' | base64 -d | gzip -d > verify_logic_composed.py
+          echo 'd436784b64cdd596b9769c8b77957ebc1f8cfb19be1f8baa087a798d158e2422  verify_logic_composed.py' | sha256sum -c -
+          echo 'c7e09be891a5cf7c1ab3df11dddb6066bb41acd674fb3f8125c5719cf9316747  prior/verify_logic_tail_adapters.py' | sha256sum -c -
+      - name: Compile and compare uninterrupted original slice
+        env:
+          REA_LANE: ${{ matrix.lane }}
+        run: python verify_logic_composed.py
+      - name: Preserve new evidence
+        if: always()
+        run: |
+          mkdir -p evidence
+          cp verify_logic_composed.py evidence/
+          cp -a logic-${{ matrix.lane }} evidence/ 2>/dev/null || true
+          sha256sum logic-input/target.bin > evidence/ORIGINAL_SHA256
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-logic-${{ matrix.lane }}-evidence
+          path: evidence
+          retention-days: 90
