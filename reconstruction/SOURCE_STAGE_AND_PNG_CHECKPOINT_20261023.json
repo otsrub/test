@@ -1,0 +1,211 @@
+{
+  "kind": "Bounded workflow stages and first batch checkpoint",
+  "date": "2026-10-23",
+  "repository": "otsrub/test",
+  "worker": "reconstruction/stage_batch_worker.py",
+  "worker_sha256": "a41194803c6592b380da3e6d2dbec99b032abfdba6b743f4b8c42974ae38a300",
+  "stage_definitions": {
+    "output": "Original-byte review of flagged baseline pseudocode candidates: compiler boundaries, disassembly, direct/indirect calls and branches, decode coverage, preserved warning/provenance. No exhausted decompiler-profile retries.",
+    "verify": "Source recovery and complete execution for exact eight-byte unsigned object getters only. O0/O2/O3 ARM64 iOS modules compared with original bytes. Other function families require dedicated source/verifier additions."
+  },
+  "batch_limits": {
+    "output_targets_per_shard": 64,
+    "verification_targets_per_shard": 16,
+    "verification_states_per_function": 1024,
+    "optimizations": [
+      0,
+      2,
+      3
+    ],
+    "shards_per_stage": 2,
+    "timeout_minutes_per_workflow": 30
+  },
+  "history": "Image SHA256 plus normalized address; all prior same-lane artifact histories and repository source/checkpoint mentions excluded. Fail when history expires or exceeds the bounded restore budget. No schedules or dispatch loops.",
+  "runs": [
+    {
+      "stage": "output",
+      "shard": 0,
+      "run_id": 40029646660,
+      "artifact_id": 12534102230,
+      "zip_sha256": "e9543c38b086a2bd2e514b57c2486ce4311da59367c1c083ab92a8ec1f5f4763",
+      "targets": 64,
+      "original_bytes_reviewed": 82052,
+      "full_decodes": 64,
+      "status": "success"
+    },
+    {
+      "stage": "output",
+      "shard": 1,
+      "run_id": 40029745807,
+      "artifact_id": 12534053250,
+      "zip_sha256": "c97226bb5b15e83275549abd4992b1ef646c202571ddcfd5fe7c90afe0c487e6",
+      "targets": 64,
+      "original_bytes_reviewed": 91984,
+      "full_decodes": 64,
+      "status": "success"
+    },
+    {
+      "stage": "verify",
+      "shard": 0,
+      "run_id": 40029790426,
+      "artifact_id": 12534915573,
+      "zip_sha256": "33d8741ff77448cdd94478b0c845ae179390fa332fb08ebfcc5c03e25a330d43",
+      "targets": 16,
+      "original_bytes": 128,
+      "comparisons": 49152,
+      "mismatches": 0,
+      "status": "success"
+    },
+    {
+      "stage": "verify",
+      "shard": 1,
+      "run_id": 40029854999,
+      "artifact_id": 12534113263,
+      "zip_sha256": "af14cc2060fe8c3fa5d67b0b1dee66d889521656c15d1c6be645b5b28155fe27",
+      "targets": 16,
+      "original_bytes": 128,
+      "comparisons": 49152,
+      "mismatches": 0,
+      "status": "success"
+    }
+  ],
+  "results_policy": "Two disjoint getter batches yield 64 complete-function bounded-test candidates / 512 original bytes, kept separate pending historical-key reconciliation. The later independently recovered PNG size helper adds one accepted complete function, bringing the strict accepted record to 34 / 5648 original bytes. Public modeled memory, return x0, SP, x19..x29, preserved D8..D15, original-result FPCR/FPSR and actual return compared. No fake callees.",
+  "limitations": [
+    "Unsigned getters only; does not solve complex constructors, compression or thread-context closures.",
+    "Finite ordinary valid-memory tests; excludes faults, concurrent mutation and MMIO.",
+    "128 flagged byte reviews do not by themselves repair pseudocode or verify source.",
+    "0/59 whole native images rebuilt. Source/evidence stay outside Payload."
+  ],
+  "worker_first_batch_sha256": "5db06f6a6a195cfb9a3f1b9c076fa236d70b5a98b16e53ededb36af797013ad7",
+  "current_worker_commit": "9f9b77db9f4ce61be324087679dca2ad943c6178",
+  "history_guard_tests": "Image-scoped address identity, inherited phase identity and unknown-image tests passed. Pending attempt IDs journaled before execution.",
+  "continuation_runs": [
+    {
+      "stage": "output",
+      "shard": 0,
+      "run_id": 40039993870,
+      "artifact_id": 12538478683,
+      "zip_sha256": "fb2e3a39fa0c94aa2b1e38e0102de727ad25fc08716d8024478301611e2463a4",
+      "targets": 64,
+      "original_bytes_reviewed": 57420,
+      "full_decodes": 64,
+      "status": "success"
+    },
+    {
+      "stage": "output",
+      "shard": 1,
+      "run_id": 40040008811,
+      "artifact_id": 12539245799,
+      "zip_sha256": "6b3d1258a5890e5d267bf003bb30d97355dd950ebb66f6f81c8997f2c5e8e5da",
+      "targets": 64,
+      "original_bytes_reviewed": 75448,
+      "full_decodes": 64,
+      "status": "success"
+    },
+    {
+      "stage": "verify",
+      "shard": 0,
+      "run_id": 40040030600,
+      "artifact_id": 12538777615,
+      "zip_sha256": "409fb9a7376269359d3501a0944cede26c416ea8e118a90ab4c4eaa156b0423e",
+      "targets": 16,
+      "original_bytes": 128,
+      "comparisons": 49152,
+      "mismatches": 0,
+      "status": "success"
+    },
+    {
+      "stage": "verify",
+      "shard": 1,
+      "run_id": 40040055416,
+      "artifact_id": 12538657070,
+      "zip_sha256": "8cfae68e766f891ab3c069e8d86c1a4f3c9ba6b65765316861b72f286378c86f",
+      "targets": 16,
+      "original_bytes": 128,
+      "comparisons": 49152,
+      "mismatches": 0,
+      "status": "success"
+    }
+  ],
+  "combined_batches": {
+    "original_byte_reviews": 256,
+    "original_bytes_reviewed": 306904,
+    "complete_getter_candidates": 64,
+    "unique_original_getter_bytes": 512,
+    "comparisons": 196608,
+    "mismatches": 0,
+    "duplicate_target_keys": 0,
+    "source_images": 7,
+    "strict_accepted_counts_changed": false
+  },
+  "source_package": {
+    "run_id": 40040395720,
+    "artifact_id": 12538653449,
+    "zip_sha256": "61d6ce9493107a2e9ca8cfbb6947adef2e4b1847f3df23be46748bfc30663c15",
+    "source_subsets": 7,
+    "original_functions": 64,
+    "original_bytes": 512,
+    "comparisons": 196608,
+    "mismatches": 0,
+    "combined_module_runtime_verified": false
+  },
+  "png_compression_dossier": {
+    "run_id": 40040659951,
+    "artifact_id": 12539580575,
+    "zip_sha256": "04ac68c9812123d9d29c3e6d40a011ccefd5eb399822f924c7adbd647e29ced7",
+    "original_entry": "0x3848c",
+    "end_exclusive": "0x38838",
+    "original_bytes": 940,
+    "native_callee_dossiers": 5
+  },
+  "png_size_helper": {
+    "image": "MACore",
+    "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+    "entry": "0x38838",
+    "end_exclusive": "0x38aa4",
+    "bytes": 620,
+    "original_function_sha256": "bad810d3f6598b5b3889911cda3ac6302d10f9813bac2702f52990ee44560fde",
+    "run_id": 40041598091,
+    "job_id": 120713704838,
+    "artifact_id": 12538909672,
+    "zip_sha256": "c22761ba90b86c1dbf450ea57d0d46473f450b7db29c46ff8bae390e940f8266",
+    "source_sha256": "984db58b6910edca6faf7010c5811f487e4f56fd1b62d39213ce4a9ce9f68cab",
+    "cases": 32768,
+    "comparisons": 98304,
+    "mismatches": 0,
+    "original_instruction_locations": 155,
+    "native_callees": 0,
+    "native_imports": 0,
+    "scope": "Complete compiler-bounded function through actual return; valid stable context memory, ABI, public memory and original-result FP state. Finite tests, not all-input proof."
+  },
+  "png_compressor_first_calls": {
+    "run_id": 40041126486,
+    "artifact_id": 12538434754,
+    "zip_sha256": "0a2d28b33468c428c450ed40c29a738e16b7d73ebf103749219d048523753da8",
+    "comparisons": 24576,
+    "mismatches": 0,
+    "original_instruction_locations": 55,
+    "outcomes": 6,
+    "whole_function_verified": false,
+    "callees_executed": false
+  },
+  "png_compressor_native_helper_composition": {
+    "run_id": 40042085658,
+    "artifact_id": 12538689694,
+    "zip_sha256": "a770ea43fb2197d6de82689d544275f221fa112a20592f0a4777366fc9234935",
+    "comparisons": 24576,
+    "mismatches": 0,
+    "original_instruction_locations": 206,
+    "original_entry": "0x3848c",
+    "executed_original_native_helpers": [
+      "0x38838"
+    ],
+    "next_unresolved_native_call": "0x38aa4",
+    "native_helper_path_cases": 1365,
+    "remaining_native_callees_executed": false,
+    "native_stubs_used": false,
+    "whole_function_verified": false
+  },
+  "strict_accepted_complete_functions": 34,
+  "strict_accepted_original_bytes": 5648
+}
