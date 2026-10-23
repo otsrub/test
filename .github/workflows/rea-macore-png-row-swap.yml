@@ -1,0 +1,43 @@
+name: REA MACore PNG row-swap phase
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  row-swap-to-finish-call:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-logic-tail-adapters-evidence
+          run-id: '39845208071'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-dossiers-evidence
+          run-id: '38815798247'
+          github-token: ${{ github.token }}
+          path: dossiers
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install bounded comparison tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          python -m pip install unicorn==2.1.4
+      - name: Compare recovered row-swap phase with original instructions
+        run: python reconstruction/verify_macore_png_row_swap.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-macore-png-row-swap-evidence
+          path: |
+            macore-png-row-swap
+            reconstruction/macore_png_row_swap.c
+            reconstruction/verify_macore_png_row_swap.py
+          retention-days: 90
