@@ -1,0 +1,65 @@
+{
+  "repository": "otsrub/test",
+  "original_image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+  "helper_workflow": ".github/workflows/rea-logic-format-helpers.yml",
+  "helper_commit": "0d72fd089cafb73fe0de8d0beef16262505a3457",
+  "helper_run": 39887815905,
+  "complete_function_addition": {
+    "entry": "0x8be770",
+    "end_exclusive": "0x8be83c",
+    "compiler_boundaries_checked_in": "reconstruction/logic/logic-helper-boundaries.json",
+    "original_bytes": 204,
+    "original_instructions_exercised": 51,
+    "states": 16384,
+    "comparisons": 49152,
+    "mismatches": 0,
+    "overlapping_buffer_states": 12288,
+    "artifact": 12472974246,
+    "zip_sha256": "3f5635d1a7c46f14efe8838eecd5769f23a2dc6655f6cef4d4d46d5432c86007",
+    "scope": "Complete presentation parser entry-to-return with modeled normal mapped memory, ABI, FPCR/FPSR and all 256 byte inputs; finite differential evidence, not all-input proof"
+  },
+  "numeric_transfer": {
+    "entry": "0x8be270",
+    "comparisons": 24576,
+    "mismatches": 0,
+    "artifact": 12473631823,
+    "zip_sha256": "02793f969bb9d4515718af85ce8a1ae416f4272dd86e927ef02328ebe1c8b588",
+    "whole_function_verified": false,
+    "scope": "Tags 0..15, return or cut before real error call; error messages and call target compared, throw/unwind excluded"
+  },
+  "real_helper_integration": {
+    "workflow": ".github/workflows/rea-logic-resolved-specs.yml",
+    "commit": "eebd5abe5f4b97c84f4bdefcfd04bf4f0f27c9b0",
+    "run": 39888349049,
+    "job": 120201791642,
+    "artifact": 12472809271,
+    "zip_sha256": "bb3234100f7030feebf5126f8188fc3fd080322af2ff104679bfb8f5780de943",
+    "entry": "0x8b5be4",
+    "comparisons": 36864,
+    "mismatches": 0,
+    "real_original_numeric_helper_calls": 12288,
+    "original_instructions_exercised": 124,
+    "whole_function_verified": false,
+    "scope": "Actual C entry/return ABI candidate compared with uninterrupted original main+numeric helper bytes. Valid dynamic indices, tags 3/4/6/7 and values 0..INT32_MAX; disjoint ordinary input buffers and intact modeled process guard. Errors, other alias layouts and abort/unwind remain open."
+  },
+  "complete_function_source_test_record": {
+    "prior_functions": 14,
+    "prior_original_bytes": 656,
+    "new_functions": 1,
+    "new_original_bytes": 204,
+    "total_functions_across_checkpoints": 15,
+    "total_original_bytes": 860,
+    "combined_fifteen_function_module_built": false,
+    "note": "Separate modules/checkpoints; phase-only candidates and transfer models excluded from function count"
+  },
+  "automatic_failure_records_still_open": 12,
+  "last_boundary_unknown_count": 72,
+  "whole_payload_source_rebuilt": false,
+  "whole_payload_equivalence_verified": false,
+  "next_targets": [
+    "Logic numeric helper invalid-index/tag/error and unwind behavior",
+    "Resolve width/precision caller under aliasing layouts and corrupted-guard/error cases without fake stubs",
+    "Recover actual static-width parser 0x8be44c and remaining parser dependencies",
+    "Integrate the real presentation parser source into formatter caller reconstruction"
+  ]
+}
