@@ -1,0 +1,45 @@
+name: REA unresolved PNG Paeth source phase
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover-and-compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-logic-tail-adapters-evidence
+          run-id: '39845208071'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-dossiers-evidence
+          run-id: '38815798247'
+          github-token: ${{ github.token }}
+          path: dossiers
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install bounded comparison tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          python -m pip install unicorn==2.1.4
+      - name: Compare new Paeth phase without repeating accepted filters
+        env:
+          REA_LANE: paeth
+        run: python reconstruction/verify_macore_png_filter_transforms.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-macore-png-paeth-evidence
+          path: |
+            macore-png-paeth
+            reconstruction/macore_png_paeth_transform.c
+            reconstruction/verify_macore_png_filter_transforms.py
+          retention-days: 90
