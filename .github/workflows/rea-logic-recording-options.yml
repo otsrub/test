@@ -1,0 +1,69 @@
+name: REA flagged Logic recording option accessors
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover-and-compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-dossiers-evidence
+          run-id: '38815798247'
+          github-token: ${{ github.token }}
+          path: dossiers
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install bounded verifier dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          python -m pip install unicorn==2.1.4
+      - name: Verify four complete original accessors
+        run: |
+          cp -a dossiers/logic-input .
+          python reconstruction/verify_logic_recording_options.py
+      - name: Build clean standalone source module
+        run: |
+          mkdir -p logic-recording-options-package/source logic-recording-options-package/evidence
+          cp reconstruction/logic_recording_options.c logic-recording-options-package/source/
+          cp reconstruction/verify_logic_recording_options.py logic-recording-options-package/evidence/
+          cp logic-recording-options/verification.json logic-recording-options-package/evidence/
+          cp logic-input/target.bin logic-recording-options-package/evidence/original-Logic-reference.bin
+          printf '%s\n' \
+            'CLANG ?= clang-18' \
+            'LD ?= ld64.lld-18' \
+            'CFLAGS = -target arm64-apple-ios17.0 -O2 -ffreestanding -Wall -Wextra -Werror' \
+            'all: build/logic-recording-options.dylib' \
+            'build/logic-recording-options.dylib: source/logic_recording_options.c' \
+            '	mkdir -p build' \
+            '	$(CLANG) $(CFLAGS) -c $< -o build/logic-recording-options.o' \
+            '	$(LD) -arch arm64 -platform_version ios 17.0 17.0 -dylib -undefined error build/logic-recording-options.o -o $@' \
+            'clean:' \
+            '	rm -rf build' > logic-recording-options-package/Makefile
+          make -C logic-recording-options-package clean all
+          nm -u logic-recording-options-package/build/logic-recording-options.dylib > logic-recording-options-package/evidence/native-imports.txt
+          test ! -s logic-recording-options-package/evidence/native-imports.txt
+          sha256sum logic-recording-options-package/build/logic-recording-options.dylib > logic-recording-options-package/evidence/MODULE_SHA256
+          sha256sum logic-input/target.bin > logic-recording-options-package/evidence/ORIGINAL_SHA256
+          printf '%s\n' 'Standalone four-function source module and reference evidence outside Payload. It is not a Logic.framework replacement or whole-app build.' > logic-recording-options-package/PROVENANCE.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-logic-recording-options-evidence
+          path: |
+            logic-recording-options
+            reconstruction/logic_recording_options.c
+            reconstruction/verify_logic_recording_options.py
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: rea-logic-recording-options-clean-source-package
+          path: logic-recording-options-package
+          retention-days: 90
