@@ -1,0 +1,14 @@
+{
+  "parent_run": 39902362363,
+  "parent_artifact": 12478668946,
+  "parent_artifact_zip_sha256": "4b5bfef5c58b8cc568ea5132cb2b377f13bf102c700c54c73e09e58381d73286",
+  "diagnostic": "Resume exact previously compiled O0 module from its existing state after reaching 30000-instruction test cap; no register or memory changes between segments.",
+  "reproduction_case": 65,
+  "pc_at_cap": "0x47c4",
+  "expected_return_pc": "0x3200000",
+  "pc_after_resume": "0x3200000",
+  "public_memory_matches_original_after_resume": true,
+  "diagnostic_66_states_3_opts_mismatches": 0,
+  "candidate_source_changed": false,
+  "next": "Rerun only failed string lane with 200000 cap and explicit incomplete-execution check."
+}
