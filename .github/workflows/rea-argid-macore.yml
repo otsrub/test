@@ -1,0 +1,63 @@
+name: REA argument ID and MACore UTF8 recovery
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/rea-argid-macore.yml
+      - reconstruction/logic/verify_logic_argid.py
+      - reconstruction/logic/verify_macore_utf8.py
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover-and-compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [argid, macore-utf8]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-logic-tail-adapters-evidence
+          run-id: '39845208071'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-dossiers-evidence
+          run-id: '38815798247'
+          github-token: ${{ github.token }}
+          path: dossiers
+      - name: Install bounded verifier dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          python -m pip install unicorn==2.1.4
+      - name: Recover source and execute original comparisons
+        env:
+          REA_LANE: ${{ matrix.lane }}
+        run: |
+          if [ "$REA_LANE" = argid ]; then
+            python reconstruction/logic/verify_logic_argid.py
+          else
+            python reconstruction/logic/verify_macore_utf8.py
+          fi
+      - name: Preserve source and diagnostics
+        if: always()
+        run: |
+          mkdir -p evidence
+          cp reconstruction/logic/verify_logic_argid.py reconstruction/logic/verify_macore_utf8.py reconstruction/logic/verify_logic_utf8.py evidence/
+          cp -a argid-source macore-utf8-source evidence/ 2>/dev/null || true
+          sha256sum dossiers/logic-input/target.bin dossiers/macore-input/target.bin > evidence/ORIGINAL_SHA256
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-${{ matrix.lane }}-source-evidence
+          path: evidence
+          retention-days: 90
