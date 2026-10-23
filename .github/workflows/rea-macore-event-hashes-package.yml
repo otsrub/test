@@ -1,0 +1,45 @@
+name: REA clean MACore event hash source package
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  clean-source-package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rea-macore-event-hashes-*-evidence
+          run-id: '39952335477'
+          github-token: ${{ github.token }}
+          path: hash-downloads
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-logic-tail-adapters-evidence
+          run-id: '39845208071'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-dossiers-evidence
+          run-id: '38815798247'
+          github-token: ${{ github.token }}
+          path: dossiers
+      - name: Clean source build from accepted parent reports
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          mkdir -p hash-parents
+          for lane in diff method fields; do
+            cp -a hash-downloads/rea-macore-event-hashes-${lane}-evidence hash-parents/${lane}
+          done
+          python reconstruction/package_macore_event_hashes.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-macore-event-hashes-clean-source-package
+          path: macore-event-hashes-source-package
+          retention-days: 90
