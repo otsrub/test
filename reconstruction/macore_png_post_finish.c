@@ -1,14 +1,16 @@
 #include <stdint.h>
-#include <string.h>
-
 static uint32_t load_u32(const uint8_t *p) {
-    uint32_t value;
-    memcpy(&value, p, sizeof(value));
-    return value;
+    return (uint32_t)p[0]
+        | ((uint32_t)p[1] << 8)
+        | ((uint32_t)p[2] << 16)
+        | ((uint32_t)p[3] << 24);
 }
 
 static void store_u32(uint8_t *p, uint32_t value) {
-    memcpy(p, &value, sizeof(value));
+    p[0] = (uint8_t)value;
+    p[1] = (uint8_t)(value >> 8);
+    p[2] = (uint8_t)(value >> 16);
+    p[3] = (uint8_t)(value >> 24);
 }
 
 /*
