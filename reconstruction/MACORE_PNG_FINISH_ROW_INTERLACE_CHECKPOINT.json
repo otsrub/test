@@ -1,0 +1,58 @@
+{
+  "repository": "otsrub/test",
+  "image": "MACore",
+  "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+  "function": {
+    "symbol": "_png_write_finish_row",
+    "entry": "0x3b9a4",
+    "end_exclusive": "0x3bd14",
+    "original_bytes": 880,
+    "original_function_sha256": "a6b5a2769ccf18efc4678293684d46f68ddc598d8a1cb58e3dfb766b34760835"
+  },
+  "accepted_interlace_continuation": {
+    "entry": "0x3b9c8",
+    "end_exclusive": "0x3bd14",
+    "complete_return_boundary": "0x3b9bc",
+    "native_compress_tail": "0x3848c",
+    "native_bzero_tail": "0x1049c8",
+    "source": "reconstruction/macore_png_finish_row_interlace.c",
+    "verifier": "reconstruction/verify_macore_png_finish_row_interlace.py",
+    "source_sha256": "c6023bf69e6600cee187e24048d592668532a3c09ce5c234af7130d62087136f",
+    "cases": 32768,
+    "comparisons": 98304,
+    "passes_O0_O2_O3": [32768, 32768, 32768],
+    "mismatches": 0,
+    "outcomes": {
+      "return": 238,
+      "compress-tail": 31941,
+      "bzero-tail": 589
+    },
+    "incoming_pass_byte_coverage": "all 256 values, 128 cases each",
+    "original_instruction_count": 211,
+    "module_sha256_O0_O2_O3": [
+      "6a05e3c08b728f798b4b6f2c598bc11d8852b6b1f3ed18a9ccc4414999cd0676",
+      "1e3fedd9bd96dddb348aff4c3ea2ed11c17be3aa315d5bd28707cf8a95056cb0",
+      "7e20902cdbda2a46428c6947d491ef20908f23343f360471dbc6a8a52ad04f51"
+    ],
+    "accepted_run_id": 40011734265,
+    "accepted_job_id": 120613556829,
+    "head_commit": "da0fb7e445fc28c56b26ccc6bfb39926e1001348",
+    "artifact_id": 12525624246,
+    "artifact_zip_sha256": "f308aa116fad9b31e316692a25815d29982831b338b57886b2b513ce1155b59e",
+    "whole_function_verified": false
+  },
+  "preserved_rejected_harness": {
+    "run_id": 40011401663,
+    "job_id": 120612407325,
+    "artifact_id": 12526706580,
+    "artifact_zip_sha256": "81b6add84c0f38681a146604dad9e58773f171308c416124a83e955e27c7f753",
+    "reason": "The first harness incorrectly treated the valid branch to the function's earlier return instruction at 0x3b9bc as leaving the phase. Source was unchanged; the corrected harness models 0x3b9bc as the complete return boundary."
+  },
+  "limits": [
+    "The accepted record is a source phase and does not increase the strict complete-function count.",
+    "The real _png_compress_IDAT and _bzero callees are neither invoked nor stubbed; their exact original tail arguments are compared.",
+    "The already accepted 0x3b9a4 prefix and this continuation have not yet been composed in one uninterrupted verification.",
+    "Finite deterministic comparisons are not an all-input equivalence proof.",
+    "Strict complete-function record remains 33 functions / 5028 original bytes; 0/59 complete native images rebuilt."
+  ]
+}
