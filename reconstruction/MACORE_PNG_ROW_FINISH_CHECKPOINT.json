@@ -1,0 +1,88 @@
+{
+  "repository": "otsrub/test",
+  "image": "MACore",
+  "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+  "caller_row_swap_phase": {
+    "original_parent_entry": "0x3c144",
+    "phase_entry": "0x3ce00",
+    "native_finish_row_call_cut": "0x3ce18",
+    "native_finish_row_target": "0x3b9a4",
+    "source": "reconstruction/macore_png_row_swap.c",
+    "verifier": "reconstruction/verify_macore_png_row_swap.py",
+    "source_sha256": "e2c074f7fef0cf63121e69e1b70c5df41f26d450eb62624b137b73f91862222a",
+    "cases": 32768,
+    "comparisons": 98304,
+    "passes_O0_O2_O3": [32768, 32768, 32768],
+    "mismatches": 0,
+    "outcomes": {
+      "unchanged-null-previous": 8192,
+      "swapped": 24576
+    },
+    "original_instruction_count": 6,
+    "module_sha256_O0_O2_O3": [
+      "9423dda3e882a4b564512aa910265d61b047cd6cb9b615254219dee667a8c919",
+      "07cc2d46361f98a2c5b3d897307e7f4ceef1a4ed8911847f2ca51f5b9fc4faaa",
+      "112b91b66cc689453d028052019638167ac124b89f5f4056229314f859f1ce79"
+    ],
+    "accepted_run_id": 39998902081,
+    "accepted_job_id": 120569559771,
+    "head_commit": "780fa51076e5bb63352f6a8a418cb3dacb3b8041",
+    "artifact_id": 12520303720,
+    "artifact_zip_sha256": "67e4028d5d4800664f6b19aedaaf5213eda27615cae241a36cb4343fd0642ecc",
+    "whole_function_verified": false
+  },
+  "finish_row_function": {
+    "symbol": "_png_write_finish_row",
+    "entry": "0x3b9a4",
+    "end_exclusive": "0x3bd14",
+    "original_bytes": 880,
+    "original_function_sha256": "a6b5a2769ccf18efc4678293684d46f68ddc598d8a1cb58e3dfb766b34760835",
+    "resolved_dependencies": {
+      "0x3848c": "_png_compress_IDAT",
+      "0x1049c8": "_bzero"
+    },
+    "verified_prefix": {
+      "entry": "0x3b9a4",
+      "early_return": "0x3b9bc",
+      "interlace_continuation_cut": "0x3b9c8",
+      "native_compress_tail_cut": "0x3848c",
+      "source": "reconstruction/macore_png_finish_row_prefix.c",
+      "verifier": "reconstruction/verify_macore_png_finish_row_prefix.py",
+      "source_sha256": "fcc9b7f82315401def2c0972f26e854b2854d14e87b528e191e30eaf993d450f",
+      "cases": 32768,
+      "comparisons": 98304,
+      "passes_O0_O2_O3": [32768, 32768, 32768],
+      "mismatches": 0,
+      "outcomes": {
+        "early-return": 16229,
+        "compress-tail": 5555,
+        "interlace-continuation": 10984
+      },
+      "original_instruction_count": 13,
+      "module_sha256_O0_O2_O3": [
+        "a5a4326b3bc6e2363f4aa5e71e0e5ed3aa899e82c519b82aeffa68a3ed761471",
+        "7312aa89032a67ce3fe0cf7fd8aa1f189791062e8267ac791826230bbc827830",
+        "a654a3e4b42a26bac77450c7301e3dee418ff54a1d4db2097318694134335fd0"
+      ],
+      "accepted_run_id": 39999385760,
+      "accepted_job_id": 120571218660,
+      "head_commit": "a9f3d6e1354974a8acaa9ca0fcd80859a2909a57",
+      "artifact_id": 12521556727,
+      "artifact_zip_sha256": "27f8f9f4681011562cd0b122b80fbe454cba266406368f2efb0ac4dc8a11ea14"
+    },
+    "whole_function_verified": false,
+    "remaining": [
+      "interlace pass advancement and lookup-table arithmetic from 0x3b9c8",
+      "Adam7 geometry updates and fallback pass search",
+      "previous-row clearing through the exact _bzero import",
+      "real _png_compress_IDAT execution and transitive dependencies",
+      "whole-function entry-to-return or tail-call integration"
+    ]
+  },
+  "limits": [
+    "Both accepted records are phases and are excluded from the strict complete-function count.",
+    "No fake compression, row-finish or callback implementation was used.",
+    "Finite deterministic comparisons are not an all-input equivalence proof.",
+    "The strict complete-function record remains 33 functions / 5028 original bytes; 0/59 complete native images rebuilt."
+  ]
+}
