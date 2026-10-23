@@ -1,0 +1,79 @@
+{
+  "kind": "Bounded workflow stages and first batch checkpoint",
+  "date": "2026-10-23",
+  "repository": "otsrub/test",
+  "worker": "reconstruction/stage_batch_worker.py",
+  "worker_sha256": "5db06f6a6a195cfb9a3f1b9c076fa236d70b5a98b16e53ededb36af797013ad7",
+  "stage_definitions": {
+    "output": "Original-byte review of flagged baseline pseudocode candidates: compiler boundaries, disassembly, direct/indirect calls and branches, decode coverage, preserved warning/provenance. No exhausted decompiler-profile retries.",
+    "verify": "Source recovery and complete execution for exact eight-byte unsigned object getters only. O0/O2/O3 ARM64 iOS modules compared with original bytes. Other function families require dedicated source/verifier additions."
+  },
+  "batch_limits": {
+    "output_targets_per_shard": 64,
+    "verification_targets_per_shard": 16,
+    "verification_states_per_function": 1024,
+    "optimizations": [
+      0,
+      2,
+      3
+    ],
+    "shards_per_stage": 2,
+    "timeout_minutes_per_workflow": 30
+  },
+  "history": "Image SHA256 plus normalized address; all prior same-lane artifact histories and repository source/checkpoint mentions excluded. Fail when history expires or exceeds the bounded restore budget. No schedules or dispatch loops.",
+  "runs": [
+    {
+      "stage": "output",
+      "shard": 0,
+      "run_id": 40029646660,
+      "artifact_id": 12534102230,
+      "zip_sha256": "e9543c38b086a2bd2e514b57c2486ce4311da59367c1c083ab92a8ec1f5f4763",
+      "targets": 64,
+      "original_bytes_reviewed": 82052,
+      "full_decodes": 64,
+      "status": "success"
+    },
+    {
+      "stage": "output",
+      "shard": 1,
+      "run_id": 40029745807,
+      "artifact_id": 12534053250,
+      "zip_sha256": "c97226bb5b15e83275549abd4992b1ef646c202571ddcfd5fe7c90afe0c487e6",
+      "targets": 64,
+      "original_bytes_reviewed": 91984,
+      "full_decodes": 64,
+      "status": "success"
+    },
+    {
+      "stage": "verify",
+      "shard": 0,
+      "run_id": 40029790426,
+      "artifact_id": 12534915573,
+      "zip_sha256": "33d8741ff77448cdd94478b0c845ae179390fa332fb08ebfcc5c03e25a330d43",
+      "targets": 16,
+      "original_bytes": 128,
+      "comparisons": 49152,
+      "mismatches": 0,
+      "status": "success"
+    },
+    {
+      "stage": "verify",
+      "shard": 1,
+      "run_id": 40029854999,
+      "artifact_id": 12534113263,
+      "zip_sha256": "af14cc2060fe8c3fa5d67b0b1dee66d889521656c15d1c6be645b5b28155fe27",
+      "targets": 16,
+      "original_bytes": 128,
+      "comparisons": 49152,
+      "mismatches": 0,
+      "status": "success"
+    }
+  ],
+  "results_policy": "First batch yields 32 complete-function bounded-test candidates / 256 original bytes. Review and reconcile separately before adding to strict accepted counts. Existing strict 33 / 5028-byte checkpoint unchanged here. Public modeled memory, return x0, SP, x19..x29, preserved D8..D15, FPCR/FPSR and actual return compared. No fake callees; eligible getters contain none.",
+  "limitations": [
+    "Unsigned getters only; does not solve complex constructors, compression or thread-context closures.",
+    "Finite ordinary valid-memory tests; excludes faults, concurrent mutation and MMIO.",
+    "128 flagged byte reviews do not by themselves repair pseudocode or verify source.",
+    "0/59 whole native images rebuilt. Source/evidence stay outside Payload."
+  ]
+}
