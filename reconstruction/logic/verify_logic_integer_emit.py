@@ -59,7 +59,7 @@ for opt in (0,2,3):
  st['imports']=im;u.hook_add(UC_HOOK_CODE,compiled_hook,st);engines.append((u,entry,sha(raw),st))
 
 
-ref,_=engine(original);state={};covered=set();calls={};grows={0x8b87b4,0x8b889c,0x8b8bdc,0x8b8c9c,0x8b89b4,0x8b8ac0};callbacks={id(u):st['callback_entry'] for u,_,_,st in engines}
+ref,_=engine(original);state={};covered=set();calls={};grows={0x8b87b4,0x8b889c,0x8b8bdc,0x8b8c9c,0x8b89b4,0x8b8ac0,0x8c0b3c};callbacks={id(u):st['callback_entry'] for u,_,_,st in engines}
 ranges=[(0x8b47a0,0x8b4e44),(0x8b5060,0x8b51b4),(0x8b586c,0x8b5ab0),(0x8b5be4,0x8b5d84),(0x8be270,0x8be92c),(0x8ba1c0,0x8ba3b4),(0x8b86dc,0x8b90b0),(0x8c05bc,0x8c0d40),(0x8c0d8c,0x8c1144)]
 cutmap={0xf0bfe8:'memcpy',0xf0bff4:'memmove',0xf0c000:'memset',0x8b4614:'error',0x8bfc08:'flag',0x8b5ab0:'presentation'}
 def ref_hook(u,pc,n,_):
