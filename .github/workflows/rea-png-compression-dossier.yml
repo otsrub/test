@@ -1,0 +1,32 @@
+name: REA original PNG compression dependency dossier
+'on':
+  push:
+    paths:
+      - .github/workflows/rea-png-compression-dossier.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: rea-png-compression-dossier
+  cancel-in-progress: false
+jobs:
+  analyze:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned original-byte decoder
+        run: python -m pip install capstone==5.0.6
+      - name: Retrieve immutable original archive
+        run: curl --fail --location --retry 3 --max-time 900 -o MobileLogic.zip https://github.com/otsrub/test/releases/download/mobilelogic-3.4-archive/MobileLogic.zip
+      - name: Resolve exact compression extent and bounded native callees
+        run: python reconstruction/analyze_png_compression.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-png-compression-dependency-dossier
+          path: |
+            png-compression-dossier/
+            reconstruction/analyze_png_compression.py
+          retention-days: 90
+          if-no-files-found: error
