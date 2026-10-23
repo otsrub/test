@@ -8,7 +8,8 @@ import subprocess
 from unicorn import Uc, UC_ARCH_ARM64, UC_HOOK_CODE, UC_HOOK_MEM_WRITE, UC_MODE_ARM
 from unicorn.arm64_const import *
 
-ROOT = pathlib.Path(__file__).resolve().parent
+SOURCE_DIR = pathlib.Path(__file__).resolve().parent
+ROOT = SOURCE_DIR.parent
 OUT = ROOT / "logic-recording-options"
 OUT.mkdir(exist_ok=True)
 ORIGINAL = (ROOT / "logic-input" / "target.bin").read_bytes()
@@ -91,7 +92,7 @@ for opt in (0, 2, 3):
     obj = OUT / f"recording-options-O{opt}.o"
     dylib = OUT / f"recording-options-O{opt}.dylib"
     commands = [
-        ["clang-18", "-target", "arm64-apple-ios17.0", f"-O{opt}", "-ffreestanding", "-Wall", "-Wextra", "-Werror", "-c", str(ROOT / "logic_recording_options.c"), "-o", str(obj)],
+        ["clang-18", "-target", "arm64-apple-ios17.0", f"-O{opt}", "-ffreestanding", "-Wall", "-Wextra", "-Werror", "-c", str(SOURCE_DIR / "logic_recording_options.c"), "-o", str(obj)],
         ["ld64.lld-18", "-arch", "arm64", "-platform_version", "ios", "17.0", "17.0", "-dylib", "-undefined", "error", str(obj), "-o", str(dylib)],
     ]
     for argv in commands:
@@ -208,7 +209,7 @@ report = {
     "comparisons": cases * len(FUNCTIONS) * len(engines),
     "mismatches": cases * len(FUNCTIONS) * len(engines) - sum(sum(v) for v in passes.values()),
     "failures": failures,
-    "source_sha256": hashlib.sha256((ROOT / "logic_recording_options.c").read_bytes()).hexdigest(),
+    "source_sha256": hashlib.sha256((SOURCE_DIR / "logic_recording_options.c").read_bytes()).hexdigest(),
     "modules": modules,
     "native_imports": 0,
     "scope": "Four complete three-instruction Logic accessors. Exhaustive 16-bit getter state and setter low-16 input domains; unrelated paired global, signed return ABI, balanced SP, callee-saved GPR/FP registers, FPCR and FPSR compared across O0/O2/O3. Ordinary coherent module storage; concurrency, faults and final whole-image link layout excluded.",
