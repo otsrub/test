@@ -15,3 +15,15 @@ void *madsp_string_copy(unsigned char*dst,const unsigned char*src,uint64_t lengt
  unsigned char*allocation=madsp_new(capacity);
  return madsp_string_copy_after_allocation(dst,src,length,capacity,allocation);
 }
+/* Original vector-copy helper after its real allocator returns, 0x52454.
+ * Allocation exceptions and unwind cleanup are outside this phase. */
+unsigned char *madsp_string_vector_after_allocation(unsigned char*vector,const unsigned char*first,const unsigned char*last,uint64_t count,unsigned char*allocation){
+ write64(vector,(uint64_t)(uintptr_t)allocation);write64(vector+8,(uint64_t)(uintptr_t)allocation);write64(vector+16,(uint64_t)(uintptr_t)(allocation+24*count));
+ unsigned char*dst=allocation;
+ while(first!=last){
+  if(first[23]&128){uint64_t p=0,n=0;for(unsigned i=0;i<8;i++){p|=(uint64_t)first[i]<<(8*i);n|=(uint64_t)first[i+8]<<(8*i);}madsp_string_copy(dst,(const unsigned char*)(uintptr_t)p,n);}
+  else for(unsigned i=0;i<24;i++)dst[i]=first[i];
+  first+=24;dst+=24;
+ }
+ write64(vector+8,(uint64_t)(uintptr_t)dst);return dst;
+}
