@@ -813,5 +813,69 @@
         "head_sha": "c6ff9bc2ef1c6cb893cfb5cea03d98196ddbac14"
       }
     }
-  ]
+  ],
+  "macore_png_uncompressed_size": {
+    "image": "MACore",
+    "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+    "entry": "0x38838",
+    "end_exclusive": "0x38aa4",
+    "bytes": 620,
+    "original_function_sha256": "bad810d3f6598b5b3889911cda3ac6302d10f9813bac2702f52990ee44560fde",
+    "run_id": 40041598091,
+    "job_id": 120713704838,
+    "artifact_id": 12538909672,
+    "zip_sha256": "c22761ba90b86c1dbf450ea57d0d46473f450b7db29c46ff8bae390e940f8266",
+    "source_sha256": "984db58b6910edca6faf7010c5811f487e4f56fd1b62d39213ce4a9ce9f68cab",
+    "cases": 32768,
+    "comparisons": 98304,
+    "mismatches": 0,
+    "original_instruction_locations": 155,
+    "native_callees": 0,
+    "native_imports": 0,
+    "scope": "Complete compiler-bounded function through actual return; valid stable context memory, ABI, public memory and original-result FP state. Finite tests, not all-input proof."
+  },
+  "stage_source_batches": {
+    "checkpoint": "../SOURCE_STAGE_AND_PNG_CHECKPOINT_20261023.json",
+    "reviewed_flagged_candidates": 256,
+    "original_bytes_reviewed": 306904,
+    "complete_getter_candidates": 64,
+    "unique_original_getter_bytes": 512,
+    "comparisons": 196608,
+    "mismatches": 0,
+    "duplicate_target_keys_across_stage_batches": 0,
+    "source_packages": 7,
+    "package_run": 40040395720,
+    "package_artifact": 12538653449,
+    "package_zip_sha256": "61d6ce9493107a2e9ca8cfbb6947adef2e4b1847f3df23be46748bfc30663c15",
+    "strict_accepted_count_includes_getter_batches": false,
+    "combined_package_modules_runtime_verified": false
+  },
+  "png_compressor_first_calls": {
+    "run_id": 40041126486,
+    "artifact_id": 12538434754,
+    "zip_sha256": "0a2d28b33468c428c450ed40c29a738e16b7d73ebf103749219d048523753da8",
+    "comparisons": 24576,
+    "mismatches": 0,
+    "original_instruction_locations": 55,
+    "outcomes": 6,
+    "whole_function_verified": false,
+    "callees_executed": false
+  },
+  "png_compressor_native_helper_composition": {
+    "run_id": 40042085658,
+    "artifact_id": 12538689694,
+    "zip_sha256": "a770ea43fb2197d6de82689d544275f221fa112a20592f0a4777366fc9234935",
+    "comparisons": 24576,
+    "mismatches": 0,
+    "original_instruction_locations": 206,
+    "original_entry": "0x3848c",
+    "executed_original_native_helpers": [
+      "0x38838"
+    ],
+    "next_unresolved_native_call": "0x38aa4",
+    "native_helper_path_cases": 1365,
+    "remaining_native_callees_executed": false,
+    "native_stubs_used": false,
+    "whole_function_verified": false
+  }
 }
