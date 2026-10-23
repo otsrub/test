@@ -541,6 +541,208 @@ jobs:
           } finally { fs.rmSync(root, { recursive: true, force: true }); }
         });
         BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us-markets.mjs <<'BOTXRAY_SOURCE'
+        // Public Polymarket US data only. Uses the app's existing coinman2 pricing engine.
+        const API = 'https://gateway.polymarket.us';
+        const INDEX = { btc: 'BRTI', eth: 'ETHUSD_RTI' };
+        const price = value => value?.currency === 'USD' && value.value !== null && value.value !== '' && Number.isFinite(Number(value.value)) ? Number(value.value) : null;
+
+        export function contract(m, now = Date.now() / 1000, { minMinutes = 30, maxHours = 30 } = {}) {
+          const t = m.assetPriceTerms;
+          if (!t || t.marketType !== 'ASSET_PRICE_MARKET_TYPE_ABOVE_BELOW' || t.asset?.assetClass !== 'ASSET_CLASS_CRYPTO') return null;
+          const coin = t.asset.symbol;
+          if (!INDEX[coin] || t.indexSymbol !== INDEX[coin] || m.category !== 'crypto' || m.active !== true || m.closed !== false || m.status !== 'MARKET_STATUS_OPEN' || m.ep3Status !== 'OPEN') return null;
+          if (!/^[a-z0-9-]+$/.test(m.slug || '')) return null;
+          const K = price(t.strike), closes = Date.parse(t.windowEnd) / 1000;
+          // Above/below metadata alone doesn't specify which side pays. Confirm the published rule.
+          const rule = m.description?.match(/^This market will settle to Yes if the price of (Bitcoin|Ethereum) is at or above \$([\d,]+(?:\.\d+)?) at /);
+          if (!rule || rule[1] !== ({ btc: 'Bitcoin', eth: 'Ethereum' })[coin] || Number(rule[2].replaceAll(',', '')) !== K || !Number.isFinite(K) || K <= 0 || !Number.isFinite(closes) || closes < now + minMinutes * 60 || closes > now + maxHours * 3600) return null;
+          if (!Number.isFinite(m.feeCoefficient) || !(m.feeCoefficient >= 0 && m.feeCoefficient <= 0.2) || !Number.isFinite(m.minimumTradeQty) || m.minimumTradeQty <= 0 || !Number.isFinite(m.orderPriceMinTickSize) || m.orderPriceMinTickSize <= 0 || m.orderPriceMinTickSize >= 1) return null;
+          if (![true, false].every(long => m.marketSides?.some(s => s.long === long && s.tradable === true))) return null;
+          return { venue: 'polymarket-us', coin, ticker: m.slug, K, closes, feeCoefficient: m.feeCoefficient, minimumTradeQty: m.minimumTradeQty, priceTick: m.orderPriceMinTickSize, label: `${coin.toUpperCase()} at or above $${K.toLocaleString('en-US')}`, yesAsk: null, yesBid: null, noAsk: null, noBid: null };
+        }
+
+        export function withQuote(c, data) {
+          const q = data.marketData;
+          if (!q || q.marketSlug !== c.ticker || q.state !== 'MARKET_STATE_OPEN') return null;
+          const ask = price(q.bestAsk), bid = price(q.bestBid);
+          // Never substitute last-trade prices or a missing quote with zero.
+          const valid = n => n !== null && n > 0 && n < 1;
+          if (valid(ask) && valid(bid) && bid > ask) return null;
+          return { ...c, yesAsk: valid(ask) ? ask : null, yesBid: valid(bid) ? bid : null, noAsk: valid(bid) ? 1 - bid : null, noBid: valid(ask) ? 1 - ask : null };
+        }
+
+        export function createMarketClient({ fetchImpl = globalThis.fetch, now = Date.now } = {}) {
+          let cache = null, cachedAt = 0, pending = null;
+          async function read(path) {
+            const r = await fetchImpl(API + path, { method: 'GET', redirect: 'error', signal: AbortSignal.timeout(20000) });
+            if (!r.ok) throw new Error(`Polymarket US public data unavailable (HTTP ${r.status})`);
+            return r.json();
+          }
+          async function markets() {
+            if (cache && now() - cachedAt < 30000) return cache;
+            if (pending) return pending;
+            pending = (async () => {
+              const rows = [], pageSize = 500;
+              const from = new Date(now()).toISOString(), to = new Date(now() + 31 * 3600e3).toISOString();
+              for (let page = 0; page < 10; page++) {
+                const qs = new URLSearchParams({ categories: 'crypto', active: 'true', closed: 'false', limit: String(pageSize), offset: String(page * pageSize), endDateMin: from, endDateMax: to });
+                const j = await read('/v1/markets?' + qs);
+                if (!Array.isArray(j.markets)) throw new Error('Unexpected Polymarket US market list');
+                rows.push(...j.markets);
+                if (j.markets.length < pageSize) {
+                  cache = rows; cachedAt = now(); return rows;
+                }
+              }
+              throw new Error('Polymarket US market list is incomplete; scan skipped');
+            })();
+            try { return await pending; } finally { pending = null; }
+          }
+          return {
+            markets,
+            async ladders(coin, options = {}) {
+              const eligible = (await markets()).map(m => contract(m, now() / 1000, options)).filter(c => c?.coin === coin);
+              const quoted = [];
+              for (let i = 0; i < eligible.length; i += 4) {
+                const batch = await Promise.all(eligible.slice(i, i + 4).map(async c => withQuote(c, await read(`/v1/markets/${c.ticker}/bbo`))));
+                quoted.push(...batch.filter(Boolean));
+                if (i + 4 < eligible.length) await new Promise(resolve => setTimeout(resolve, 250));
+              }
+              const groups = new Map();
+              for (const c of quoted) {
+                const key = `${c.closes}:${c.feeCoefficient}`;
+                const g = groups.get(key) || { venue: 'polymarket-us', coin, closes: c.closes, feeCoefficient: c.feeCoefficient, contracts: [] };
+                g.contracts.push(c); groups.set(key, g);
+              }
+              return [...groups.values()].map(g => ({ ...g, contracts: g.contracts.sort((a, b) => a.K - b.K) })).sort((a, b) => a.closes - b.closes);
+            },
+            async result(slug) {
+              if (!/^[a-z0-9-]+$/.test(slug)) throw new Error('Invalid market slug');
+              const j = await read(`/v1/markets/${slug}/settlement`);
+              if (j.slug !== slug) return null;
+              return j.settlement === 1 ? 'yes' : j.settlement === 0 ? 'no' : null;
+            },
+          };
+        }
+
+        const client = createMarketClient();
+        export const ladders = (...args) => client.ladders(...args);
+        export const result = (...args) => client.result(...args);
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us-markets.test.mjs <<'BOTXRAY_SOURCE'
+        import test from 'node:test';
+        import assert from 'node:assert/strict';
+        import { contract, withQuote, createMarketClient } from './polymarket-us-markets.mjs';
+        import { priceLadder, DEFAULTS } from '../bot-x-ray/lib/strategy/engine.js';
+        import { probAbove, YEAR } from '../bot-x-ray/lib/strategy/model.js';
+
+        const now = Date.parse('2026-10-23T07:00:00Z');
+        const market = () => ({ slug: 'cpc-btc-above-wk-2026-10-23-82000', category: 'crypto', active: true, closed: false, status: 'MARKET_STATUS_OPEN', ep3Status: 'OPEN', description: 'This market will settle to Yes if the price of Bitcoin is at or above $82,000 at 5:00PM ET on Oct 23, 2026.', feeCoefficient: 0.0695, minimumTradeQty: 0.01, orderPriceMinTickSize: 0.01, marketSides: [{ long: true, tradable: true }, { long: false, tradable: true }], assetPriceTerms: { marketType: 'ASSET_PRICE_MARKET_TYPE_ABOVE_BELOW', asset: { assetClass: 'ASSET_CLASS_CRYPTO', symbol: 'btc' }, indexSymbol: 'BRTI', strike: { value: '82000', currency: 'USD' }, windowEnd: '2026-10-23T21:00:00Z' } });
+        const quote = (m = market()) => ({ marketData: { marketSlug: m.slug, state: 'MARKET_STATE_OPEN', bestAsk: { value: '0.42', currency: 'USD' }, bestBid: { value: '0.38', currency: 'USD' } } });
+
+        test('only fixed-time above-strike markets enter the built-in model', () => {
+          assert.equal(contract(market(), now / 1000).K, 82000);
+          const cases = [
+            m => { m.assetPriceTerms.marketType = 'ASSET_PRICE_MARKET_TYPE_ONE_TOUCH'; },
+            m => { m.assetPriceTerms.marketType = 'ASSET_PRICE_MARKET_TYPE_RANGE'; },
+            m => { m.assetPriceTerms.strike.value = '81000'; },
+            m => { m.assetPriceTerms.windowEnd = '2026-10-23T07:10:00Z'; },
+            m => { m.assetPriceTerms.indexSymbol = 'UNKNOWN'; },
+            m => { m.description = m.description.replace('Bitcoin', 'Ethereum'); },
+            m => { m.feeCoefficient = null; },
+            m => { m.closed = true; },
+            m => { m.marketSides[1].tradable = false; },
+            m => { m.description = 'Bitcoin hits $82,000 at any point before expiry'; },
+          ];
+          for (const change of cases) { const m = market(); change(m); assert.equal(contract(m, now / 1000), null); }
+        });
+
+        test('executable YES/NO quotes use opposite best bid and never last-trade prices', () => {
+          const c = contract(market(), now / 1000), q = quote();
+          const result = withQuote(c, q);
+          assert.equal(result.yesAsk, 0.42);
+          assert.equal(result.noAsk, 0.62);
+          q.marketData.bestBid = null;
+          q.marketData.lastTradePx = { value: '0.1', currency: 'USD' };
+          assert.equal(withQuote(c, q).noAsk, null);
+          q.marketData.marketSlug = 'another-market';
+          assert.equal(withQuote(c, q), null);
+        });
+
+        test('pagination completes and quote requests stay public GET requests without credentials', async () => {
+          const calls = [];
+          const firstPage = Array.from({ length: 500 }, (_, i) => ({ ...market(), slug: `market-${i}` }));
+          const client = createMarketClient({ now: () => now, fetchImpl: async (url, options) => {
+            calls.push({ url, options });
+            const u = new URL(url);
+            return { ok: true, json: async () => u.pathname === '/v1/markets' ? { markets: u.searchParams.get('offset') === '0' ? firstPage : [] } : quote() };
+          } });
+          assert.equal((await client.markets()).length, 500);
+          assert.equal(calls.length, 2);
+          await client.markets();
+          assert.equal(calls.length, 2);
+          assert.equal(new URL(calls[1].url).searchParams.get('offset'), '500');
+          assert.ok(calls.every(c => c.options.method === 'GET' && c.options.redirect === 'error' && !c.options.headers));
+        });
+
+        test('the existing coinman2 model is reused with the US fee coefficient', () => {
+          const c = withQuote(contract(market(), now / 1000), quote());
+          const ladder = { venue: 'polymarket-us', coin: 'btc', closes: c.closes, feeCoefficient: 0.0695, contracts: [c] };
+          const output = priceLadder(ladder, { S: 82000, sigma: 0.5, now: now / 1000, cfg: DEFAULTS });
+          assert.equal(output.contracts[0].fairYes, probAbove(82000, 82000, 0.5, (c.closes - now / 1000) / YEAR));
+          const side = output.contracts[0].best;
+          assert.equal(side.cost, side.ask + 0.0695 * side.ask * (1 - side.ask));
+          assert.equal(output.volOk, false); // One quote cannot establish market volatility: no trade.
+          assert.equal(output.contracts[0].signal, false);
+        });
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us-strategy-patch.mjs <<'BOTXRAY_SOURCE'
+        import fs from 'node:fs';
+        import path from 'node:path';
+        import { pathToFileURL } from 'node:url';
+
+        function replaceOne(source, needle, replacement) {
+          if (source.split(needle).length !== 2) throw new Error('Polymarket US patch does not match the pinned app release');
+          return source.replace(needle, replacement);
+        }
+
+        export function patchPolymarketUS(root) {
+          const enginePath = path.join(root, 'lib/strategy/engine.js');
+          let engine = fs.readFileSync(enginePath, 'utf8');
+          if (engine.includes('// Polymarket US venue')) return;
+          engine = replaceOne(engine, 'import * as kalshi from "./kalshi.js";', 'import * as kalshi from "./kalshi.js";\n// Polymarket US venue\nimport * as polymarketUS from "./polymarket-us-markets.js";');
+          engine = replaceOne(engine, 'markets: { kalshi: true, options: true },', 'markets: { kalshi: true, options: true, polymarketUS: false },');
+          engine = replaceOne(engine, ': kalshi.feePerContract(p);', ': l.venue === "polymarket-us" ? l.feeCoefficient * p * (1 - p) : kalshi.feePerContract(p);');
+          engine = replaceOne(engine, '      if (cfg.markets.kalshi) {', `      if (cfg.markets.polymarketUS) {
+                try {
+                  const S = (await spot(coin)).price;
+                  for (const l of await polymarketUS.ladders(coin, { maxHours: cfg.kalshiMaxHours }))
+                    out.ladders.push(priceLadder(l, { S, sigma: sigma.sigma, cfg }));
+                } catch (e) { out.notes.push('Polymarket US ' + coin.toUpperCase() + ': ' + e.message); }
+              }
+              if (cfg.markets.kalshi) {`);
+          engine = replaceOne(engine, '      } else if (p.venue === "kalshi") {', `      } else if (p.venue === "polymarket-us") {
+                const r = await polymarketUS.result(p.ticker);
+                if (r) paid = r === p.side ? 1 : 0;
+              } else if (p.venue === "kalshi") {`);
+
+          const serverPath = path.join(root, 'server.js');
+          const server = replaceOne(fs.readFileSync(serverPath, 'utf8'), 'options: Boolean(b.markets.options),', 'options: Boolean(b.markets.options),\n          polymarketUS: Boolean(b.markets.polymarketUS),');
+          const uiPath = path.join(root, 'public/js/app.js');
+          let ui = fs.readFileSync(uiPath, 'utf8');
+          ui = replaceOne(ui, '<span class="small">$${c.stake} a trade</span>', '<label class="toggle"><input type="checkbox" id="mp" ${c.markets.polymarketUS ? "checked" : ""}/> Polymarket US</label>\n        <span class="small">$${c.stake} a trade</span>');
+          ui = replaceOne(ui, 'markets: { kalshi: e.target.checked, options: c.markets.options },', 'markets: { ...c.markets, kalshi: e.target.checked },');
+          ui = replaceOne(ui, 'set({ markets: { kalshi: c.markets.kalshi, options: e.target.checked } });', 'set({ markets: { ...c.markets, options: e.target.checked } });\n    $("#mp").onchange = (e) => set({ markets: { ...c.markets, polymarketUS: e.target.checked } });');
+          ui = replaceOne(ui, 'l.venue === "kalshi" ? "Kalshi" : "ETF options"', 'l.venue === "polymarket-us" ? "Polymarket US" : l.venue === "kalshi" ? "Kalshi" : "ETF options"');
+          ui = replaceOne(ui, 'l.venue === "kalshi" ? `Kalshi ${l.coin.toUpperCase()}` : `${esc(l.symbol)} options`', 'l.venue === "polymarket-us" ? `Polymarket US ${l.coin.toUpperCase()}` : l.venue === "kalshi" ? `Kalshi ${l.coin.toUpperCase()}` : `${esc(l.symbol)} options`');
+          ui = replaceOne(ui, '<div class="row" style="margin:18px 0">', '<p class="small">Polymarket US uses the same pricing rules on fixed-time BTC and ETH above-strike markets. Paper fills and fees are estimates. Spot-price inputs come from public exchanges; settlement uses the market\'s CF Benchmarks index. The account connection does not enable real orders.</p>\n      <div class="row" style="margin:18px 0">');
+          fs.writeFileSync(enginePath, engine);
+          fs.writeFileSync(serverPath, server);
+          fs.writeFileSync(uiPath, ui);
+        }
+
+        if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) patchPolymarketUS(process.argv[2]);
+        BOTXRAY_SOURCE
     - name: Download the verified Bot X-Ray release
       shell: bash
       run: |
@@ -563,10 +765,24 @@ jobs:
         cp bot-x-ray-actions/polymarket-us.mjs bot-x-ray/lib/brokers/polymarket-us.js
         cp bot-x-ray-actions/paper-bankroll.mjs bot-x-ray/lib/strategy/paper-bankroll.js
         node bot-x-ray-actions/paper-bankroll.mjs patch bot-x-ray
+        cp bot-x-ray-actions/polymarket-us-markets.mjs bot-x-ray/lib/strategy/polymarket-us-markets.js
+        node bot-x-ray-actions/polymarket-us-strategy-patch.mjs bot-x-ray
     - name: Test app and password protection
       run: |-
         node --test bot-x-ray-actions/*.test.mjs
         (cd bot-x-ray && node scripts/test.js)
+    - name: Check US markets for the built-in coinman2 model (no orders)
+      run: |-
+        node --input-type=module <<'MARKETS'
+        import { createMarketClient, contract } from './bot-x-ray-actions/polymarket-us-markets.mjs';
+        const now = Date.now();
+        const rows = await createMarketClient().markets();
+        const supported = rows.map(m => contract(m, now / 1000)).filter(Boolean);
+        console.log('Read-only Polymarket US check. No orders created or previewed.');
+        console.log('Fixed-time above-strike contracts supported by the built-in model: ' + supported.length);
+        for (const coin of ['btc', 'eth']) console.log(coin.toUpperCase() + ': ' + supported.filter(c => c.coin === coin).length);
+        console.log('Touch and range contracts excluded. Real-money trading remains disabled.');
+        MARKETS
     - name: Verify Polymarket US account access without displaying account data
       env:
         POLYMARKET_US_KEY_ID: ${{ secrets.POLYMARKET_US_KEY_ID }}
@@ -1112,6 +1328,208 @@ jobs:
           } finally { fs.rmSync(root, { recursive: true, force: true }); }
         });
         BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us-markets.mjs <<'BOTXRAY_SOURCE'
+        // Public Polymarket US data only. Uses the app's existing coinman2 pricing engine.
+        const API = 'https://gateway.polymarket.us';
+        const INDEX = { btc: 'BRTI', eth: 'ETHUSD_RTI' };
+        const price = value => value?.currency === 'USD' && value.value !== null && value.value !== '' && Number.isFinite(Number(value.value)) ? Number(value.value) : null;
+
+        export function contract(m, now = Date.now() / 1000, { minMinutes = 30, maxHours = 30 } = {}) {
+          const t = m.assetPriceTerms;
+          if (!t || t.marketType !== 'ASSET_PRICE_MARKET_TYPE_ABOVE_BELOW' || t.asset?.assetClass !== 'ASSET_CLASS_CRYPTO') return null;
+          const coin = t.asset.symbol;
+          if (!INDEX[coin] || t.indexSymbol !== INDEX[coin] || m.category !== 'crypto' || m.active !== true || m.closed !== false || m.status !== 'MARKET_STATUS_OPEN' || m.ep3Status !== 'OPEN') return null;
+          if (!/^[a-z0-9-]+$/.test(m.slug || '')) return null;
+          const K = price(t.strike), closes = Date.parse(t.windowEnd) / 1000;
+          // Above/below metadata alone doesn't specify which side pays. Confirm the published rule.
+          const rule = m.description?.match(/^This market will settle to Yes if the price of (Bitcoin|Ethereum) is at or above \$([\d,]+(?:\.\d+)?) at /);
+          if (!rule || rule[1] !== ({ btc: 'Bitcoin', eth: 'Ethereum' })[coin] || Number(rule[2].replaceAll(',', '')) !== K || !Number.isFinite(K) || K <= 0 || !Number.isFinite(closes) || closes < now + minMinutes * 60 || closes > now + maxHours * 3600) return null;
+          if (!Number.isFinite(m.feeCoefficient) || !(m.feeCoefficient >= 0 && m.feeCoefficient <= 0.2) || !Number.isFinite(m.minimumTradeQty) || m.minimumTradeQty <= 0 || !Number.isFinite(m.orderPriceMinTickSize) || m.orderPriceMinTickSize <= 0 || m.orderPriceMinTickSize >= 1) return null;
+          if (![true, false].every(long => m.marketSides?.some(s => s.long === long && s.tradable === true))) return null;
+          return { venue: 'polymarket-us', coin, ticker: m.slug, K, closes, feeCoefficient: m.feeCoefficient, minimumTradeQty: m.minimumTradeQty, priceTick: m.orderPriceMinTickSize, label: `${coin.toUpperCase()} at or above $${K.toLocaleString('en-US')}`, yesAsk: null, yesBid: null, noAsk: null, noBid: null };
+        }
+
+        export function withQuote(c, data) {
+          const q = data.marketData;
+          if (!q || q.marketSlug !== c.ticker || q.state !== 'MARKET_STATE_OPEN') return null;
+          const ask = price(q.bestAsk), bid = price(q.bestBid);
+          // Never substitute last-trade prices or a missing quote with zero.
+          const valid = n => n !== null && n > 0 && n < 1;
+          if (valid(ask) && valid(bid) && bid > ask) return null;
+          return { ...c, yesAsk: valid(ask) ? ask : null, yesBid: valid(bid) ? bid : null, noAsk: valid(bid) ? 1 - bid : null, noBid: valid(ask) ? 1 - ask : null };
+        }
+
+        export function createMarketClient({ fetchImpl = globalThis.fetch, now = Date.now } = {}) {
+          let cache = null, cachedAt = 0, pending = null;
+          async function read(path) {
+            const r = await fetchImpl(API + path, { method: 'GET', redirect: 'error', signal: AbortSignal.timeout(20000) });
+            if (!r.ok) throw new Error(`Polymarket US public data unavailable (HTTP ${r.status})`);
+            return r.json();
+          }
+          async function markets() {
+            if (cache && now() - cachedAt < 30000) return cache;
+            if (pending) return pending;
+            pending = (async () => {
+              const rows = [], pageSize = 500;
+              const from = new Date(now()).toISOString(), to = new Date(now() + 31 * 3600e3).toISOString();
+              for (let page = 0; page < 10; page++) {
+                const qs = new URLSearchParams({ categories: 'crypto', active: 'true', closed: 'false', limit: String(pageSize), offset: String(page * pageSize), endDateMin: from, endDateMax: to });
+                const j = await read('/v1/markets?' + qs);
+                if (!Array.isArray(j.markets)) throw new Error('Unexpected Polymarket US market list');
+                rows.push(...j.markets);
+                if (j.markets.length < pageSize) {
+                  cache = rows; cachedAt = now(); return rows;
+                }
+              }
+              throw new Error('Polymarket US market list is incomplete; scan skipped');
+            })();
+            try { return await pending; } finally { pending = null; }
+          }
+          return {
+            markets,
+            async ladders(coin, options = {}) {
+              const eligible = (await markets()).map(m => contract(m, now() / 1000, options)).filter(c => c?.coin === coin);
+              const quoted = [];
+              for (let i = 0; i < eligible.length; i += 4) {
+                const batch = await Promise.all(eligible.slice(i, i + 4).map(async c => withQuote(c, await read(`/v1/markets/${c.ticker}/bbo`))));
+                quoted.push(...batch.filter(Boolean));
+                if (i + 4 < eligible.length) await new Promise(resolve => setTimeout(resolve, 250));
+              }
+              const groups = new Map();
+              for (const c of quoted) {
+                const key = `${c.closes}:${c.feeCoefficient}`;
+                const g = groups.get(key) || { venue: 'polymarket-us', coin, closes: c.closes, feeCoefficient: c.feeCoefficient, contracts: [] };
+                g.contracts.push(c); groups.set(key, g);
+              }
+              return [...groups.values()].map(g => ({ ...g, contracts: g.contracts.sort((a, b) => a.K - b.K) })).sort((a, b) => a.closes - b.closes);
+            },
+            async result(slug) {
+              if (!/^[a-z0-9-]+$/.test(slug)) throw new Error('Invalid market slug');
+              const j = await read(`/v1/markets/${slug}/settlement`);
+              if (j.slug !== slug) return null;
+              return j.settlement === 1 ? 'yes' : j.settlement === 0 ? 'no' : null;
+            },
+          };
+        }
+
+        const client = createMarketClient();
+        export const ladders = (...args) => client.ladders(...args);
+        export const result = (...args) => client.result(...args);
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us-markets.test.mjs <<'BOTXRAY_SOURCE'
+        import test from 'node:test';
+        import assert from 'node:assert/strict';
+        import { contract, withQuote, createMarketClient } from './polymarket-us-markets.mjs';
+        import { priceLadder, DEFAULTS } from '../bot-x-ray/lib/strategy/engine.js';
+        import { probAbove, YEAR } from '../bot-x-ray/lib/strategy/model.js';
+
+        const now = Date.parse('2026-10-23T07:00:00Z');
+        const market = () => ({ slug: 'cpc-btc-above-wk-2026-10-23-82000', category: 'crypto', active: true, closed: false, status: 'MARKET_STATUS_OPEN', ep3Status: 'OPEN', description: 'This market will settle to Yes if the price of Bitcoin is at or above $82,000 at 5:00PM ET on Oct 23, 2026.', feeCoefficient: 0.0695, minimumTradeQty: 0.01, orderPriceMinTickSize: 0.01, marketSides: [{ long: true, tradable: true }, { long: false, tradable: true }], assetPriceTerms: { marketType: 'ASSET_PRICE_MARKET_TYPE_ABOVE_BELOW', asset: { assetClass: 'ASSET_CLASS_CRYPTO', symbol: 'btc' }, indexSymbol: 'BRTI', strike: { value: '82000', currency: 'USD' }, windowEnd: '2026-10-23T21:00:00Z' } });
+        const quote = (m = market()) => ({ marketData: { marketSlug: m.slug, state: 'MARKET_STATE_OPEN', bestAsk: { value: '0.42', currency: 'USD' }, bestBid: { value: '0.38', currency: 'USD' } } });
+
+        test('only fixed-time above-strike markets enter the built-in model', () => {
+          assert.equal(contract(market(), now / 1000).K, 82000);
+          const cases = [
+            m => { m.assetPriceTerms.marketType = 'ASSET_PRICE_MARKET_TYPE_ONE_TOUCH'; },
+            m => { m.assetPriceTerms.marketType = 'ASSET_PRICE_MARKET_TYPE_RANGE'; },
+            m => { m.assetPriceTerms.strike.value = '81000'; },
+            m => { m.assetPriceTerms.windowEnd = '2026-10-23T07:10:00Z'; },
+            m => { m.assetPriceTerms.indexSymbol = 'UNKNOWN'; },
+            m => { m.description = m.description.replace('Bitcoin', 'Ethereum'); },
+            m => { m.feeCoefficient = null; },
+            m => { m.closed = true; },
+            m => { m.marketSides[1].tradable = false; },
+            m => { m.description = 'Bitcoin hits $82,000 at any point before expiry'; },
+          ];
+          for (const change of cases) { const m = market(); change(m); assert.equal(contract(m, now / 1000), null); }
+        });
+
+        test('executable YES/NO quotes use opposite best bid and never last-trade prices', () => {
+          const c = contract(market(), now / 1000), q = quote();
+          const result = withQuote(c, q);
+          assert.equal(result.yesAsk, 0.42);
+          assert.equal(result.noAsk, 0.62);
+          q.marketData.bestBid = null;
+          q.marketData.lastTradePx = { value: '0.1', currency: 'USD' };
+          assert.equal(withQuote(c, q).noAsk, null);
+          q.marketData.marketSlug = 'another-market';
+          assert.equal(withQuote(c, q), null);
+        });
+
+        test('pagination completes and quote requests stay public GET requests without credentials', async () => {
+          const calls = [];
+          const firstPage = Array.from({ length: 500 }, (_, i) => ({ ...market(), slug: `market-${i}` }));
+          const client = createMarketClient({ now: () => now, fetchImpl: async (url, options) => {
+            calls.push({ url, options });
+            const u = new URL(url);
+            return { ok: true, json: async () => u.pathname === '/v1/markets' ? { markets: u.searchParams.get('offset') === '0' ? firstPage : [] } : quote() };
+          } });
+          assert.equal((await client.markets()).length, 500);
+          assert.equal(calls.length, 2);
+          await client.markets();
+          assert.equal(calls.length, 2);
+          assert.equal(new URL(calls[1].url).searchParams.get('offset'), '500');
+          assert.ok(calls.every(c => c.options.method === 'GET' && c.options.redirect === 'error' && !c.options.headers));
+        });
+
+        test('the existing coinman2 model is reused with the US fee coefficient', () => {
+          const c = withQuote(contract(market(), now / 1000), quote());
+          const ladder = { venue: 'polymarket-us', coin: 'btc', closes: c.closes, feeCoefficient: 0.0695, contracts: [c] };
+          const output = priceLadder(ladder, { S: 82000, sigma: 0.5, now: now / 1000, cfg: DEFAULTS });
+          assert.equal(output.contracts[0].fairYes, probAbove(82000, 82000, 0.5, (c.closes - now / 1000) / YEAR));
+          const side = output.contracts[0].best;
+          assert.equal(side.cost, side.ask + 0.0695 * side.ask * (1 - side.ask));
+          assert.equal(output.volOk, false); // One quote cannot establish market volatility: no trade.
+          assert.equal(output.contracts[0].signal, false);
+        });
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us-strategy-patch.mjs <<'BOTXRAY_SOURCE'
+        import fs from 'node:fs';
+        import path from 'node:path';
+        import { pathToFileURL } from 'node:url';
+
+        function replaceOne(source, needle, replacement) {
+          if (source.split(needle).length !== 2) throw new Error('Polymarket US patch does not match the pinned app release');
+          return source.replace(needle, replacement);
+        }
+
+        export function patchPolymarketUS(root) {
+          const enginePath = path.join(root, 'lib/strategy/engine.js');
+          let engine = fs.readFileSync(enginePath, 'utf8');
+          if (engine.includes('// Polymarket US venue')) return;
+          engine = replaceOne(engine, 'import * as kalshi from "./kalshi.js";', 'import * as kalshi from "./kalshi.js";\n// Polymarket US venue\nimport * as polymarketUS from "./polymarket-us-markets.js";');
+          engine = replaceOne(engine, 'markets: { kalshi: true, options: true },', 'markets: { kalshi: true, options: true, polymarketUS: false },');
+          engine = replaceOne(engine, ': kalshi.feePerContract(p);', ': l.venue === "polymarket-us" ? l.feeCoefficient * p * (1 - p) : kalshi.feePerContract(p);');
+          engine = replaceOne(engine, '      if (cfg.markets.kalshi) {', `      if (cfg.markets.polymarketUS) {
+                try {
+                  const S = (await spot(coin)).price;
+                  for (const l of await polymarketUS.ladders(coin, { maxHours: cfg.kalshiMaxHours }))
+                    out.ladders.push(priceLadder(l, { S, sigma: sigma.sigma, cfg }));
+                } catch (e) { out.notes.push('Polymarket US ' + coin.toUpperCase() + ': ' + e.message); }
+              }
+              if (cfg.markets.kalshi) {`);
+          engine = replaceOne(engine, '      } else if (p.venue === "kalshi") {', `      } else if (p.venue === "polymarket-us") {
+                const r = await polymarketUS.result(p.ticker);
+                if (r) paid = r === p.side ? 1 : 0;
+              } else if (p.venue === "kalshi") {`);
+
+          const serverPath = path.join(root, 'server.js');
+          const server = replaceOne(fs.readFileSync(serverPath, 'utf8'), 'options: Boolean(b.markets.options),', 'options: Boolean(b.markets.options),\n          polymarketUS: Boolean(b.markets.polymarketUS),');
+          const uiPath = path.join(root, 'public/js/app.js');
+          let ui = fs.readFileSync(uiPath, 'utf8');
+          ui = replaceOne(ui, '<span class="small">$${c.stake} a trade</span>', '<label class="toggle"><input type="checkbox" id="mp" ${c.markets.polymarketUS ? "checked" : ""}/> Polymarket US</label>\n        <span class="small">$${c.stake} a trade</span>');
+          ui = replaceOne(ui, 'markets: { kalshi: e.target.checked, options: c.markets.options },', 'markets: { ...c.markets, kalshi: e.target.checked },');
+          ui = replaceOne(ui, 'set({ markets: { kalshi: c.markets.kalshi, options: e.target.checked } });', 'set({ markets: { ...c.markets, options: e.target.checked } });\n    $("#mp").onchange = (e) => set({ markets: { ...c.markets, polymarketUS: e.target.checked } });');
+          ui = replaceOne(ui, 'l.venue === "kalshi" ? "Kalshi" : "ETF options"', 'l.venue === "polymarket-us" ? "Polymarket US" : l.venue === "kalshi" ? "Kalshi" : "ETF options"');
+          ui = replaceOne(ui, 'l.venue === "kalshi" ? `Kalshi ${l.coin.toUpperCase()}` : `${esc(l.symbol)} options`', 'l.venue === "polymarket-us" ? `Polymarket US ${l.coin.toUpperCase()}` : l.venue === "kalshi" ? `Kalshi ${l.coin.toUpperCase()}` : `${esc(l.symbol)} options`');
+          ui = replaceOne(ui, '<div class="row" style="margin:18px 0">', '<p class="small">Polymarket US uses the same pricing rules on fixed-time BTC and ETH above-strike markets. Paper fills and fees are estimates. Spot-price inputs come from public exchanges; settlement uses the market\'s CF Benchmarks index. The account connection does not enable real orders.</p>\n      <div class="row" style="margin:18px 0">');
+          fs.writeFileSync(enginePath, engine);
+          fs.writeFileSync(serverPath, server);
+          fs.writeFileSync(uiPath, ui);
+        }
+
+        if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) patchPolymarketUS(process.argv[2]);
+        BOTXRAY_SOURCE
     - name: Download the verified Bot X-Ray release
       shell: bash
       run: |
@@ -1134,6 +1552,8 @@ jobs:
         cp bot-x-ray-actions/polymarket-us.mjs bot-x-ray/lib/brokers/polymarket-us.js
         cp bot-x-ray-actions/paper-bankroll.mjs bot-x-ray/lib/strategy/paper-bankroll.js
         node bot-x-ray-actions/paper-bankroll.mjs patch bot-x-ray
+        cp bot-x-ray-actions/polymarket-us-markets.mjs bot-x-ray/lib/strategy/polymarket-us-markets.js
+        node bot-x-ray-actions/polymarket-us-strategy-patch.mjs bot-x-ray
     - name: Restore the latest saved paper records
       env:
         GH_TOKEN: ${{ github.token }}
