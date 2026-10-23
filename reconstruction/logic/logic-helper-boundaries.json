@@ -1,0 +1,20 @@
+{
+  "original_image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+  "functions": [
+    {
+      "entry": "0x8be770",
+      "next_LC_FUNCTION_STARTS": "0x8be83c",
+      "bytes": 204
+    },
+    {
+      "entry": "0x8be270",
+      "next_LC_FUNCTION_STARTS": "0x8be304",
+      "bytes": 148
+    },
+    {
+      "entry": "0x8b5be4",
+      "next_LC_FUNCTION_STARTS": "0x8b5d8c",
+      "bytes": 424
+    }
+  ]
+}
