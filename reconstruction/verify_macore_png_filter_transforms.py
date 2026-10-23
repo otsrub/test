@@ -11,17 +11,19 @@ start,stop,flag,symbol={
  'sub':(0x3c18c,0x3c4d4,0x10,'_mobilelogic_png_sub_transform'),
  'up':(0x3c4d4,0x3c5c4,0x20,'_mobilelogic_png_up_transform'),
  'average':(0x3c5c4,0x3c87c,0x40,'_mobilelogic_png_average_transform'),
+ 'paeth':(0x3c87c,0x3cde8,0x80,'_mobilelogic_png_paeth_transform'),
 }[LANE]
 OUT=ROOT/('macore-png-'+LANE);OUT.mkdir(exist_ok=True)
 original=(ROOT/'dossiers/macore-input/target.bin').read_bytes()
 assert sha(original)=='88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5'
-source=(ROOT/'reconstruction/macore_png_filter_transforms.c').read_bytes()
-(OUT/'macore_png_filter_transforms.c').write_bytes(source)
+source_file='macore_png_paeth_transform.c' if LANE=='paeth' else 'macore_png_filter_transforms.c'
+source=(ROOT/'reconstruction'/source_file).read_bytes()
+(OUT/source_file).write_bytes(source)
 engines=[];diagnostics=[]
 for opt in (0,2,3):
  obj=OUT/f'O{opt}.o';lib=OUT/f'O{opt}.dylib'
  for argv in (
-  ['clang-18','-target','arm64-apple-ios17.0',f'-O{opt}','-ffreestanding','-fno-builtin','-fno-stack-protector','-Wall','-Wextra','-Werror','-c',str(OUT/'macore_png_filter_transforms.c'),'-o',str(obj)],
+  ['clang-18','-target','arm64-apple-ios17.0',f'-O{opt}','-ffreestanding','-fno-builtin','-fno-stack-protector','-Wall','-Wextra','-Werror','-c',str(OUT/source_file),'-o',str(obj)],
   ['ld64.lld-18','-arch','arm64','-platform_version','ios','17.0','17.0','-dylib','-undefined','error',str(obj),'-o',str(lib)]):
   r=subprocess.run(argv,text=True,capture_output=True);diagnostics.append({'argv':argv,'returncode':r.returncode,'stderr':r.stderr});(OUT/'compile.json').write_text(json.dumps(diagnostics,indent=2));assert r.returncode==0,r.stderr
  raw=lib.read_bytes();u,syms=engine(raw);assert not [n for n,v,undef in syms if undef]
@@ -55,10 +57,15 @@ for case in range(cases):
  ref.emu_start(start,stop,count=50000);assert ref.reg_read(UC_ARM64_REG_PC)==stop
  wanted=bytes(ref.mem_read(BASE,SIZE));wanted_pointer=ref.reg_read(UC_ARM64_REG_X8)
  # A separate byte-level oracle checks the source's stated PNG contract.
- oracle=bytearray(data);oracle[output-BASE]={'sub':1,'up':2,'average':3}[LANE]
+ oracle=bytearray(data);oracle[output-BASE]={'sub':1,'up':2,'average':3,'paeth':4}[LANE]
  for i in range(length):
   left=data[row-BASE+1+i-bpp] if i>=bpp else 0;above=data[previous-BASE+1+i]
   predictor=left if LANE=='sub' else above if LANE=='up' else (left+above)//2
+  if LANE=='paeth':
+   corner=data[previous-BASE+1+i-bpp] if i>=bpp else 0
+   estimate=left+above-corner
+   distances=[abs(estimate-value) for value in [left,above,corner]]
+   predictor=[left,above,corner][distances.index(min(distances))]
   oracle[output-BASE+1+i]=(data[row-BASE+1+i]-predictor)&255
  assert wanted==bytes(oracle),(case,LANE,depth,length)
  for oi,(u,entry,_) in enumerate(engines):
