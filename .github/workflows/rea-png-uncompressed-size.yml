@@ -1,0 +1,41 @@
+name: REA complete PNG size helper source verification
+'on':
+  push:
+    paths:
+      - .github/workflows/rea-png-uncompressed-size.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-png-uncompressed-size
+  cancel-in-progress: false
+jobs:
+  differential:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-compression-dependency-dossier
+          run-id: '40040659951'
+          github-token: ${{ github.token }}
+          path: prior
+      - name: Install bounded original-byte comparison tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          python -m pip install unicorn==2.1.4
+      - name: Compare complete source helper with original return and memory
+        run: python reconstruction/verify_png_uncompressed_size.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-png-uncompressed-size-evidence
+          path: |
+            png-uncompressed-size/
+            reconstruction/macore_png_uncompressed_size.c
+            reconstruction/verify_png_uncompressed_size.py
+          retention-days: 90
+          if-no-files-found: error
