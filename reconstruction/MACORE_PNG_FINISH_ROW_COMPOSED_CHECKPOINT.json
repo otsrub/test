@@ -1,0 +1,50 @@
+{
+  "repository": "otsrub/test",
+  "image": "MACore",
+  "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+  "function": {
+    "symbol": "_png_write_finish_row",
+    "entry": "0x3b9a4",
+    "end_exclusive": "0x3bd14",
+    "original_bytes": 880,
+    "original_function_sha256": "a6b5a2769ccf18efc4678293684d46f68ddc598d8a1cb58e3dfb766b34760835"
+  },
+  "accepted_composed_call_boundary_evidence": {
+    "source": "reconstruction/macore_png_finish_row_composed.c",
+    "verifier": "reconstruction/verify_macore_png_finish_row_composed.py",
+    "source_sha256": "1d78a9d8f710dc7a127ec894cf23c51b8f800e71b779e8fa6fcafc594739cbbe",
+    "uninterrupted_original_entry": "0x3b9a4",
+    "complete_return": "0x3b9bc",
+    "native_compress_tail": "0x3848c",
+    "native_bzero_tail": "0x1049c8",
+    "cases": 32768,
+    "comparisons": 98304,
+    "passes_O0_O2_O3": [32768, 32768, 32768],
+    "mismatches": 0,
+    "outcomes": {
+      "return": 16187,
+      "compress-tail": 16323,
+      "bzero-tail": 258
+    },
+    "original_instruction_count": 220,
+    "all_original_instruction_locations_exercised": true,
+    "module_sha256_O0_O2_O3": [
+      "a9eee4247af0dfe04da7bb8b7eeef974f901c6fa6a4cda125fadef377b02f230",
+      "af7ed828b52b988a5be532735af99ed4a09e47c13edeea0bb7bded4532705421",
+      "d79341977c83a4d83e4c7951e8bb6d9dfd2fcefbaaf446c654c2ce776e923f2d"
+    ],
+    "accepted_run_id": 40012674430,
+    "accepted_job_id": 120616755937,
+    "head_commit": "c011b7706eda81c8e9105f019e767593a886f4da",
+    "artifact_id": 12527241485,
+    "artifact_zip_sha256": "8326391ec859c149a7d0150d57ecb8012417374fc62292c6d1cd92581352b4b0",
+    "whole_function_verified": false
+  },
+  "limits": [
+    "This composes the previously accepted prefix and Adam7 continuation in one uninterrupted original execution.",
+    "The real _png_compress_IDAT and _bzero callees are not invoked or stubbed; exact tail arguments are compared.",
+    "Because external tail effects remain unresolved, this is not complete whole-function runtime evidence and does not increase the strict complete-function count.",
+    "Finite deterministic comparisons are not an all-input equivalence proof.",
+    "Strict complete-function record remains 33 functions / 5028 original bytes; 0/59 complete native images rebuilt."
+  ]
+}
