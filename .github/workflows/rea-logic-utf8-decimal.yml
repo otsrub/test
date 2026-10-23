@@ -1,0 +1,63 @@
+name: REA Logic UTF8 and decimal recovery
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/rea-logic-utf8-decimal.yml
+      - reconstruction/logic/verify_logic_decimal.py
+      - reconstruction/logic/verify_logic_utf8.py
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover-and-compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [utf8, width, precision]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-logic-tail-adapters-evidence
+          run-id: '39845208071'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-dossiers-evidence
+          run-id: '38815798247'
+          github-token: ${{ github.token }}
+          path: dossiers
+      - name: Install bounded verifier dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          python -m pip install unicorn==2.1.4
+      - name: Recover source and execute original comparisons
+        env:
+          REA_LANE: ${{ matrix.lane }}
+        run: |
+          if [ "$REA_LANE" = utf8 ]; then
+            python reconstruction/logic/verify_logic_utf8.py
+          else
+            python reconstruction/logic/verify_logic_decimal.py
+          fi
+      - name: Preserve source and diagnostics
+        if: always()
+        run: |
+          mkdir -p evidence
+          cp reconstruction/logic/verify_logic_decimal.py reconstruction/logic/verify_logic_utf8.py evidence/
+          cp -a utf8-source decimal-${{ matrix.lane }} evidence/ 2>/dev/null || true
+          sha256sum dossiers/logic-input/target.bin > evidence/ORIGINAL_SHA256
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-logic-${{ matrix.lane }}-recovery-evidence
+          path: evidence
+          retention-days: 90
