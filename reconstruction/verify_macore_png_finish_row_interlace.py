@@ -36,11 +36,14 @@ for opt in (0, 2, 3):
     engines.append((u, entry, sha(raw)))
 
 reference, _ = engine(original)
-ENTRY, COMPRESS, BZERO = 0x3b9c8, 0x3848c, 0x1049c8
+ENTRY, RETURN, COMPRESS, BZERO = 0x3b9c8, 0x3b9bc, 0x3848c, 0x1049c8
 covered, state = set(), {'outcome': None}
 
 def hook(u, pc, size, _):
-    if pc == COMPRESS:
+    if pc == RETURN:
+        state['outcome'] = 0
+        u.emu_stop()
+    elif pc == COMPRESS:
         state['outcome'] = 1
         u.emu_stop()
     elif pc == BZERO:
@@ -93,9 +96,7 @@ for case in range(cases):
     state['outcome'] = None
     reference.emu_start(ENTRY, STOP, count=1000)
     outcome = state['outcome']
-    if outcome is None:
-        assert reference.reg_read(UC_ARM64_REG_PC) == STOP
-        outcome = 0
+    assert outcome is not None
     args = tuple(reference.reg_read(r) for r in
                  (UC_ARM64_REG_X0, UC_ARM64_REG_X1,
                   UC_ARM64_REG_X2, UC_ARM64_REG_X3))
