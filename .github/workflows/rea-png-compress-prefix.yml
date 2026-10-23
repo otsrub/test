@@ -1,0 +1,41 @@
+name: REA PNG compressor original-entry source phase
+'on':
+  push:
+    paths:
+      - .github/workflows/rea-png-compress-prefix.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-png-compress-prefix
+  cancel-in-progress: false
+jobs:
+  differential:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-compression-dependency-dossier
+          run-id: '40040659951'
+          github-token: ${{ github.token }}
+          path: prior
+      - name: Install bounded source test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          python -m pip install unicorn==2.1.4
+      - name: Compare uninterrupted original compressor entry with real source
+        run: python reconstruction/verify_png_compress_prefix.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-png-compress-prefix-evidence
+          path: |
+            png-compress-prefix/
+            reconstruction/macore_png_compress_prefix.c
+            reconstruction/verify_png_compress_prefix.py
+          retention-days: 90
+          if-no-files-found: error
