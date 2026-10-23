@@ -1,0 +1,291 @@
+{
+  "scope": "New bounded source work only; no all-payload completion claim. Original binaries unmodified; recovered sources and evidence outside Payload.",
+  "evidence": [
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8ba1c0",
+      "end": "0x8ba3b4",
+      "original_bytes": 500,
+      "original_slice_sha256": "8b5474dbaf6b63af8648151611e93bbc3221c696dae23e24e50f57642b449ff3",
+      "cases": 85504,
+      "families": {
+        "all-two-byte-prefixes": 65536,
+        "length-and-continuations": 7168,
+        "valid-continuation-boundaries": 4608,
+        "overlap-reload-order": 8192
+      },
+      "comparisons": 256512,
+      "passes_O0_O2_O3": [
+        85504,
+        85504,
+        85504
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "original_instruction_count": 125,
+      "source_sha256": "7526494abb49736985c1fad30e30eac30cfc04e8381d8d84cc818e85b0a211bf",
+      "module_sha256": [
+        "2f751cb6451dc85062cfb9ec4734f8968d3eaf979a549b7d39794e3aeeb64026",
+        "c795cdb592a99714cac609e0b97325ac7c1f2e580147840666603a8ad1f485e8",
+        "a1f090be6927312307fbbb6f50e0d0207d96c092c0d2b9cc093cc9e2007bd327"
+      ],
+      "complete_function_bounded_tests_passed": true,
+      "all_input_equivalence_proven": false,
+      "limits": [
+        "Complete original entry-to-return execution; no external callees or stubs.",
+        "Mapped normal memory and non-wrapping pointers; logical end may precede cursor but referenced bytes remain physically mapped. Faults, MMIO, concurrency and asynchronous observation excluded.",
+        "All 65536 two-byte prefixes and selected multi-byte, truncation, overlong, surrogate, out-of-range and aliasing cases; finite tests are not all-input proof."
+      ],
+      "artifact_id": 12473812739,
+      "run_id": 39889659496,
+      "artifact_zip_sha256": "3538647cab580c97508823df259a93cfe0a532fc500a0bdfee8dc2a8919ba798",
+      "immutable_evidence_url": "https://github.com/otsrub/test/actions/runs/39889659496/artifacts/12473812739"
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0xce810",
+      "end": "0xcea04",
+      "original_bytes": 500,
+      "original_slice_sha256": "8b5474dbaf6b63af8648151611e93bbc3221c696dae23e24e50f57642b449ff3",
+      "cases": 85504,
+      "families": {
+        "all-two-byte-prefixes": 65536,
+        "length-and-continuations": 7168,
+        "valid-continuation-boundaries": 4608,
+        "overlap-reload-order": 8192
+      },
+      "comparisons": 256512,
+      "passes_O0_O2_O3": [
+        85504,
+        85504,
+        85504
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "original_instruction_count": 125,
+      "source_sha256": "7526494abb49736985c1fad30e30eac30cfc04e8381d8d84cc818e85b0a211bf",
+      "module_sha256": [
+        "444db2c0aae204aa123e36ff3bc4f9987bfaecc5ba824b3db8e09b81a0cba670",
+        "6e4bb94fdac6b8140f2c13cf3962c002db82f6c2dfe7d1c79d6884da297eea6b",
+        "216d9b0b9693632c35cf087d8ce399dee85057bf836d9a8ffdbd2e6dc8f27357"
+      ],
+      "complete_function_bounded_tests_passed": true,
+      "all_input_equivalence_proven": false,
+      "limits": [
+        "Complete original entry-to-return execution; no external callees or stubs.",
+        "Mapped normal memory and non-wrapping pointers; logical end may precede cursor but referenced bytes remain physically mapped. Faults, MMIO, concurrency and asynchronous observation excluded.",
+        "All 65536 two-byte prefixes and selected multi-byte, truncation, overlong, surrogate, out-of-range and aliasing cases; finite tests are not all-input proof."
+      ],
+      "clone_provenance": {
+        "logic_run": 39889659496,
+        "logic_artifact": 12473812739,
+        "same_original_500_bytes": true,
+        "independent_MACore_execution": true,
+        "compiler_metadata_extent": [
+          "0xce810",
+          "0xcea04"
+        ]
+      },
+      "artifact_id": 12474641213,
+      "run_id": 39890377337,
+      "artifact_zip_sha256": "8f4b99e0d884b1e69b1bba8e67b07d31dab15ccc495bfe24a15e9acf26a9221f",
+      "immutable_evidence_url": "https://github.com/otsrub/test/actions/runs/39890377337/artifacts/12474641213"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8b47a0",
+      "end": "0x8b493c",
+      "cases": 18079,
+      "families": {
+        "all-leading-bytes-and-modes": 1280,
+        "index-boundaries-and-modes": 415,
+        "random-grammar-and-modes": 16384
+      },
+      "comparisons": 54237,
+      "passes_O0_O2_O3": [
+        18079,
+        18079,
+        18079
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "0x1092762": 4566,
+        "return": 10651,
+        "0x1092796": 2288,
+        "0x10927db": 432,
+        "0x1092820": 142
+      },
+      "original_instruction_count": 103,
+      "source_sha256": "234065f30a7bca6996ab5c001cdd2bf42fbefecbd47d417ee15c465c503c3b48",
+      "module_sha256": [
+        "1364d4787ee0ac16d11dd90050596613f071e3777274e1032c21110524e90dcf",
+        "24dc182636759bbe7457a97f24188578e0c57acd1b1216db80486fd6c07dba55",
+        "81faf04ae4a9451d605a692e0977bafde3b5c722a9416dc125d20c82c5a98fa9"
+      ],
+      "whole_function_verified": false,
+      "limits": [
+        "Actual original entry-to-return or entry to real throw helper; exception allocation, throw and unwinding unresolved, no stub called.",
+        "Disjoint ordinary mapped input/context; nonempty input, nonwrapping forward end, mode values and automatic counter edges exercised. Overlap, faults, concurrency and MMIO excluded.",
+        "Original aggregate return x0/x1 compared; source uses explicit transfer record rather than claiming original complete exception ABI."
+      ],
+      "artifact_id": 12473859776,
+      "run_id": 39890377337,
+      "artifact_zip_sha256": "1c16ac79a6aa62ff0c4b4fd7455c664a4c71973370ceac842f0e24bbf97cf01a",
+      "immutable_evidence_url": "https://github.com/otsrub/test/actions/runs/39890377337/artifacts/12473859776"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8be44c",
+      "lane": "width",
+      "cases": 17695,
+      "families": {
+        "all-leading-bytes": 1024,
+        "decimal-and-brace-boundaries": 137,
+        "dynamic-index-boundaries": 150,
+        "random-grammar": 16384
+      },
+      "comparisons": 53085,
+      "passes_O0_O2_O3": [
+        17695,
+        17695,
+        17695
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "return": 15363,
+        "0x109294e": 1118,
+        "0x109297e": 88,
+        "0x10929ab": 611,
+        "0x1092820": 115,
+        "0x1092796": 152,
+        "0x10927db": 34,
+        "0x1092762": 214
+      },
+      "original_instruction_count": 194,
+      "source_sha256": "e65c290850727837c70b0517bd153d1c7f50ca9e25ce2dce9cf752acf1811e0b",
+      "module_sha256": [
+        "4042aa4e86bc53e9acd19930519d9af6258fbc98690581e0c9858da828ae05de",
+        "bfafda326ab57d58c3eb0eb4185ab54110fdbb12612e6ab8c36d8e4f76f76613",
+        "5694274da72f3a06e6f581dc7dedb06ede7a09183eea9eddd001f1fa3e9ea8ee"
+      ],
+      "actual_original_argid_calls": 1195,
+      "rejected_parent_run": 39890653673,
+      "compile_context": "Freestanding isolated comparison module, original parser has no stack-protector runtime calls; no guard stub or new app build claim.",
+      "whole_function_verified": false,
+      "limits": [
+        "Composed source compared with uninterrupted original width/precision and actual original argument-ID helper execution; only the throw helper is cut before entry. No callee stubbed.",
+        "Static and dynamic brace paths execute to return or real throw helper; exception allocation/throw/unwinding remain unresolved.",
+        "Input/spec/cursor are disjoint mapped ordinary memory with alignment varied. Logical input length >=1; faults, MMIO, concurrency and overlap excluded."
+      ],
+      "artifact_id": 12474403747,
+      "run_id": 39890825464,
+      "artifact_zip_sha256": "dcea2cdbde5843250832d3dbde5729aeec32f978d681e69337881c0aecc12e98",
+      "immutable_evidence_url": "https://github.com/otsrub/test/actions/runs/39890825464/artifacts/12474403747"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8be5bc",
+      "lane": "precision",
+      "cases": 17695,
+      "families": {
+        "all-leading-bytes": 1024,
+        "decimal-and-brace-boundaries": 137,
+        "dynamic-index-boundaries": 150,
+        "random-grammar": 16384
+      },
+      "comparisons": 53085,
+      "passes_O0_O2_O3": [
+        17695,
+        17695,
+        17695
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "return": 14744,
+        "0x10929c9": 46,
+        "0x109297e": 53,
+        "0x10929ab": 318,
+        "0x1092820": 83,
+        "0x10927db": 14,
+        "0x1092762": 113,
+        "0x1092796": 88,
+        "0x10929ff": 2236
+      },
+      "original_instruction_count": 212,
+      "source_sha256": "e65c290850727837c70b0517bd153d1c7f50ca9e25ce2dce9cf752acf1811e0b",
+      "module_sha256": [
+        "4ce59b89e5342884f21eb7f28355ac33f14795666268584531dd8bba8ff175ac",
+        "8126085889e4b6ce2c5fcf4f65cb04e94403d62912624e288d0e20f62dbc4ed9",
+        "7e1b7a4dbc31d43d7260bc9825abb9c8c252634d7c17d0b64950be674ee191a7"
+      ],
+      "actual_original_argid_calls": 656,
+      "rejected_parent_run": 39890653673,
+      "compile_context": "Freestanding isolated comparison module, original parser has no stack-protector runtime calls; no guard stub or new app build claim.",
+      "whole_function_verified": false,
+      "limits": [
+        "Composed source compared with uninterrupted original width/precision and actual original argument-ID helper execution; only the throw helper is cut before entry. No callee stubbed.",
+        "Static and dynamic brace paths execute to return or real throw helper; exception allocation/throw/unwinding remain unresolved.",
+        "Input/spec/cursor are disjoint mapped ordinary memory with alignment varied. Logical input length >=1; faults, MMIO, concurrency and overlap excluded."
+      ],
+      "artifact_id": 12474563553,
+      "run_id": 39890825464,
+      "artifact_zip_sha256": "3442f1c8422e7cb2ed115073036e7e848e39ac18fc2235823109a0d29c7c091f",
+      "immutable_evidence_url": "https://github.com/otsrub/test/actions/runs/39890825464/artifacts/12474563553"
+    }
+  ],
+  "cumulative_strict_complete_function_checkpoints": {
+    "prior_count": 15,
+    "prior_original_bytes": 860,
+    "new_image_address_keys": [
+      {
+        "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+        "entry": "0x8ba1c0",
+        "bytes": 500
+      },
+      {
+        "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+        "entry": "0xce810",
+        "bytes": 500
+      }
+    ],
+    "count": 17,
+    "original_bytes": 1860,
+    "finite_tests_only": true,
+    "one_combined_module": false,
+    "all_input_equivalence_proven": false
+  },
+  "rejected_build": {
+    "run_id": 39890653673,
+    "commit": "03d9f12bbe7e9b06a57d5ea64c59d64ad115ff93",
+    "reason": "Compiler inserted stack-protector imports into isolated freestanding candidate. No differential comparisons accepted.",
+    "artifacts": [
+      {
+        "id": 12474856255,
+        "sha256": "24eab4c874427dca5b0bde218eb456bf5660e8121f9066b49a80edd0a2d2b6bb"
+      },
+      {
+        "id": 12474432154,
+        "sha256": "aa06c74fd6dda13dba30a7870b9d04ed191458c20f231853d733d1e401b55ec0"
+      }
+    ],
+    "corrected_run": 39890825464
+  },
+  "progress_dimensions": {
+    "decompilation_percentage": null,
+    "verification_percentage": null,
+    "buildable_source_byte_percentage": null,
+    "reason": "Need current deduplicated admissible original-code denominators and integrated source/equivalence ledger; baseline pseudocode candidates cannot be used as source or semantic coverage.",
+    "complete_native_images_source_rebuilt": 0,
+    "native_image_count": 59,
+    "complete_native_image_rebuild_percentage": 0
+  },
+  "unresolved_next_work": [
+    "Real libc++ exception allocation/runtime_error construction/throw/destruction and libSystem unwind integration for parser error exits. Exact original dependencies in LOGIC_EXCEPTION_DEPENDENCIES.json.",
+    "Logic 0x8b493c visitor integration with actual parser/helper paths and output dispatch.",
+    "Other auto-failure implementations, exact-boundary queue and flagged baseline pseudocode require source work and original-byte testing.",
+    "MACore constructor/TLS/destructor integration, remaining images/resources, whole-payload source builds, filesystem parity and runtime equivalence remain incomplete."
+  ]
+}

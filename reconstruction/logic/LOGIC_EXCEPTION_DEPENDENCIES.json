@@ -1,0 +1,153 @@
+{
+  "scope": "New exact original exception helper dependency facts; no runtime equivalence or recovery claim.",
+  "functions": [
+    {
+      "entry": "0x8b4614",
+      "end": "0x8b4664",
+      "original_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "slice_sha256": "3052682e66b06d449fd8a3a1b5333a5bb897b7330190364f7dd7e08c5a5e36b6",
+      "assembly": [
+        "0x8b4614: stp x20, x19, [sp, #-0x20]!",
+        "0x8b4618: stp x29, x30, [sp, #0x10]",
+        "0x8b461c: add x29, sp, #0x10",
+        "0x8b4620: mov x20, x0",
+        "0x8b4624: mov w0, #0x10",
+        "0x8b4628: bl #0xf0b8e0",
+        "0x8b462c: mov x19, x0",
+        "0x8b4630: mov x1, x20",
+        "0x8b4634: bl #0x8c1588",
+        "0x8b4638: adrp x1, #0x131a000",
+        "0x8b463c: add x1, x1, #0x2d0",
+        "0x8b4640: adrp x2, #0x8c1000",
+        "0x8b4644: add x2, x2, #0x5a8",
+        "0x8b4648: mov x0, x19",
+        "0x8b464c: bl #0xf0b94c",
+        "0x8b4650: mov x20, x0",
+        "0x8b4654: mov x0, x19",
+        "0x8b4658: bl #0xf0b910",
+        "0x8b465c: mov x0, x20",
+        "0x8b4660: bl #0xf0885c"
+      ],
+      "calls": [
+        {
+          "pc": "0x8b4628",
+          "target": "0xf0b8e0",
+          "original_import": {
+            "symbol": "___cxa_allocate_exception",
+            "nlist_index": 29305,
+            "n_type": 1,
+            "n_desc": 11008,
+            "dylib_ordinal": 43,
+            "dependency": "/usr/lib/libc++.1.dylib",
+            "undefined": true,
+            "stub_stride": 12
+          }
+        },
+        {
+          "pc": "0x8b4634",
+          "target": "0x8c1588",
+          "original_import": null
+        },
+        {
+          "pc": "0x8b464c",
+          "target": "0xf0b94c",
+          "original_import": {
+            "symbol": "___cxa_throw",
+            "nlist_index": 29315,
+            "n_type": 1,
+            "n_desc": 11008,
+            "dylib_ordinal": 43,
+            "dependency": "/usr/lib/libc++.1.dylib",
+            "undefined": true,
+            "stub_stride": 12
+          }
+        },
+        {
+          "pc": "0x8b4658",
+          "target": "0xf0b910",
+          "original_import": {
+            "symbol": "___cxa_free_exception",
+            "nlist_index": 29309,
+            "n_type": 1,
+            "n_desc": 11008,
+            "dylib_ordinal": 43,
+            "dependency": "/usr/lib/libc++.1.dylib",
+            "undefined": true,
+            "stub_stride": 12
+          }
+        },
+        {
+          "pc": "0x8b4660",
+          "target": "0xf0885c",
+          "original_import": {
+            "symbol": "__Unwind_Resume",
+            "nlist_index": 28165,
+            "n_type": 1,
+            "n_desc": 11264,
+            "dylib_ordinal": 44,
+            "dependency": "/usr/lib/libSystem.B.dylib",
+            "undefined": true,
+            "stub_stride": 12
+          }
+        }
+      ]
+    },
+    {
+      "entry": "0x8c1588",
+      "end": "0x8c15a8",
+      "original_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "slice_sha256": "987dad7393aa2748db9b74b2a2c21b4f890a0c42ebd92aa1ff326a0e3c177d1d",
+      "assembly": [
+        "0x8c1588: stp x29, x30, [sp, #-0x10]!",
+        "0x8c158c: mov x29, sp",
+        "0x8c1590: bl #0xf0b3ac",
+        "0x8c1594: adrp x8, #0x131a000",
+        "0x8c1598: add x8, x8, #0x2f8",
+        "0x8c159c: str x8, [x0]",
+        "0x8c15a0: ldp x29, x30, [sp], #0x10",
+        "0x8c15a4: ret "
+      ],
+      "calls": [
+        {
+          "pc": "0x8c1590",
+          "target": "0xf0b3ac",
+          "original_import": {
+            "symbol": "__ZNSt13runtime_errorC2EPKc",
+            "nlist_index": 29131,
+            "n_type": 1,
+            "n_desc": 11008,
+            "dylib_ordinal": 43,
+            "dependency": "/usr/lib/libc++.1.dylib",
+            "undefined": true,
+            "stub_stride": 12
+          }
+        }
+      ]
+    },
+    {
+      "entry": "0x8c15a8",
+      "end": "0x8c15ac",
+      "original_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "slice_sha256": "0297c44800a2e70b94f804a5a83233dbfcb3436e6674cc85ed8586d2840d7fb4",
+      "assembly": [
+        "0x8c15a8: b #0xf0b3d0"
+      ],
+      "calls": [
+        {
+          "pc": "0x8c15a8",
+          "target": "0xf0b3d0",
+          "original_import": {
+            "symbol": "__ZNSt13runtime_errorD2Ev",
+            "nlist_index": 29135,
+            "n_type": 1,
+            "n_desc": 11008,
+            "dylib_ordinal": 43,
+            "dependency": "/usr/lib/libc++.1.dylib",
+            "undefined": true,
+            "stub_stride": 12
+          }
+        }
+      ]
+    }
+  ]
+}
