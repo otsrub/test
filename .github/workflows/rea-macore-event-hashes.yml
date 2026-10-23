@@ -1,0 +1,49 @@
+name: REA flagged MACore event hash source
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover-and-compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [diff, method, fields]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-logic-tail-adapters-evidence
+          run-id: '39845208071'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-dossiers-evidence
+          run-id: '38815798247'
+          github-token: ${{ github.token }}
+          path: dossiers
+      - name: Install bounded comparison tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18
+          python -m pip install unicorn==2.1.4
+      - name: Compile real source and compare with original instructions
+        env:
+          REA_LANE: ${{ matrix.lane }}
+        run: python reconstruction/verify_macore_event_hashes.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-macore-event-hashes-${{ matrix.lane }}-evidence
+          path: |
+            macore-hashes-${{ matrix.lane }}
+            reconstruction/macore_event_hashes.c
+            reconstruction/verify_macore_event_hashes.py
+          retention-days: 90
