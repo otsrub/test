@@ -634,5 +634,184 @@
         }
       }
     ]
-  }
+  },
+  "macore_event_hashes": [
+    {
+      "id": 12501390369,
+      "name": "rea-macore-event-hashes-fields-evidence",
+      "size_in_bytes": 11015,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12501390369",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12501390369/zip",
+      "expired": false,
+      "created_at": "2026-10-23T12:19:02Z",
+      "expires_at": "2027-01-21T12:18:32Z",
+      "updated_at": "2026-10-23T12:19:02Z",
+      "digest": "sha256:e3964351b5d7bfa4a09cd1f209f274e7f6597198c23bc03ffb78d566454abfdf",
+      "workflow_run": {
+        "id": 39952335477,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "4ce3ee11c4088099dd1ecc3db4f3408f4befa8ef"
+      }
+    },
+    {
+      "id": 12500906640,
+      "name": "rea-macore-event-hashes-diff-evidence",
+      "size_in_bytes": 11116,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500906640",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500906640/zip",
+      "expired": false,
+      "created_at": "2026-10-23T12:19:07Z",
+      "expires_at": "2027-01-21T12:18:32Z",
+      "updated_at": "2026-10-23T12:19:07Z",
+      "digest": "sha256:e41a4dad85e5a864f75034d49726435b4f3a45455cc4212805463bd9dbd8b72f",
+      "workflow_run": {
+        "id": 39952335477,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "4ce3ee11c4088099dd1ecc3db4f3408f4befa8ef"
+      }
+    },
+    {
+      "id": 12500757942,
+      "name": "rea-macore-event-hashes-method-evidence",
+      "size_in_bytes": 11155,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500757942",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500757942/zip",
+      "expired": false,
+      "created_at": "2026-10-23T12:19:26Z",
+      "expires_at": "2027-01-21T12:18:32Z",
+      "updated_at": "2026-10-23T12:19:26Z",
+      "digest": "sha256:f6d1a5bdbab21a43e24935cc577d9945ab5e40d53fcf591fd8ff14d31bb75d8d",
+      "workflow_run": {
+        "id": 39952335477,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "4ce3ee11c4088099dd1ecc3db4f3408f4befa8ef"
+      }
+    }
+  ],
+  "macore_event_hashes_clean_package": [
+    {
+      "id": 12500887490,
+      "name": "rea-macore-event-hashes-clean-source-package",
+      "size_in_bytes": 891479,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500887490",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500887490/zip",
+      "expired": false,
+      "created_at": "2026-10-23T12:24:10Z",
+      "expires_at": "2027-01-21T12:23:41Z",
+      "updated_at": "2026-10-23T12:24:10Z",
+      "digest": "sha256:854ff0322af3a5d1503e90d820cdf02398eb1369987446fad076080f93c40bac",
+      "workflow_run": {
+        "id": 39952970963,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "4d59e0c9a0ccca76b44a15bb5231016941f636d8"
+      }
+    }
+  ],
+  "macore_png_transforms": [
+    {
+      "id": 12501730650,
+      "name": "rea-macore-png-sub-evidence",
+      "size_in_bytes": 11827,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12501730650",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12501730650/zip",
+      "expired": false,
+      "created_at": "2026-10-23T12:24:02Z",
+      "expires_at": "2027-01-21T12:23:30Z",
+      "updated_at": "2026-10-23T12:24:02Z",
+      "digest": "sha256:9d5f4fd509cf4f06d084cd54c48e6ad44d82e648fb5507e81774998088cf4670",
+      "workflow_run": {
+        "id": 39952945563,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "4d59e0c9a0ccca76b44a15bb5231016941f636d8"
+      }
+    },
+    {
+      "id": 12500858565,
+      "name": "rea-macore-png-up-evidence",
+      "size_in_bytes": 11750,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500858565",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500858565/zip",
+      "expired": false,
+      "created_at": "2026-10-23T12:23:51Z",
+      "expires_at": "2027-01-21T12:23:30Z",
+      "updated_at": "2026-10-23T12:23:51Z",
+      "digest": "sha256:ec690e835f0cc08567fb8a17446e6a26bb9ac91994d9152eb81fab0657614817",
+      "workflow_run": {
+        "id": 39952945563,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "4d59e0c9a0ccca76b44a15bb5231016941f636d8"
+      }
+    },
+    {
+      "id": 12500843534,
+      "name": "rea-macore-png-average-evidence",
+      "size_in_bytes": 11998,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500843534",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500843534/zip",
+      "expired": false,
+      "created_at": "2026-10-23T12:24:03Z",
+      "expires_at": "2027-01-21T12:23:30Z",
+      "updated_at": "2026-10-23T12:24:03Z",
+      "digest": "sha256:c030988315ee6d83a052db1588832de53471fb6d78ee936b68c0be40a6011bac",
+      "workflow_run": {
+        "id": 39952945563,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "4d59e0c9a0ccca76b44a15bb5231016941f636d8"
+      }
+    },
+    {
+      "id": 12501226873,
+      "name": "rea-macore-png-paeth-evidence",
+      "size_in_bytes": 10825,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12501226873",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12501226873/zip",
+      "expired": false,
+      "created_at": "2026-10-23T12:27:52Z",
+      "expires_at": "2027-01-21T12:27:21Z",
+      "updated_at": "2026-10-23T12:27:52Z",
+      "digest": "sha256:a55fb78adea9a9306f3e67e2721b1432423421036f212b034d9b880a2c5e808a",
+      "workflow_run": {
+        "id": 39953428093,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "794821dd2ffa232fa458fc404761b2023b948659"
+      }
+    }
+  ],
+  "macore_png_fixed_caller": [
+    {
+      "id": 12500924980,
+      "name": "rea-macore-png-fixed-caller-evidence",
+      "size_in_bytes": 23305,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500924980",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12500924980/zip",
+      "expired": false,
+      "created_at": "2026-10-23T12:32:50Z",
+      "expires_at": "2027-01-21T12:31:42Z",
+      "updated_at": "2026-10-23T12:32:50Z",
+      "digest": "sha256:b919e85ddfbd1b7cd8a41ff5bd07aa602e6e27f86aaefd466de9dee8bfde442a",
+      "workflow_run": {
+        "id": 39953985333,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "c6ff9bc2ef1c6cb893cfb5cea03d98196ddbac14"
+      }
+    }
+  ]
 }
