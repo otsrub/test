@@ -600,6 +600,10 @@ jobs:
           }
           return {
             markets,
+            async quote(c) {
+              if (!/^[a-z0-9-]+$/.test(c.ticker || '')) throw new Error('Invalid market slug');
+              return withQuote(c, await read(`/v1/markets/${c.ticker}/bbo`));
+            },
             async ladders(coin, options = {}) {
               const eligible = (await markets()).map(m => contract(m, now() / 1000, options)).filter(c => c?.coin === coin);
               const quoted = [];
@@ -742,6 +746,315 @@ jobs:
         }
 
         if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) patchPolymarketUS(process.argv[2]);
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us-orders.mjs <<'BOTXRAY_SOURCE'
+        import { createPrivateKey, sign } from 'node:crypto';
+
+        const API = 'https://api.polymarket.us';
+        const KEY_PREFIX = Buffer.from('302e020100300506032b657004220420', 'hex');
+        export const CONFIRMATION = 'RISK AT MOST 1 USD';
+
+        export function tradingHeaders({ keyId, secretKey }, method, path, timestamp = Date.now()) {
+          if (!keyId || !secretKey || !/^[A-Za-z0-9+/]+={0,2}$/.test(secretKey.trim())) throw new Error('Trading credentials are missing or invalid');
+          const read = method === 'GET' && (path === '/v1/orders/open' || /^\/v1\/order\/[a-zA-Z0-9-]+$/.test(path));
+          const write = method === 'POST' && (['/v1/orders', '/v1/order/preview'].includes(path) || /^\/v1\/order\/[a-zA-Z0-9-]+\/cancel$/.test(path));
+          if (!read && !write) throw new Error('Trading request is not allowlisted');
+          const bytes = Buffer.from(secretKey.trim(), 'base64');
+          if (![32, 64].includes(bytes.length)) throw new Error('Invalid trading key format');
+          const key = createPrivateKey({ key: Buffer.concat([KEY_PREFIX, bytes.subarray(0, 32)]), format: 'der', type: 'pkcs8' });
+          return { 'X-PM-Access-Key': keyId, 'X-PM-Timestamp': String(timestamp), 'X-PM-Signature': sign(null, Buffer.from(String(timestamp) + method + path), key).toString('base64'), 'Content-Type': 'application/json', Accept: 'application/json' };
+        }
+
+        // A single buy-and-hold trial. Never recycle its dollar, short, sell, or use market orders.
+        export function planOneDollarOrder(c, availableCents = 100, now = Date.now() / 1000) {
+          if (c.venue !== 'polymarket-us' || !/^[a-z0-9-]+$/.test(c.ticker || '') || !['yes', 'no'].includes(c.side)) throw new Error('Unsupported market or side');
+          const p = c.limit, step = c.minimumTradeQty, tick = c.priceTick, theta = c.feeCoefficient;
+          if (![p, step, tick, theta, c.fair, c.closes].every(Number.isFinite) || p < 0.2 || p > 0.95 || step <= 0 || tick <= 0 || theta < 0 || theta > 0.2 || c.closes < now + 1800) throw new Error('Invalid price, precision, fees, or expiry');
+          if (Math.abs(step * 1e6 - Math.round(step * 1e6)) > 1e-6) throw new Error('Unsupported quantity precision');
+          const yesPrice = Number((c.side === 'yes' ? p : 1 - p).toFixed(6));
+          if (Math.abs(yesPrice / tick - Math.round(yesPrice / tick)) > 1e-7) throw new Error('Limit price is not aligned to this market tick');
+          const budget = Math.min(100, Math.floor(availableCents));
+          if (!Number.isFinite(budget) || budget <= 1) throw new Error('Not enough buying power');
+          const quantity = Number((Math.floor(((budget - 1) / 100) / (p + theta * p * (1 - p)) / step) * step).toFixed(6));
+          if (quantity < step || quantity <= 0) throw new Error('Minimum order does not fit the one-dollar limit');
+          // The published cumulative fee is rounded to cents. An extra cent covers that rounding.
+          const maximumDebitCents = Math.ceil(quantity * (p + theta * p * (1 - p)) * 100 - 1e-9) + 1;
+          if (maximumDebitCents > budget) throw new Error('Order would exceed the one-dollar limit including fees');
+          if (c.fair - maximumDebitCents / 100 / quantity < 0.03) throw new Error('Not enough edge after size and rounded fee allowance');
+          const request = Object.freeze({ marketSlug: c.ticker, intent: c.side === 'yes' ? 'ORDER_INTENT_BUY_LONG' : 'ORDER_INTENT_BUY_SHORT', type: 'ORDER_TYPE_LIMIT', price: Object.freeze({ value: String(yesPrice), currency: 'USD' }), quantity, tif: 'TIME_IN_FORCE_IMMEDIATE_OR_CANCEL', manualOrderIndicator: 'MANUAL_ORDER_INDICATOR_AUTOMATIC', synchronousExecution: true, maxBlockTime: '10s' });
+          return Object.freeze({ request, maximumDebitCents, limit: p, side: c.side });
+        }
+
+        export function createOrderClient({ keyId, secretKey, confirmation = '', fetchImpl = globalThis.fetch, now = Date.now } = {}) {
+          const enabled = confirmation === CONFIRMATION;
+          async function request(method, path, body) {
+            const headers = tradingHeaders({ keyId, secretKey }, method, path, now());
+            let r;
+            try { r = await fetchImpl(API + path, { method, headers, ...(body ? { body: JSON.stringify(body) } : {}), redirect: 'error', signal: AbortSignal.timeout(30000) }); }
+            catch { throw new Error('Trading request outcome is unknown; do not resubmit. Check Polymarket US.'); }
+            if (!r.ok) throw new Error(`Polymarket US trading request refused (HTTP ${r.status}). No automatic retry.`);
+            if (r.status === 204) return {};
+            try { return await r.json(); }
+            catch { throw new Error('Trading response is unreadable; do not resubmit. Check Polymarket US.'); }
+          }
+          return {
+            async openOrders() {
+              const j = await request('GET', '/v1/orders/open');
+              if (!Array.isArray(j.orders)) throw new Error('Unknown open-order format');
+              return j.orders;
+            },
+            async preview(plan) {
+              const j = await request('POST', '/v1/order/preview', { request: plan.request });
+              const o = j.order, p = plan.request;
+              if (!o || o.marketSlug !== p.marketSlug || o.type !== p.type || o.intent !== p.intent || o.tif !== p.tif || o.price?.currency !== 'USD' || Number(o.price.value) !== Number(p.price.value) || Math.abs(Number(o.quantity) - p.quantity) > 1e-9) throw new Error('Order preview changed the request; nothing will be sent');
+              return true;
+            },
+            async submit(plan, durableReservation) {
+              if (!enabled) throw new Error('Real orders are disabled');
+              if (durableReservation?.reservedCents !== 100 || durableReservation?.requestHash !== hashRequest(plan.request) || durableReservation?.committed !== true) throw new Error('Durable one-dollar reservation is required');
+              const j = await request('POST', '/v1/orders', plan.request);
+              if (typeof j.id !== 'string' || !/^[a-zA-Z0-9-]+$/.test(j.id)) throw new Error('Order acknowledgement is unknown; do not resubmit');
+              return { id: j.id }; // An ID confirms acknowledgement, never a fill.
+            },
+            async cancelOwnOrder(id, slug) {
+              if (!enabled || !/^[a-zA-Z0-9-]+$/.test(id) || !/^[a-z0-9-]+$/.test(slug)) throw new Error('Invalid cancellation');
+              return request('POST', `/v1/order/${id}/cancel`, { marketSlug: slug });
+            },
+          };
+        }
+
+        import { createHash } from 'node:crypto';
+        export const hashRequest = request => createHash('sha256').update(JSON.stringify(request)).digest('hex');
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us-orders.test.mjs <<'BOTXRAY_SOURCE'
+        import test from 'node:test';
+        import assert from 'node:assert/strict';
+        import { createPublicKey, verify } from 'node:crypto';
+        import { planOneDollarOrder, createOrderClient, tradingHeaders, hashRequest, CONFIRMATION } from './polymarket-us-orders.mjs';
+        import { createTrialLedger } from './us-trial-ledger.mjs';
+        import { executeTrial } from './coinman2-us-worker.mjs';
+
+        const now = Date.parse('2026-10-23T07:00:00Z');
+        const secretKey = Buffer.from('9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60', 'hex').toString('base64');
+        const publicKey = createPublicKey({ key: Buffer.from('302a300506032b6570032100d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a', 'hex'), format: 'der', type: 'spki' });
+        const candidate = (side = 'yes', limit = 0.42) => ({ venue: 'polymarket-us', ticker: 'test-btc-above', side, limit, fair: 0.99, minimumTradeQty: 0.01, priceTick: 0.01, feeCoefficient: 0.0695, closes: now / 1000 + 3600 });
+        const plan = side => planOneDollarOrder(candidate(side), 100, now / 1000);
+        const reservation = p => ({ committed: true, reservedCents: 100, requestHash: hashRequest(p.request) });
+
+        test('YES/NO limit requests sign POST correctly and exclude all other destinations', () => {
+          const h = tradingHeaders({ keyId: 'test-key', secretKey }, 'POST', '/v1/orders', now);
+          assert.equal(verify(null, Buffer.from(now + 'POST/v1/orders'), publicKey, Buffer.from(h['X-PM-Signature'], 'base64')), true);
+          assert.throws(() => tradingHeaders({ keyId: 'id', secretKey }, 'POST', '/v1/withdrawal'), /not allowlisted/);
+          const yes = plan('yes'), no = plan('no');
+          assert.equal(yes.request.price.value, '0.42');
+          assert.equal(no.request.price.value, '0.58');
+          assert.equal(no.request.intent, 'ORDER_INTENT_BUY_SHORT');
+          assert.equal(yes.request.tif, 'TIME_IN_FORCE_IMMEDIATE_OR_CANCEL');
+          assert.ok(yes.maximumDebitCents <= 100 && no.maximumDebitCents <= 100);
+        });
+
+        test('size and fee allowance stay within one dollar, including partial fills and better prices', () => {
+          let sized = 0;
+          for (let cents = 20; cents <= 95; cents++) {
+            let p;
+            try { p = planOneDollarOrder(candidate('yes', cents / 100), 100, now / 1000); }
+            catch (error) { assert.match(error.message, /Not enough edge/); continue; }
+            sized++;
+            const q = p.request.quantity;
+            assert.ok(q >= 0.01);
+            for (const fraction of [0.01, 0.25, 0.5, 1]) {
+              for (const better of [0.5, 0.75, 1]) {
+                const price = p.limit * better, qty = q * fraction;
+                const roundedFee = Math.round(0.0695 * qty * price * (1 - price) * 100) / 100;
+                assert.ok(price * qty + roundedFee <= p.maximumDebitCents / 100 + 1e-9);
+              }
+            }
+          }
+          assert.ok(sized >= 70);
+          assert.throws(() => planOneDollarOrder({ ...candidate(), minimumTradeQty: 10 }, 100, now / 1000), /Minimum order/);
+          assert.throws(() => planOneDollarOrder({ ...candidate(), fair: 0.43 }, 100, now / 1000), /Not enough edge/);
+          assert.throws(() => planOneDollarOrder({ ...candidate(), venue: 'kalshi' }, 100, now / 1000), /Unsupported/);
+        });
+
+        test('real orders require manual mode and a matching durable reservation; uncertain create is never retried', async () => {
+          const p = plan('yes'), calls = [];
+          const fetchImpl = async (url, options) => { calls.push({ url, options }); throw new Error('secret response must not be printed'); };
+          const disabled = createOrderClient({ keyId: 'id', secretKey, fetchImpl });
+          await assert.rejects(disabled.submit(p, reservation(p)), /disabled/);
+          const live = createOrderClient({ keyId: 'id', secretKey, confirmation: CONFIRMATION, fetchImpl });
+          await assert.rejects(live.submit(p, { ...reservation(p), requestHash: 'wrong' }), /reservation/);
+          assert.equal(calls.length, 0);
+          await assert.rejects(live.submit(p, reservation(p)), /outcome is unknown/);
+          assert.equal(calls.length, 1);
+          assert.equal(calls[0].options.redirect, 'error');
+        });
+
+        test('durable reservation precedes submission and survives a lost exchange response across restarts', async () => {
+          let file = null;
+          const events = [];
+          const fetchImpl = async (url, options = {}) => {
+            if (options.method === 'PUT') {
+              if (file) return { status: 409, ok: false };
+              file = JSON.parse(options.body).content;
+              events.push('persist');
+              return { status: 201, ok: true };
+            }
+            return file ? { status: 200, ok: true, json: async () => ({ content: file, sha: 'saved-sha' }) } : { status: 404, ok: false };
+          };
+          const makeLedger = () => createTrialLedger({ token: 'test-token', password: 'test password of more than 24 characters', fetchImpl });
+          const orderClient = { preview: async () => { events.push('preview'); }, submit: async () => { events.push('submit'); throw new Error('unknown'); } };
+          await assert.rejects(executeTrial({ candidate: plan('yes'), orderClient, ledger: makeLedger() }), /unknown/);
+          assert.deepEqual(events, ['preview', 'persist', 'submit']);
+          await assert.rejects(executeTrial({ candidate: plan('yes'), orderClient, ledger: makeLedger() }), /already been reserved/);
+          assert.equal(events.filter(e => e === 'submit').length, 1);
+        });
+
+        test('preview changes and cancellation during preparation prevent submission', async () => {
+          const p = plan('yes');
+          const api = createOrderClient({ keyId: 'id', secretKey, fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({ order: { ...p.request, quantity: 999 } }) }) });
+          await assert.rejects(api.preview(p), /preview changed/);
+          let stopped = false, submitted = false;
+          const orderClient = { preview: async () => { stopped = true; }, submit: async () => { submitted = true; } };
+          const result = await executeTrial({ candidate: p, orderClient, ledger: { reserve: async () => { throw new Error('must not reserve'); } }, shouldStop: () => stopped });
+          assert.equal(result.status, 'stopped');
+          assert.equal(submitted, false);
+        });
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/us-trial-ledger.mjs <<'BOTXRAY_SOURCE'
+        import { encryptState, decryptState } from './state.mjs';
+        import { hashRequest } from './polymarket-us-orders.mjs';
+
+        // Reserve the entire authorized dollar durably BEFORE the exchange sees an order.
+        // Presence of a record blocks every later run, including after a crash or lost response.
+        export function createTrialLedger({ token, password, repository = 'otsrub/test', fetchImpl = globalThis.fetch } = {}) {
+          if (repository !== 'otsrub/test' || !token || !password || password.length < 24) throw new Error('Durable trial storage is not configured');
+          const api = `https://api.github.com/repos/${repository}/contents/.bot-x-ray/us-one-dollar-trial.enc`;
+          const headers = { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'content-type': 'application/json' };
+          async function read() {
+            const r = await fetchImpl(api + '?ref=main', { headers, redirect: 'error', signal: AbortSignal.timeout(20000) });
+            if (r.status === 404) return null;
+            if (!r.ok) throw new Error('Cannot verify the one-dollar trial record');
+            const j = await r.json();
+            const value = JSON.parse(decryptState(Buffer.from(j.content, 'base64'), password));
+            if (value.version !== 1 || value.reservedCents !== 100) throw new Error('Unknown trial record; no further orders are allowed');
+            return { ...value, sha: j.sha };
+          }
+          return {
+            read,
+            async reserve(plan) {
+              if (await read()) throw new Error('The one-dollar trial has already been reserved or used. No further orders.');
+              const record = { version: 1, reservedCents: 100, requestHash: hashRequest(plan.request), createdAt: new Date().toISOString() };
+              const content = encryptState(Buffer.from(JSON.stringify(record)), password).toString('base64');
+              // No SHA is provided: an existing file causes GitHub to refuse the write.
+              const r = await fetchImpl(api, { method: 'PUT', headers, redirect: 'error', signal: AbortSignal.timeout(20000), body: JSON.stringify({ message: 'Reserve the authorized one-dollar Bot X-Ray trial', content, branch: 'main' }) });
+              if (r.status !== 201) throw new Error('Trial reservation did not commit; no order may be sent');
+              const saved = await read();
+              if (!saved || saved.requestHash !== record.requestHash) throw new Error('Trial reservation could not be verified; no order may be sent');
+              return { ...record, committed: true };
+            },
+          };
+        }
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/coinman2-us-worker.mjs <<'BOTXRAY_SOURCE'
+        import fs from 'node:fs';
+        import { pathToFileURL } from 'node:url';
+        import { priceLadder, DEFAULTS } from '../bot-x-ray/lib/strategy/engine.js';
+        import { spot } from '../bot-x-ray/lib/prices.js';
+        import { realisedVol } from '../bot-x-ray/lib/strategy/model.js';
+        import { createMarketClient } from './polymarket-us-markets.mjs';
+        import { createClient } from './polymarket-us.mjs';
+        import { createOrderClient, planOneDollarOrder, CONFIRMATION } from './polymarket-us-orders.mjs';
+        import { createTrialLedger } from './us-trial-ledger.mjs';
+
+        function report(note) {
+          console.log(note);
+          if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, note + '\n\n');
+        }
+
+        export async function executeTrial({ candidate, orderClient, ledger, shouldStop = () => false }) {
+          // All network/state dependencies are injected so the complete order path is tested offline.
+          if (shouldStop()) return { status: 'stopped' };
+          await orderClient.preview(candidate);
+          if (shouldStop()) return { status: 'stopped' };
+          const reservation = await ledger.reserve(candidate);
+          if (shouldStop()) return { status: 'reserved-without-order' };
+          await orderClient.submit(candidate, reservation);
+          return { status: 'acknowledged' }; // Never infer a fill from acknowledgement.
+        }
+
+        async function main() {
+          const mode = process.env.US_TRIAL_MODE || 'check';
+          if (!['check', 'live'].includes(mode)) throw new Error('Invalid trial mode');
+          const live = mode === 'live';
+          if (live && process.env.US_TRIAL_CONFIRMATION !== CONFIRMATION) throw new Error('Live trial requires the exact manual confirmation');
+          if (live && process.env.GITHUB_ACTOR === 'github-actions[bot]') throw new Error('The live trial must be launched manually by the account owner');
+          let stopped = false;
+          process.once('SIGTERM', () => { stopped = true; });
+          process.once('SIGINT', () => { stopped = true; });
+          const marketClient = createMarketClient();
+          const keys = { keyId: process.env.POLYMARKET_US_KEY_ID, secretKey: process.env.POLYMARKET_US_SECRET_KEY };
+          const orderClient = live ? createOrderClient({ ...keys, confirmation: process.env.US_TRIAL_CONFIRMATION }) : null;
+          const ledger = live ? createTrialLedger({ token: process.env.GH_TOKEN, password: process.env.SESSION_PASSWORD }) : null;
+          if (live && await ledger.read()) {
+            report('The authorized one-dollar trial is already reserved or used. No further orders were sent.');
+            return;
+          }
+          const accountClient = live ? createClient(keys) : null;
+          const end = Date.now() + 330 * 60000;
+          report(live ? 'Manual live trial: maximum cumulative new debit $1 including fees. One order attempt only; never recycle the dollar. Limit buys only; hold filled contracts to settlement.' : 'Read-only strategy check. Real orders are disabled; no account keys are used.');
+          do {
+            let supported = 0, signals = 0;
+            for (const coin of ['btc', 'eth']) {
+              if (stopped || Date.now() >= end) return;
+              let ladders, volatility;
+              try {
+                volatility = await realisedVol(coin);
+                ladders = await marketClient.ladders(coin);
+              } catch {
+                report(coin.toUpperCase() + ': price or market data unavailable; no orders for this scan.');
+                continue;
+              }
+              const s = (await spot(coin)).price;
+              for (const ladder of ladders) {
+                supported += ladder.contracts.length;
+                const priced = priceLadder(ladder, { S: s, sigma: volatility.sigma, cfg: DEFAULTS });
+                const candidates = priced.contracts.filter(c => c.signal).sort((a, b) => b.best.edge - a.best.edge);
+                signals += candidates.length;
+                if (!live || !candidates.length) continue;
+                // Refresh this entire volatility ladder, then the selected quote and model inputs.
+                const fresh = [];
+                for (let i = 0; i < ladder.contracts.length; i += 4) {
+                  fresh.push(...(await Promise.all(ladder.contracts.slice(i, i + 4).map(c => marketClient.quote(c)))).filter(Boolean));
+                  await new Promise(resolve => setTimeout(resolve, 250));
+                }
+                const updatedSpot = (await spot(coin)).price;
+                const current = priceLadder({ ...ladder, contracts: fresh }, { S: updatedSpot, sigma: volatility.sigma, cfg: DEFAULTS });
+                for (const c of current.contracts.filter(c => c.signal).sort((a, b) => b.best.edge - a.best.edge)) {
+                  if (stopped || Date.now() >= end) return;
+                  const account = await accountClient.account();
+                  const usd = account.balances?.find(b => b.currency === 'USD');
+                  if (!account.ok || typeof usd?.buyingPower !== 'number' || !Number.isFinite(usd.buyingPower)) throw new Error('Cannot verify USD buying power; no order sent');
+                  if ((await orderClient.openOrders()).length) throw new Error('Existing open orders need review before this trial; no order sent');
+                  let plan;
+                  try { plan = planOneDollarOrder({ ...c, side: c.best.side, limit: c.best.ask, fair: c.best.fair }, Math.floor(usd.buyingPower * 100 + 1e-9)); }
+                  catch { continue; }
+                  const outcome = await executeTrial({ candidate: plan, orderClient, ledger, shouldStop: () => stopped || Date.now() >= end });
+                  report(outcome.status === 'acknowledged' ? 'One limit order was acknowledged. This is not fill confirmation. The dollar will not be reused. Check Polymarket US for fills; filled contracts remain held to settlement.' : 'Stopped. The dollar may remain reserved; no replacement order will be sent automatically.');
+                  return;
+                }
+              }
+            }
+            report(`Strategy scan complete: ${supported} supported contracts; ${signals} model signals before size and rounded-fee checks.`);
+            if (!live) return;
+            const next = Date.now() + 5 * 60000;
+            while (!stopped && Date.now() < next && Date.now() < end) await new Promise(resolve => setTimeout(resolve, 1000));
+          } while (!stopped && Date.now() < end);
+          report('Trial session ended without submitting an order.');
+        }
+
+        if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+          main().catch(error => { report(error.message); process.exitCode = 1; });
+        }
         BOTXRAY_SOURCE
     - name: Download the verified Bot X-Ray release
       shell: bash
@@ -1387,6 +1700,10 @@ jobs:
           }
           return {
             markets,
+            async quote(c) {
+              if (!/^[a-z0-9-]+$/.test(c.ticker || '')) throw new Error('Invalid market slug');
+              return withQuote(c, await read(`/v1/markets/${c.ticker}/bbo`));
+            },
             async ladders(coin, options = {}) {
               const eligible = (await markets()).map(m => contract(m, now() / 1000, options)).filter(c => c?.coin === coin);
               const quoted = [];
@@ -1529,6 +1846,315 @@ jobs:
         }
 
         if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) patchPolymarketUS(process.argv[2]);
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us-orders.mjs <<'BOTXRAY_SOURCE'
+        import { createPrivateKey, sign } from 'node:crypto';
+
+        const API = 'https://api.polymarket.us';
+        const KEY_PREFIX = Buffer.from('302e020100300506032b657004220420', 'hex');
+        export const CONFIRMATION = 'RISK AT MOST 1 USD';
+
+        export function tradingHeaders({ keyId, secretKey }, method, path, timestamp = Date.now()) {
+          if (!keyId || !secretKey || !/^[A-Za-z0-9+/]+={0,2}$/.test(secretKey.trim())) throw new Error('Trading credentials are missing or invalid');
+          const read = method === 'GET' && (path === '/v1/orders/open' || /^\/v1\/order\/[a-zA-Z0-9-]+$/.test(path));
+          const write = method === 'POST' && (['/v1/orders', '/v1/order/preview'].includes(path) || /^\/v1\/order\/[a-zA-Z0-9-]+\/cancel$/.test(path));
+          if (!read && !write) throw new Error('Trading request is not allowlisted');
+          const bytes = Buffer.from(secretKey.trim(), 'base64');
+          if (![32, 64].includes(bytes.length)) throw new Error('Invalid trading key format');
+          const key = createPrivateKey({ key: Buffer.concat([KEY_PREFIX, bytes.subarray(0, 32)]), format: 'der', type: 'pkcs8' });
+          return { 'X-PM-Access-Key': keyId, 'X-PM-Timestamp': String(timestamp), 'X-PM-Signature': sign(null, Buffer.from(String(timestamp) + method + path), key).toString('base64'), 'Content-Type': 'application/json', Accept: 'application/json' };
+        }
+
+        // A single buy-and-hold trial. Never recycle its dollar, short, sell, or use market orders.
+        export function planOneDollarOrder(c, availableCents = 100, now = Date.now() / 1000) {
+          if (c.venue !== 'polymarket-us' || !/^[a-z0-9-]+$/.test(c.ticker || '') || !['yes', 'no'].includes(c.side)) throw new Error('Unsupported market or side');
+          const p = c.limit, step = c.minimumTradeQty, tick = c.priceTick, theta = c.feeCoefficient;
+          if (![p, step, tick, theta, c.fair, c.closes].every(Number.isFinite) || p < 0.2 || p > 0.95 || step <= 0 || tick <= 0 || theta < 0 || theta > 0.2 || c.closes < now + 1800) throw new Error('Invalid price, precision, fees, or expiry');
+          if (Math.abs(step * 1e6 - Math.round(step * 1e6)) > 1e-6) throw new Error('Unsupported quantity precision');
+          const yesPrice = Number((c.side === 'yes' ? p : 1 - p).toFixed(6));
+          if (Math.abs(yesPrice / tick - Math.round(yesPrice / tick)) > 1e-7) throw new Error('Limit price is not aligned to this market tick');
+          const budget = Math.min(100, Math.floor(availableCents));
+          if (!Number.isFinite(budget) || budget <= 1) throw new Error('Not enough buying power');
+          const quantity = Number((Math.floor(((budget - 1) / 100) / (p + theta * p * (1 - p)) / step) * step).toFixed(6));
+          if (quantity < step || quantity <= 0) throw new Error('Minimum order does not fit the one-dollar limit');
+          // The published cumulative fee is rounded to cents. An extra cent covers that rounding.
+          const maximumDebitCents = Math.ceil(quantity * (p + theta * p * (1 - p)) * 100 - 1e-9) + 1;
+          if (maximumDebitCents > budget) throw new Error('Order would exceed the one-dollar limit including fees');
+          if (c.fair - maximumDebitCents / 100 / quantity < 0.03) throw new Error('Not enough edge after size and rounded fee allowance');
+          const request = Object.freeze({ marketSlug: c.ticker, intent: c.side === 'yes' ? 'ORDER_INTENT_BUY_LONG' : 'ORDER_INTENT_BUY_SHORT', type: 'ORDER_TYPE_LIMIT', price: Object.freeze({ value: String(yesPrice), currency: 'USD' }), quantity, tif: 'TIME_IN_FORCE_IMMEDIATE_OR_CANCEL', manualOrderIndicator: 'MANUAL_ORDER_INDICATOR_AUTOMATIC', synchronousExecution: true, maxBlockTime: '10s' });
+          return Object.freeze({ request, maximumDebitCents, limit: p, side: c.side });
+        }
+
+        export function createOrderClient({ keyId, secretKey, confirmation = '', fetchImpl = globalThis.fetch, now = Date.now } = {}) {
+          const enabled = confirmation === CONFIRMATION;
+          async function request(method, path, body) {
+            const headers = tradingHeaders({ keyId, secretKey }, method, path, now());
+            let r;
+            try { r = await fetchImpl(API + path, { method, headers, ...(body ? { body: JSON.stringify(body) } : {}), redirect: 'error', signal: AbortSignal.timeout(30000) }); }
+            catch { throw new Error('Trading request outcome is unknown; do not resubmit. Check Polymarket US.'); }
+            if (!r.ok) throw new Error(`Polymarket US trading request refused (HTTP ${r.status}). No automatic retry.`);
+            if (r.status === 204) return {};
+            try { return await r.json(); }
+            catch { throw new Error('Trading response is unreadable; do not resubmit. Check Polymarket US.'); }
+          }
+          return {
+            async openOrders() {
+              const j = await request('GET', '/v1/orders/open');
+              if (!Array.isArray(j.orders)) throw new Error('Unknown open-order format');
+              return j.orders;
+            },
+            async preview(plan) {
+              const j = await request('POST', '/v1/order/preview', { request: plan.request });
+              const o = j.order, p = plan.request;
+              if (!o || o.marketSlug !== p.marketSlug || o.type !== p.type || o.intent !== p.intent || o.tif !== p.tif || o.price?.currency !== 'USD' || Number(o.price.value) !== Number(p.price.value) || Math.abs(Number(o.quantity) - p.quantity) > 1e-9) throw new Error('Order preview changed the request; nothing will be sent');
+              return true;
+            },
+            async submit(plan, durableReservation) {
+              if (!enabled) throw new Error('Real orders are disabled');
+              if (durableReservation?.reservedCents !== 100 || durableReservation?.requestHash !== hashRequest(plan.request) || durableReservation?.committed !== true) throw new Error('Durable one-dollar reservation is required');
+              const j = await request('POST', '/v1/orders', plan.request);
+              if (typeof j.id !== 'string' || !/^[a-zA-Z0-9-]+$/.test(j.id)) throw new Error('Order acknowledgement is unknown; do not resubmit');
+              return { id: j.id }; // An ID confirms acknowledgement, never a fill.
+            },
+            async cancelOwnOrder(id, slug) {
+              if (!enabled || !/^[a-zA-Z0-9-]+$/.test(id) || !/^[a-z0-9-]+$/.test(slug)) throw new Error('Invalid cancellation');
+              return request('POST', `/v1/order/${id}/cancel`, { marketSlug: slug });
+            },
+          };
+        }
+
+        import { createHash } from 'node:crypto';
+        export const hashRequest = request => createHash('sha256').update(JSON.stringify(request)).digest('hex');
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/polymarket-us-orders.test.mjs <<'BOTXRAY_SOURCE'
+        import test from 'node:test';
+        import assert from 'node:assert/strict';
+        import { createPublicKey, verify } from 'node:crypto';
+        import { planOneDollarOrder, createOrderClient, tradingHeaders, hashRequest, CONFIRMATION } from './polymarket-us-orders.mjs';
+        import { createTrialLedger } from './us-trial-ledger.mjs';
+        import { executeTrial } from './coinman2-us-worker.mjs';
+
+        const now = Date.parse('2026-10-23T07:00:00Z');
+        const secretKey = Buffer.from('9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60', 'hex').toString('base64');
+        const publicKey = createPublicKey({ key: Buffer.from('302a300506032b6570032100d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a', 'hex'), format: 'der', type: 'spki' });
+        const candidate = (side = 'yes', limit = 0.42) => ({ venue: 'polymarket-us', ticker: 'test-btc-above', side, limit, fair: 0.99, minimumTradeQty: 0.01, priceTick: 0.01, feeCoefficient: 0.0695, closes: now / 1000 + 3600 });
+        const plan = side => planOneDollarOrder(candidate(side), 100, now / 1000);
+        const reservation = p => ({ committed: true, reservedCents: 100, requestHash: hashRequest(p.request) });
+
+        test('YES/NO limit requests sign POST correctly and exclude all other destinations', () => {
+          const h = tradingHeaders({ keyId: 'test-key', secretKey }, 'POST', '/v1/orders', now);
+          assert.equal(verify(null, Buffer.from(now + 'POST/v1/orders'), publicKey, Buffer.from(h['X-PM-Signature'], 'base64')), true);
+          assert.throws(() => tradingHeaders({ keyId: 'id', secretKey }, 'POST', '/v1/withdrawal'), /not allowlisted/);
+          const yes = plan('yes'), no = plan('no');
+          assert.equal(yes.request.price.value, '0.42');
+          assert.equal(no.request.price.value, '0.58');
+          assert.equal(no.request.intent, 'ORDER_INTENT_BUY_SHORT');
+          assert.equal(yes.request.tif, 'TIME_IN_FORCE_IMMEDIATE_OR_CANCEL');
+          assert.ok(yes.maximumDebitCents <= 100 && no.maximumDebitCents <= 100);
+        });
+
+        test('size and fee allowance stay within one dollar, including partial fills and better prices', () => {
+          let sized = 0;
+          for (let cents = 20; cents <= 95; cents++) {
+            let p;
+            try { p = planOneDollarOrder(candidate('yes', cents / 100), 100, now / 1000); }
+            catch (error) { assert.match(error.message, /Not enough edge/); continue; }
+            sized++;
+            const q = p.request.quantity;
+            assert.ok(q >= 0.01);
+            for (const fraction of [0.01, 0.25, 0.5, 1]) {
+              for (const better of [0.5, 0.75, 1]) {
+                const price = p.limit * better, qty = q * fraction;
+                const roundedFee = Math.round(0.0695 * qty * price * (1 - price) * 100) / 100;
+                assert.ok(price * qty + roundedFee <= p.maximumDebitCents / 100 + 1e-9);
+              }
+            }
+          }
+          assert.ok(sized >= 70);
+          assert.throws(() => planOneDollarOrder({ ...candidate(), minimumTradeQty: 10 }, 100, now / 1000), /Minimum order/);
+          assert.throws(() => planOneDollarOrder({ ...candidate(), fair: 0.43 }, 100, now / 1000), /Not enough edge/);
+          assert.throws(() => planOneDollarOrder({ ...candidate(), venue: 'kalshi' }, 100, now / 1000), /Unsupported/);
+        });
+
+        test('real orders require manual mode and a matching durable reservation; uncertain create is never retried', async () => {
+          const p = plan('yes'), calls = [];
+          const fetchImpl = async (url, options) => { calls.push({ url, options }); throw new Error('secret response must not be printed'); };
+          const disabled = createOrderClient({ keyId: 'id', secretKey, fetchImpl });
+          await assert.rejects(disabled.submit(p, reservation(p)), /disabled/);
+          const live = createOrderClient({ keyId: 'id', secretKey, confirmation: CONFIRMATION, fetchImpl });
+          await assert.rejects(live.submit(p, { ...reservation(p), requestHash: 'wrong' }), /reservation/);
+          assert.equal(calls.length, 0);
+          await assert.rejects(live.submit(p, reservation(p)), /outcome is unknown/);
+          assert.equal(calls.length, 1);
+          assert.equal(calls[0].options.redirect, 'error');
+        });
+
+        test('durable reservation precedes submission and survives a lost exchange response across restarts', async () => {
+          let file = null;
+          const events = [];
+          const fetchImpl = async (url, options = {}) => {
+            if (options.method === 'PUT') {
+              if (file) return { status: 409, ok: false };
+              file = JSON.parse(options.body).content;
+              events.push('persist');
+              return { status: 201, ok: true };
+            }
+            return file ? { status: 200, ok: true, json: async () => ({ content: file, sha: 'saved-sha' }) } : { status: 404, ok: false };
+          };
+          const makeLedger = () => createTrialLedger({ token: 'test-token', password: 'test password of more than 24 characters', fetchImpl });
+          const orderClient = { preview: async () => { events.push('preview'); }, submit: async () => { events.push('submit'); throw new Error('unknown'); } };
+          await assert.rejects(executeTrial({ candidate: plan('yes'), orderClient, ledger: makeLedger() }), /unknown/);
+          assert.deepEqual(events, ['preview', 'persist', 'submit']);
+          await assert.rejects(executeTrial({ candidate: plan('yes'), orderClient, ledger: makeLedger() }), /already been reserved/);
+          assert.equal(events.filter(e => e === 'submit').length, 1);
+        });
+
+        test('preview changes and cancellation during preparation prevent submission', async () => {
+          const p = plan('yes');
+          const api = createOrderClient({ keyId: 'id', secretKey, fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({ order: { ...p.request, quantity: 999 } }) }) });
+          await assert.rejects(api.preview(p), /preview changed/);
+          let stopped = false, submitted = false;
+          const orderClient = { preview: async () => { stopped = true; }, submit: async () => { submitted = true; } };
+          const result = await executeTrial({ candidate: p, orderClient, ledger: { reserve: async () => { throw new Error('must not reserve'); } }, shouldStop: () => stopped });
+          assert.equal(result.status, 'stopped');
+          assert.equal(submitted, false);
+        });
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/us-trial-ledger.mjs <<'BOTXRAY_SOURCE'
+        import { encryptState, decryptState } from './state.mjs';
+        import { hashRequest } from './polymarket-us-orders.mjs';
+
+        // Reserve the entire authorized dollar durably BEFORE the exchange sees an order.
+        // Presence of a record blocks every later run, including after a crash or lost response.
+        export function createTrialLedger({ token, password, repository = 'otsrub/test', fetchImpl = globalThis.fetch } = {}) {
+          if (repository !== 'otsrub/test' || !token || !password || password.length < 24) throw new Error('Durable trial storage is not configured');
+          const api = `https://api.github.com/repos/${repository}/contents/.bot-x-ray/us-one-dollar-trial.enc`;
+          const headers = { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'content-type': 'application/json' };
+          async function read() {
+            const r = await fetchImpl(api + '?ref=main', { headers, redirect: 'error', signal: AbortSignal.timeout(20000) });
+            if (r.status === 404) return null;
+            if (!r.ok) throw new Error('Cannot verify the one-dollar trial record');
+            const j = await r.json();
+            const value = JSON.parse(decryptState(Buffer.from(j.content, 'base64'), password));
+            if (value.version !== 1 || value.reservedCents !== 100) throw new Error('Unknown trial record; no further orders are allowed');
+            return { ...value, sha: j.sha };
+          }
+          return {
+            read,
+            async reserve(plan) {
+              if (await read()) throw new Error('The one-dollar trial has already been reserved or used. No further orders.');
+              const record = { version: 1, reservedCents: 100, requestHash: hashRequest(plan.request), createdAt: new Date().toISOString() };
+              const content = encryptState(Buffer.from(JSON.stringify(record)), password).toString('base64');
+              // No SHA is provided: an existing file causes GitHub to refuse the write.
+              const r = await fetchImpl(api, { method: 'PUT', headers, redirect: 'error', signal: AbortSignal.timeout(20000), body: JSON.stringify({ message: 'Reserve the authorized one-dollar Bot X-Ray trial', content, branch: 'main' }) });
+              if (r.status !== 201) throw new Error('Trial reservation did not commit; no order may be sent');
+              const saved = await read();
+              if (!saved || saved.requestHash !== record.requestHash) throw new Error('Trial reservation could not be verified; no order may be sent');
+              return { ...record, committed: true };
+            },
+          };
+        }
+        BOTXRAY_SOURCE
+        cat > bot-x-ray-actions/coinman2-us-worker.mjs <<'BOTXRAY_SOURCE'
+        import fs from 'node:fs';
+        import { pathToFileURL } from 'node:url';
+        import { priceLadder, DEFAULTS } from '../bot-x-ray/lib/strategy/engine.js';
+        import { spot } from '../bot-x-ray/lib/prices.js';
+        import { realisedVol } from '../bot-x-ray/lib/strategy/model.js';
+        import { createMarketClient } from './polymarket-us-markets.mjs';
+        import { createClient } from './polymarket-us.mjs';
+        import { createOrderClient, planOneDollarOrder, CONFIRMATION } from './polymarket-us-orders.mjs';
+        import { createTrialLedger } from './us-trial-ledger.mjs';
+
+        function report(note) {
+          console.log(note);
+          if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, note + '\n\n');
+        }
+
+        export async function executeTrial({ candidate, orderClient, ledger, shouldStop = () => false }) {
+          // All network/state dependencies are injected so the complete order path is tested offline.
+          if (shouldStop()) return { status: 'stopped' };
+          await orderClient.preview(candidate);
+          if (shouldStop()) return { status: 'stopped' };
+          const reservation = await ledger.reserve(candidate);
+          if (shouldStop()) return { status: 'reserved-without-order' };
+          await orderClient.submit(candidate, reservation);
+          return { status: 'acknowledged' }; // Never infer a fill from acknowledgement.
+        }
+
+        async function main() {
+          const mode = process.env.US_TRIAL_MODE || 'check';
+          if (!['check', 'live'].includes(mode)) throw new Error('Invalid trial mode');
+          const live = mode === 'live';
+          if (live && process.env.US_TRIAL_CONFIRMATION !== CONFIRMATION) throw new Error('Live trial requires the exact manual confirmation');
+          if (live && process.env.GITHUB_ACTOR === 'github-actions[bot]') throw new Error('The live trial must be launched manually by the account owner');
+          let stopped = false;
+          process.once('SIGTERM', () => { stopped = true; });
+          process.once('SIGINT', () => { stopped = true; });
+          const marketClient = createMarketClient();
+          const keys = { keyId: process.env.POLYMARKET_US_KEY_ID, secretKey: process.env.POLYMARKET_US_SECRET_KEY };
+          const orderClient = live ? createOrderClient({ ...keys, confirmation: process.env.US_TRIAL_CONFIRMATION }) : null;
+          const ledger = live ? createTrialLedger({ token: process.env.GH_TOKEN, password: process.env.SESSION_PASSWORD }) : null;
+          if (live && await ledger.read()) {
+            report('The authorized one-dollar trial is already reserved or used. No further orders were sent.');
+            return;
+          }
+          const accountClient = live ? createClient(keys) : null;
+          const end = Date.now() + 330 * 60000;
+          report(live ? 'Manual live trial: maximum cumulative new debit $1 including fees. One order attempt only; never recycle the dollar. Limit buys only; hold filled contracts to settlement.' : 'Read-only strategy check. Real orders are disabled; no account keys are used.');
+          do {
+            let supported = 0, signals = 0;
+            for (const coin of ['btc', 'eth']) {
+              if (stopped || Date.now() >= end) return;
+              let ladders, volatility;
+              try {
+                volatility = await realisedVol(coin);
+                ladders = await marketClient.ladders(coin);
+              } catch {
+                report(coin.toUpperCase() + ': price or market data unavailable; no orders for this scan.');
+                continue;
+              }
+              const s = (await spot(coin)).price;
+              for (const ladder of ladders) {
+                supported += ladder.contracts.length;
+                const priced = priceLadder(ladder, { S: s, sigma: volatility.sigma, cfg: DEFAULTS });
+                const candidates = priced.contracts.filter(c => c.signal).sort((a, b) => b.best.edge - a.best.edge);
+                signals += candidates.length;
+                if (!live || !candidates.length) continue;
+                // Refresh this entire volatility ladder, then the selected quote and model inputs.
+                const fresh = [];
+                for (let i = 0; i < ladder.contracts.length; i += 4) {
+                  fresh.push(...(await Promise.all(ladder.contracts.slice(i, i + 4).map(c => marketClient.quote(c)))).filter(Boolean));
+                  await new Promise(resolve => setTimeout(resolve, 250));
+                }
+                const updatedSpot = (await spot(coin)).price;
+                const current = priceLadder({ ...ladder, contracts: fresh }, { S: updatedSpot, sigma: volatility.sigma, cfg: DEFAULTS });
+                for (const c of current.contracts.filter(c => c.signal).sort((a, b) => b.best.edge - a.best.edge)) {
+                  if (stopped || Date.now() >= end) return;
+                  const account = await accountClient.account();
+                  const usd = account.balances?.find(b => b.currency === 'USD');
+                  if (!account.ok || typeof usd?.buyingPower !== 'number' || !Number.isFinite(usd.buyingPower)) throw new Error('Cannot verify USD buying power; no order sent');
+                  if ((await orderClient.openOrders()).length) throw new Error('Existing open orders need review before this trial; no order sent');
+                  let plan;
+                  try { plan = planOneDollarOrder({ ...c, side: c.best.side, limit: c.best.ask, fair: c.best.fair }, Math.floor(usd.buyingPower * 100 + 1e-9)); }
+                  catch { continue; }
+                  const outcome = await executeTrial({ candidate: plan, orderClient, ledger, shouldStop: () => stopped || Date.now() >= end });
+                  report(outcome.status === 'acknowledged' ? 'One limit order was acknowledged. This is not fill confirmation. The dollar will not be reused. Check Polymarket US for fills; filled contracts remain held to settlement.' : 'Stopped. The dollar may remain reserved; no replacement order will be sent automatically.');
+                  return;
+                }
+              }
+            }
+            report(`Strategy scan complete: ${supported} supported contracts; ${signals} model signals before size and rounded-fee checks.`);
+            if (!live) return;
+            const next = Date.now() + 5 * 60000;
+            while (!stopped && Date.now() < next && Date.now() < end) await new Promise(resolve => setTimeout(resolve, 1000));
+          } while (!stopped && Date.now() < end);
+          report('Trial session ended without submitting an order.');
+        }
+
+        if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+          main().catch(error => { report(error.message); process.exitCode = 1; });
+        }
         BOTXRAY_SOURCE
     - name: Download the verified Bot X-Ray release
       shell: bash
