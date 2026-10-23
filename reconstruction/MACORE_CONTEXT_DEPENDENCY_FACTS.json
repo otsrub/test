@@ -1,0 +1,47 @@
+{
+  "image": "MACore",
+  "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+  "constructor_entry": "0x51cd0",
+  "wrapper_entry": "0x51f1c",
+  "destructor_entry": "0x51f90",
+  "imports": {
+    "0x1054b4": "_remainder",
+    "0x105358": "_pthread_getspecific",
+    "0x105424": "_pthread_self",
+    "0x105334": "_pthread_get_stackaddr_np",
+    "0x105448": "_pthread_setspecific",
+    "0x104b24": "_dispatch_once"
+  },
+  "remainder_calls": [
+    "0x51ea4",
+    "0x51ee0"
+  ],
+  "constructor_inputs": {
+    "x0": "object",
+    "x1": "signed timestamp",
+    "x2": "opaque context key",
+    "x3": "optional explicit provider callback",
+    "x4": "flags",
+    "s0": "sample-rate/float key"
+  },
+  "provider_and_tls": {
+    "provider_pointer_address": "0x195d88",
+    "dispatch_once_token_address": "0x193200",
+    "pthread_key_address": "0x1931f8",
+    "linked_prior_context_offset": "0xb0"
+  },
+  "scope": "Exact original bytes/import-table analysis only; not new recovered source or semantic verification. Real pthread/dispatch/remainder functions remain dependencies.",
+  "no_provider_path": {
+    "entry": "0x51e8c",
+    "remainder_is_not_fmod": true,
+    "constant_divisor1_bits": "0x40d5888000000000",
+    "constant_divisor2_bits": "0x3ff6f80000000000",
+    "constant_multiplier_bits": "0x40ce000000000000",
+    "writes": [
+      "object+0x40",
+      "object+0x48",
+      "object+0x50"
+    ]
+  },
+  "region_sha256": "e6cef3e99318d3c2f884b8210376cad457383ad88eda1c2438d7d6cfd42d183c"
+}
