@@ -1,0 +1,48 @@
+{
+  "run": 39889659496,
+  "commit": "0f68dc541495c75533f1dc8d8542bbfe62c9f966",
+  "artifacts": [
+    {
+      "id": 12473812739,
+      "sha256": "3538647cab580c97508823df259a93cfe0a532fc500a0bdfee8dc2a8919ba798",
+      "target": "Logic 0x8ba1c0..0x8ba3b4",
+      "comparisons": 256512,
+      "instructions": 125,
+      "scope": "complete entry-to-return bounded tests, all-input proof false"
+    },
+    {
+      "id": 12473992237,
+      "sha256": "148309791afa09e2d09821d60dd8bf849b3edec809667650de44df01da342e87",
+      "target": "Logic width 0x8be44c",
+      "comparisons": 39483,
+      "instructions": 76,
+      "scope": "return or first real helper/error transfer only"
+    },
+    {
+      "id": 12474012737,
+      "sha256": "5e90d5afb7d972685eb775cfbde480ec6bf4d3bd7a8c1b4b4cc2f4ee7faa64b1",
+      "target": "Logic precision 0x8be5bc",
+      "comparisons": 39483,
+      "instructions": 89,
+      "scope": "return or first real helper/error transfer only"
+    }
+  ],
+  "mismatches": 0,
+  "strict_complete_function_evidence_across_separate_checkpoints": {
+    "count": 16,
+    "original_bytes": 1360,
+    "not_combined_module": true,
+    "not_all_input_proof": true
+  },
+  "complete_native_images_source_rebuilt": 0,
+  "native_images_total": 59,
+  "percentage_unknown": [
+    "current decompilation",
+    "semantic equivalence",
+    "compiled-source original-byte coverage"
+  ],
+  "next": [
+    "Argument ID parser 0x8b47a0",
+    "independent MACore clone 0xce810..0xcea04"
+  ]
+}
