@@ -1,0 +1,2041 @@
+{
+  "repository": "otsrub/test",
+  "progress": "Incomplete reconstruction; no whole-app or all-input correctness claim.",
+  "strict_complete_function_bounded_test_record": {
+    "prior_functions": 17,
+    "prior_original_bytes": 1860,
+    "new_functions": 6,
+    "new_original_bytes": 1944,
+    "functions_across_checkpoints": 23,
+    "original_bytes_across_checkpoints": 3804,
+    "new_six_function_combined_module_built": true,
+    "all_twenty_three_combined": false,
+    "all_input_equivalence_proven": false
+  },
+  "new_clean_source_package": {
+    "run_id": 39901106837,
+    "artifact_id": 12479395277,
+    "zip_sha256": "98930e744ea2064a0371c7cc2b181752c76a044d0afed9a1bc33ce3c773176af",
+    "source_sha256": "126e92ce794fa8c9807a0e1ec6a9dd41bc7b976a059ccf5d5375de0aaba49750",
+    "module_sha256": "96ab23aec87ed89699d1f5bbb1760f08bd8a80754cf3de90a222de5b532a3a3c",
+    "comparisons": 589824,
+    "mismatches": 0,
+    "native_imports": 0,
+    "scope": "Standalone six-function source module, Makefile, original reference image, reproduction tests and provenance; no Payload assembly."
+  },
+  "phase_and_rejected_evidence": [
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8be304",
+      "lane": "fill",
+      "cases": 12480,
+      "comparisons": 37440,
+      "passes_O0_O2_O3": [
+        12480,
+        12480,
+        12480
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "return": 6381,
+        "error:0x1092924": 23,
+        "error:0x10928e9": 6027,
+        "memmove": 49
+      },
+      "families": {
+        "all-leading-bytes": 3840,
+        "unicode-and-brace-boundaries": 448,
+        "random-bytes": 8192
+      },
+      "actual_original_helper_calls": {
+        "0x8be304": 12480,
+        "0x8ba1c0": 12480
+      },
+      "original_instruction_count": 207,
+      "source_sha256": "a033542b52e7873341807d52eeb25f891ddbfc5249e276c2ba4458e6d29d3932",
+      "module_sha256": [
+        "34e3d6d37b6ba828743e1afebafc1651ea9798e0719d04336fa86afabc9e43d5",
+        "814ccd0ce31e6a8d920628ae762e9915ac23aa8bc8aba4bb3136692c0e4102e4",
+        "bd3a21df21809ee8c979b1590e046e1e00f0a8f5b8b680cdc23d05e58eacfaf1"
+      ],
+      "source_uses_actual_entry_return_abi": true,
+      "whole_function_verified": false,
+      "all_input_equivalence_proven": false,
+      "unresolved_original_dependencies": {
+        "0xf0bff4": "_memmove",
+        "0x8b4614": "original throwing helper"
+      },
+      "limits": [
+        "Uninterrupted original parser/helper execution through return or entry to real memmove/throw helper, never substituting a fake callee.",
+        "Compiled candidates expose actual function ABI and real unresolved extern declarations. Dynamic lookup test dylibs are not complete production builds.",
+        "Compare complete modeled public input/spec/context memory, returned value or external-call args, FPCR/FPSR, and full callee-saved register set/SP on returns.",
+        "Ordinary disjoint mapped memory; input bounded to 24 bytes, physically mapped after logical end, state pointers nonwrapping. Aliases, faults, MMIO, concurrent observers, real memmove behavior and exceptions/unwinding remain unresolved."
+      ],
+      "artifact_id": 12478286935,
+      "artifact_digest": "sha256:4ed0f5e5a1d619070bdae144d283b74e9cf7ec876038c292f498fc22dbb072e3",
+      "run_id": 39899413663,
+      "evidence_group": "format_core"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8b586c",
+      "lane": "core",
+      "cases": 35072,
+      "comparisons": 105216,
+      "passes_O0_O2_O3": [
+        35072,
+        35072,
+        35072
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "return": 20644,
+        "error:0x109294e": 1491,
+        "error:0x1092820": 512,
+        "error:0x10927db": 262,
+        "error:0x1092796": 411,
+        "error:0x10929ab": 1014,
+        "error:0x1092762": 746,
+        "memmove": 512,
+        "error:0x1092924": 569,
+        "error:0x10928e9": 640,
+        "error:0x10929c9": 326,
+        "error:0x10928a9": 7651,
+        "error:0x10929ff": 204,
+        "error:0x109297e": 90
+      },
+      "families": {
+        "all-mask-combinations": 18432,
+        "all-leading-bytes": 256,
+        "random-grammar-and-truncation": 16384
+      },
+      "actual_original_helper_calls": {
+        "0x8be304": 30516,
+        "0x8ba1c0": 30516,
+        "0x8be44c": 26426,
+        "0x8b47a0": 4088,
+        "0x8be5bc": 9383,
+        "0x8be770": 8523
+      },
+      "original_instruction_count": 595,
+      "source_sha256": "a033542b52e7873341807d52eeb25f891ddbfc5249e276c2ba4458e6d29d3932",
+      "module_sha256": [
+        "17a65e3ea00b45098e2f12f0ea571295ac3e3025fb7470c9ceca51f07b2d253d",
+        "f27ef7644dd0ebc01cabc211c9fa7dd1236c613a78b1548a4739759abba839c3",
+        "3c905dcc4638b74d849ede1f37c3bffbb0c75e6c4e3875375c0bf46522186dc3"
+      ],
+      "source_uses_actual_entry_return_abi": true,
+      "whole_function_verified": false,
+      "all_input_equivalence_proven": false,
+      "unresolved_original_dependencies": {
+        "0xf0bff4": "_memmove",
+        "0x8b4614": "original throwing helper"
+      },
+      "limits": [
+        "Uninterrupted original parser/helper execution through return or entry to real memmove/throw helper, never substituting a fake callee.",
+        "Compiled candidates expose actual function ABI and real unresolved extern declarations. Dynamic lookup test dylibs are not complete production builds.",
+        "Compare complete modeled public input/spec/context memory, returned value or external-call args, FPCR/FPSR, and full callee-saved register set/SP on returns.",
+        "Ordinary disjoint mapped memory; input bounded to 24 bytes, physically mapped after logical end, state pointers nonwrapping. Aliases, faults, MMIO, concurrent observers, real memmove behavior and exceptions/unwinding remain unresolved."
+      ],
+      "artifact_id": 12478272094,
+      "artifact_digest": "sha256:3c71c9e727a8baf9fd8541707f9345f30e9e7011cf2c1f4b33170a437ef35580",
+      "run_id": 39899413663,
+      "evidence_group": "format_core"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8be83c",
+      "end": "0x8be92c",
+      "cases": 81920,
+      "comparisons": 245760,
+      "passes_O0_O2_O3": [
+        81920,
+        81920,
+        81920
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "flag:0x1092a63": 18524,
+        "presentation": 1541,
+        "return": 996,
+        "error:0x1092ab9": 17651,
+        "flag:0x1092a56": 4569,
+        "flag:0x1092a42": 22515,
+        "flag:0x1092a47": 10775,
+        "flag:0x1092a6d": 5349
+      },
+      "families": {
+        "all-flags-and-capability-masks": 8192,
+        "all-type-bytes-and-error-precedence": 65536,
+        "random-precision-and-presentation-bitmaps": 8192
+      },
+      "original_instruction_count": 60,
+      "source_sha256": "933f47b5fb1d03d8e5aa172c503c4a380cd1493705eb1993ebdf5b903a6f2510",
+      "module_sha256": [
+        "e6e3ba3d019bd88829aacff19f438433d1b4019a996b3284b096ababdcbdb542",
+        "283af7dcbf570bfbce7ba7277bebdeaa8bc229c4508895c83fa758272d7d2529",
+        "84fa799c0e730dc04001af16a920d2c8472bb6c5ea9ce0fcf081266fdb4b389d"
+      ],
+      "actual_function_ABI_source": true,
+      "whole_function_verified": false,
+      "all_input_equivalence_proven": false,
+      "limits": [
+        "Original entry-to-return or exact first error helper; checks complete ordinary public memory, error precedence/call arguments, ABI and FPCR/FPSR.",
+        "Real error helpers are unresolved external declarations in the candidate and never replaced by successful callbacks or fake stubs. Their throwing/unwind behavior remains unresolved.",
+        "All 256 flag/type byte values and all low-five capability-mask combinations exercised across the recorded families. Finite tests; faulting memory and concurrent observers excluded."
+      ],
+      "artifact_id": 12478556946,
+      "artifact_digest": "sha256:3dd46242f4d790326991a3c097c31ea00fb48ec29c5c364aefa2f9cc25305558",
+      "run_id": 39899958313,
+      "evidence_group": "validation"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8b5be4",
+      "lane": "resolve-errors",
+      "cases": 24576,
+      "comparisons": 73728,
+      "passes_O0_O2_O3": [
+        24576,
+        24576,
+        24576
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "return": 6533,
+        "error:0x1092857": 12897,
+        "error:0x1092b1f": 4213,
+        "error:0x1092b95": 665,
+        "error:0x1092b65": 268
+      },
+      "actual_original_helper_calls": {
+        "0x8b5be4": 24576,
+        "0x8be270": 18721
+      },
+      "original_instruction_count": 141,
+      "source_sha256": "0190c1d1c3fd800af2d2c9ca79c2216e2de104be76a7285338e49ae09d232a12",
+      "included_source_sha256": {
+        "logic_format_core_candidate.c": "a033542b52e7873341807d52eeb25f891ddbfc5249e276c2ba4458e6d29d3932",
+        "logic_format_validate_candidate.c": "933f47b5fb1d03d8e5aa172c503c4a380cd1493705eb1993ebdf5b903a6f2510"
+      },
+      "module_sha256": [
+        "0843b9f5f79eb292aef217ccd70ffe91f5a1979fb5df855608448cfff1213b1d",
+        "cba2bbd4e8eaa0f73f6cf602e7b9036253adc49e72e05653187c608ccceed39b",
+        "56da685f3a9fb990920142c47db9ed55579403c9965b96bf1af542e347a239cd"
+      ],
+      "actual_function_ABI_source": true,
+      "whole_function_verified": false,
+      "all_input_equivalence_proven": false,
+      "limits": [
+        "Uninterrupted original execution through real visitor, formatter, central parser, validation, dynamic resolver, numeric and UTF8 helpers; stops before real output, memmove or throwing helpers. No successful fake callbacks or stub implementations.",
+        "Resolver expands prior valid-only domain to missing/out-of-range/negative indices, tags 0..15 and 64-bit numeric edge values with exact original errors. Tags outside 0..15 remain excluded.",
+        "Compare modeled public context/spec/argument memory, return ABI or exact output/error call arguments (character pointer normalized to its one-byte content), FPCR/FPSR and full callee-saved state/SP on returns.",
+        "Original native guard slot points to allocated synthetic process guard storage; guard corruption/abort excluded. Ordinary disjoint memory and bounded strings; no real output execution, exceptions, unwind, arbitrary aliases, faults or concurrency claim."
+      ],
+      "artifact_id": 12478722143,
+      "artifact_digest": "sha256:f5f6f61c799ea14434ce0914f2f82105c0178de2e67dc8774a77cfb6b7ee612c",
+      "run_id": 39900460000,
+      "evidence_group": "integer_path_parent"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8b493c",
+      "lane": "visitor-tag3",
+      "cases": 24576,
+      "comparisons": 73728,
+      "passes_O0_O2_O3": [
+        24492,
+        24492,
+        24492
+      ],
+      "mismatches": 252,
+      "failures": [
+        {
+          "case": 174,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967295,
+          "mode": 1,
+          "count": 0,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335758,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392428,
+              50335758,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 174,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967295,
+          "mode": 1,
+          "count": 0,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335758,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335758,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 174,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967295,
+          "mode": 1,
+          "count": 0,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335758,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335758,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 223,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 0,
+          "mode": 1,
+          "count": 1,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335759,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392428,
+              50335759,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 223,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 0,
+          "mode": 1,
+          "count": 1,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335759,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335759,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 223,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 0,
+          "mode": 1,
+          "count": 1,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335759,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335759,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 272,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 127,
+          "mode": 1,
+          "count": 4,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335744,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392428,
+              50335744,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 272,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 127,
+          "mode": 1,
+          "count": 4,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335744,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335744,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 272,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 127,
+          "mode": 1,
+          "count": 4,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335744,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335744,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 321,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 128,
+          "mode": 1,
+          "count": 12,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335745,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392428,
+              50335745,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 321,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 128,
+          "mode": 1,
+          "count": 12,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335745,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335745,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 321,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 128,
+          "mode": 1,
+          "count": 12,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335745,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335745,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 370,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 255,
+          "mode": 1,
+          "count": 13,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335746,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392428,
+              50335746,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 370,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 255,
+          "mode": 1,
+          "count": 13,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335746,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335746,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 370,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 255,
+          "mode": 1,
+          "count": 13,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335746,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335746,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 419,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 256,
+          "mode": 1,
+          "count": 32,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335747,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392428,
+              50335747,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 419,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 256,
+          "mode": 1,
+          "count": 32,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335747,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335747,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 419,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 256,
+          "mode": 1,
+          "count": 32,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335747,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335747,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1350,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 2147483648,
+          "mode": 1,
+          "count": 0,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335750,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392428,
+              50335750,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1350,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 2147483648,
+          "mode": 1,
+          "count": 0,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335750,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335750,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1350,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 2147483648,
+          "mode": 1,
+          "count": 0,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335750,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335750,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1399,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967168,
+          "mode": 1,
+          "count": 1,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335751,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392428,
+              50335751,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1399,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967168,
+          "mode": 1,
+          "count": 1,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335751,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335751,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1399,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967168,
+          "mode": 1,
+          "count": 1,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335751,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335751,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1448,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967295,
+          "mode": 1,
+          "count": 4,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335752,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392428,
+              50335752,
+              2
+            ]
+          ],
+          "memory_equal": true
+        }
+      ],
+      "outcomes": {
+        "integer-output": 20626,
+        "error:0x10928a9": 1667,
+        "character-output": 117,
+        "flag:0x1092a42": 82,
+        "flag:0x1092a47": 83,
+        "error:0x10928e9": 84,
+        "error:0x1092c46": 149,
+        "error:0x1092924": 92,
+        "memmove": 84,
+        "error:0x1092762": 116,
+        "error:0x10927db": 52,
+        "error:0x10929ab": 160,
+        "error:0x1092796": 138,
+        "presentation": 373,
+        "error:0x1092857": 253,
+        "error:0x1092b1f": 274,
+        "error:0x1092b65": 21,
+        "error:0x1092b95": 20,
+        "error:0x1092820": 84,
+        "flag:0x1092a56": 82,
+        "error:0x109297e": 11,
+        "error:0x109294e": 8
+      },
+      "actual_original_helper_calls": {
+        "0x8b5060": 24576,
+        "0x8b5be4": 21460,
+        "0x8b586c": 6144,
+        "0x8be304": 5592,
+        "0x8ba1c0": 5592,
+        "0x8be44c": 4585,
+        "0x8be770": 3283,
+        "0x8be83c": 574,
+        "0x8b47a0": 1074,
+        "0x8be270": 605
+      },
+      "original_instruction_count": 706,
+      "source_sha256": "0190c1d1c3fd800af2d2c9ca79c2216e2de104be76a7285338e49ae09d232a12",
+      "included_source_sha256": {
+        "logic_format_core_candidate.c": "a033542b52e7873341807d52eeb25f891ddbfc5249e276c2ba4458e6d29d3932",
+        "logic_format_validate_candidate.c": "933f47b5fb1d03d8e5aa172c503c4a380cd1493705eb1993ebdf5b903a6f2510"
+      },
+      "module_sha256": [
+        "8d3b8128345856823e5aa298b5d486bb30fd4122c7282bb97f19cf343b36c6d3",
+        "63bb39b8df46d7495d15dd4badc0787ecc28d2e25aaacc0a347a933c7f5b3995",
+        "0d0480bcdc60f97598f72c315e1b2f061369b46e1453966a29abca280e346ab9"
+      ],
+      "rejected_parent_run": 39900460000,
+      "harness_correction": "Admit the real original argument-ID helper range 0x8b47a0..0x8b493c previously omitted from the execution whitelist. Candidate C source unchanged.",
+      "actual_function_ABI_source": true,
+      "whole_function_verified": false,
+      "all_input_equivalence_proven": false,
+      "limits": [
+        "Uninterrupted original execution through real visitor, formatter, central parser, validation, dynamic resolver, numeric and UTF8 helpers; stops before real output, memmove or throwing helpers. No successful fake callbacks or stub implementations.",
+        "Resolver expands prior valid-only domain to missing/out-of-range/negative indices, tags 0..15 and 64-bit numeric edge values with exact original errors. Tags outside 0..15 remain excluded.",
+        "Compare modeled public context/spec/argument memory, return ABI or exact output/error call arguments (character pointer normalized to its one-byte content), FPCR/FPSR and full callee-saved state/SP on returns.",
+        "Original native guard slot points to allocated synthetic process guard storage; guard corruption/abort excluded. Ordinary disjoint memory and bounded strings; no real output execution, exceptions, unwind, arbitrary aliases, faults or concurrency claim."
+      ],
+      "artifact_id": 12479255067,
+      "artifact_digest": "sha256:c76c9eb97aa8e48484d0b492750e0162209d54f7eee61c11f11b5908bf3af1f2",
+      "run_id": 39901106895,
+      "evidence_group": "integer_caller_rejected"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8b5060",
+      "lane": "signed-int",
+      "cases": 24576,
+      "comparisons": 73728,
+      "passes_O0_O2_O3": [
+        24492,
+        24492,
+        24492
+      ],
+      "mismatches": 252,
+      "failures": [
+        {
+          "case": 174,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967295,
+          "mode": 1,
+          "count": 0,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335758,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392476,
+              50335758,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 174,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967295,
+          "mode": 1,
+          "count": 0,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335758,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335758,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 174,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967295,
+          "mode": 1,
+          "count": 0,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335758,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335758,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 223,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 0,
+          "mode": 1,
+          "count": 1,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335759,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392476,
+              50335759,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 223,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 0,
+          "mode": 1,
+          "count": 1,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335759,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335759,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 223,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 0,
+          "mode": 1,
+          "count": 1,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335759,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335759,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 272,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 127,
+          "mode": 1,
+          "count": 4,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335744,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392476,
+              50335744,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 272,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 127,
+          "mode": 1,
+          "count": 4,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335744,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335744,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 272,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 127,
+          "mode": 1,
+          "count": 4,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335744,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335744,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 321,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 128,
+          "mode": 1,
+          "count": 12,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335745,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392476,
+              50335745,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 321,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 128,
+          "mode": 1,
+          "count": 12,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335745,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335745,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 321,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 128,
+          "mode": 1,
+          "count": 12,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335745,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335745,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 370,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 255,
+          "mode": 1,
+          "count": 13,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335746,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392476,
+              50335746,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 370,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 255,
+          "mode": 1,
+          "count": 13,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335746,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335746,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 370,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 255,
+          "mode": 1,
+          "count": 13,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335746,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335746,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 419,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 256,
+          "mode": 1,
+          "count": 32,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335747,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392476,
+              50335747,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 419,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 256,
+          "mode": 1,
+          "count": 32,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335747,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335747,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 419,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 256,
+          "mode": 1,
+          "count": 32,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335747,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335747,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1350,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 2147483648,
+          "mode": 1,
+          "count": 0,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335750,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392476,
+              50335750,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1350,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 2147483648,
+          "mode": 1,
+          "count": 0,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335750,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335750,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1350,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 2147483648,
+          "mode": 1,
+          "count": 0,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335750,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335750,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1399,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967168,
+          "mode": 1,
+          "count": 1,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335751,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392476,
+              50335751,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1399,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967168,
+          "mode": 1,
+          "count": 1,
+          "opt": 2,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335751,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335751,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1399,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967168,
+          "mode": 1,
+          "count": 1,
+          "opt": 3,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335751,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392444,
+              50335751,
+              2
+            ]
+          ],
+          "memory_equal": true
+        },
+        {
+          "case": 1448,
+          "text": "c2803c38647d",
+          "length": 6,
+          "flag": 1,
+          "value32": 4294967295,
+          "mode": 1,
+          "count": 4,
+          "opt": 0,
+          "expected": [
+            "memmove",
+            [
+              51392452,
+              50335752,
+              2
+            ]
+          ],
+          "actual": [
+            "memmove",
+            [
+              51392476,
+              50335752,
+              2
+            ]
+          ],
+          "memory_equal": true
+        }
+      ],
+      "outcomes": {
+        "integer-output": 20567,
+        "error:0x10928a9": 1743,
+        "character-output": 117,
+        "flag:0x1092a42": 83,
+        "flag:0x1092a47": 82,
+        "error:0x10928e9": 84,
+        "error:0x1092c46": 148,
+        "error:0x1092924": 85,
+        "memmove": 84,
+        "error:0x1092762": 120,
+        "error:0x10927db": 52,
+        "error:0x10929ab": 148,
+        "error:0x1092796": 136,
+        "presentation": 372,
+        "error:0x1092857": 253,
+        "error:0x1092b1f": 269,
+        "error:0x1092b65": 19,
+        "error:0x1092b95": 24,
+        "error:0x1092820": 84,
+        "flag:0x1092a56": 83,
+        "error:0x109297e": 16,
+        "error:0x109294e": 7
+      },
+      "actual_original_helper_calls": {
+        "0x8b5060": 24576,
+        "0x8b5be4": 21397,
+        "0x8b586c": 6144,
+        "0x8be304": 5639,
+        "0x8ba1c0": 5639,
+        "0x8be44c": 4629,
+        "0x8be770": 3345,
+        "0x8be83c": 574,
+        "0x8b47a0": 1061,
+        "0x8be270": 605
+      },
+      "original_instruction_count": 690,
+      "source_sha256": "0190c1d1c3fd800af2d2c9ca79c2216e2de104be76a7285338e49ae09d232a12",
+      "included_source_sha256": {
+        "logic_format_core_candidate.c": "a033542b52e7873341807d52eeb25f891ddbfc5249e276c2ba4458e6d29d3932",
+        "logic_format_validate_candidate.c": "933f47b5fb1d03d8e5aa172c503c4a380cd1493705eb1993ebdf5b903a6f2510"
+      },
+      "module_sha256": [
+        "05fee7673bc416e878fa687e316b176bb9883f55069ccfd6c487d7d796343dd3",
+        "c8c7aac360f44f1827832801b5f8a121e6a5745d7ce53de94219dd431520c898",
+        "4edb82971d6e5d7a40cdccc8ca70136566d74bad8db1caabf5968265c5c8fcb4"
+      ],
+      "rejected_parent_run": 39900460000,
+      "harness_correction": "Admit the real original argument-ID helper range 0x8b47a0..0x8b493c previously omitted from the execution whitelist. Candidate C source unchanged.",
+      "actual_function_ABI_source": true,
+      "whole_function_verified": false,
+      "all_input_equivalence_proven": false,
+      "limits": [
+        "Uninterrupted original execution through real visitor, formatter, central parser, validation, dynamic resolver, numeric and UTF8 helpers; stops before real output, memmove or throwing helpers. No successful fake callbacks or stub implementations.",
+        "Resolver expands prior valid-only domain to missing/out-of-range/negative indices, tags 0..15 and 64-bit numeric edge values with exact original errors. Tags outside 0..15 remain excluded.",
+        "Compare modeled public context/spec/argument memory, return ABI or exact output/error call arguments (character pointer normalized to its one-byte content), FPCR/FPSR and full callee-saved state/SP on returns.",
+        "Original native guard slot points to allocated synthetic process guard storage; guard corruption/abort excluded. Ordinary disjoint memory and bounded strings; no real output execution, exceptions, unwind, arbitrary aliases, faults or concurrency claim."
+      ],
+      "artifact_id": 12479205871,
+      "artifact_digest": "sha256:2e55b582dcff0eaa321304350da34ef0cdc48a95f1e2efb99319722f5e66c778",
+      "run_id": 39901106895,
+      "evidence_group": "integer_caller_rejected"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8b8cd0",
+      "end": "0x8b90b0",
+      "original_bytes": 992,
+      "original_slice_sha256": "4ce24b5ccc9bf8cb2a094f7f70db99085484015aeeee6710f71df4b071b75f6d",
+      "lane": "decimal",
+      "cases": 32768,
+      "comparisons": 98304,
+      "passes_O0_O2_O3": [
+        32768,
+        32768,
+        32768
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "return": 32768
+      },
+      "actual_original_function_entry_counts": {
+        "0x8b8cd0": 32768
+      },
+      "original_instruction_count": 248,
+      "target_instruction_count": 248,
+      "source_sha256": "126e92ce794fa8c9807a0e1ec6a9dd41bc7b976a059ccf5d5375de0aaba49750",
+      "module_sha256": [
+        "53de82db6861ffe85c0b9f11550fcf568926586ec442f539dc04fe21a4e49be7",
+        "f197741dd8a2cb09bc86f0377175c165214792ac611197148d1012ca8674d69e",
+        "5e1a205def9be068244bba76c2859faa78cd8881eaed8b12ebdb1b79e0ab5bb4"
+      ],
+      "complete_function_bounded_tests_passed": true,
+      "all_input_equivalence_proven": false,
+      "source_module_all_imports_resolved": true,
+      "limits": [
+        "Actual complete original entry-to-return and compiled entry-to-return; no external callees or fake stubs. Generic converter executes the real original recovered digit helpers.",
+        "uint32 values; all 35 valid bases 2..36 sampled for count/generic. Base 0/1 and bases outside the normal original caller domain excluded; no all-input claim.",
+        "Ordinary mapped destination memory with alignment varied; logical capacity -1,0 and digit-boundary sizes; compare entire public memory, return aggregate ABI, full callee-saved state/SP and FPCR/FPSR. Faults, MMIO, concurrent observers and wraparound pointers excluded.",
+        "Decimal writer has no capacity argument: tests allocate at least 10 physical output bytes and compare all writes. Original full image, code slice and digit-table hashes retained."
+      ],
+      "artifact_id": 12479061949,
+      "artifact_digest": "sha256:fecaefe5b4affad828c29997e8c8988548413cc1fa8981f700982adf92d91941",
+      "run_id": 39901106837,
+      "evidence_group": "integer_digits"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8c1038",
+      "end": "0x8c10dc",
+      "original_bytes": 164,
+      "original_slice_sha256": "f1a770137cad0859d74fad258f30d3ac44c6614c6a54c329a964272c16bae115",
+      "lane": "hex",
+      "cases": 32768,
+      "comparisons": 98304,
+      "passes_O0_O2_O3": [
+        32768,
+        32768,
+        32768
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "capacity-error": 16172,
+        "success": 16596
+      },
+      "actual_original_function_entry_counts": {
+        "0x8c1038": 32768
+      },
+      "original_instruction_count": 41,
+      "target_instruction_count": 41,
+      "source_sha256": "126e92ce794fa8c9807a0e1ec6a9dd41bc7b976a059ccf5d5375de0aaba49750",
+      "module_sha256": [
+        "aa11a2005266142daf00a8fe124bfe518971939b6baa36e9c9f3f59765d84ebf",
+        "c15f7ce7c87cfdb2895aff77dcf760813a0970e3cc0544a0d56711eabf0e71f8",
+        "d49c09e103cf35db1bf731ab8b91bb44f65f36d2c246df615b68ad12426d0216"
+      ],
+      "complete_function_bounded_tests_passed": true,
+      "all_input_equivalence_proven": false,
+      "source_module_all_imports_resolved": true,
+      "limits": [
+        "Actual complete original entry-to-return and compiled entry-to-return; no external callees or fake stubs. Generic converter executes the real original recovered digit helpers.",
+        "uint32 values; all 35 valid bases 2..36 sampled for count/generic. Base 0/1 and bases outside the normal original caller domain excluded; no all-input claim.",
+        "Ordinary mapped destination memory with alignment varied; logical capacity -1,0 and digit-boundary sizes; compare entire public memory, return aggregate ABI, full callee-saved state/SP and FPCR/FPSR. Faults, MMIO, concurrent observers and wraparound pointers excluded.",
+        "Decimal writer has no capacity argument: tests allocate at least 10 physical output bytes and compare all writes. Original full image, code slice and digit-table hashes retained."
+      ],
+      "artifact_id": 12478748019,
+      "artifact_digest": "sha256:381b3daf00b7fd9228a54a57a7b03ae192300198a487cb499dcebff0705fdd05",
+      "run_id": 39901106837,
+      "evidence_group": "integer_digits"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8c0d8c",
+      "end": "0x8c0eec",
+      "original_bytes": 352,
+      "original_slice_sha256": "3b2d4bd856433bd5c9729593c8bcea8721dc5d223c9a615b2a351d4b882df93d",
+      "lane": "generic",
+      "cases": 32768,
+      "comparisons": 98304,
+      "passes_O0_O2_O3": [
+        32768,
+        32768,
+        32768
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "capacity-error": 16219,
+        "success": 16549
+      },
+      "actual_original_function_entry_counts": {
+        "0x8c0d8c": 32768,
+        "0x8c0eec": 937,
+        "0x8c10dc": 29022,
+        "0x8c0f8c": 937,
+        "0x8c1038": 936,
+        "0x8b8cd0": 471
+      },
+      "original_instruction_count": 486,
+      "target_instruction_count": 88,
+      "source_sha256": "126e92ce794fa8c9807a0e1ec6a9dd41bc7b976a059ccf5d5375de0aaba49750",
+      "module_sha256": [
+        "f254fb5f23c032b21af4a5999d71b083cb6cd71b6f211c70ef239d91cb407d57",
+        "cf873351e254c2bf413db0efe7b64e0f73e45d589d592a85fbe059e163d17aa3",
+        "a7897c7fcd3618376eba8b537343514519a8c075eae7bca7fa5d728be9d001a6"
+      ],
+      "complete_function_bounded_tests_passed": true,
+      "all_input_equivalence_proven": false,
+      "source_module_all_imports_resolved": true,
+      "limits": [
+        "Actual complete original entry-to-return and compiled entry-to-return; no external callees or fake stubs. Generic converter executes the real original recovered digit helpers.",
+        "uint32 values; all 35 valid bases 2..36 sampled for count/generic. Base 0/1 and bases outside the normal original caller domain excluded; no all-input claim.",
+        "Ordinary mapped destination memory with alignment varied; logical capacity -1,0 and digit-boundary sizes; compare entire public memory, return aggregate ABI, full callee-saved state/SP and FPCR/FPSR. Faults, MMIO, concurrent observers and wraparound pointers excluded.",
+        "Decimal writer has no capacity argument: tests allocate at least 10 physical output bytes and compare all writes. Original full image, code slice and digit-table hashes retained."
+      ],
+      "artifact_id": 12478683378,
+      "artifact_digest": "sha256:27ffba2d975fb2396791685250eb3037a0a11bd36ab91f8e9a6ef37b2d62f5f3",
+      "run_id": 39901106837,
+      "evidence_group": "integer_digits"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8c0f8c",
+      "end": "0x8c1038",
+      "original_bytes": 172,
+      "original_slice_sha256": "4d2bc8786a9b81516b9a95ae0e8d62a46462c0c642607cbab8c1545d016cf35b",
+      "lane": "octal",
+      "cases": 32768,
+      "comparisons": 98304,
+      "passes_O0_O2_O3": [
+        32768,
+        32768,
+        32768
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "capacity-error": 16258,
+        "success": 16510
+      },
+      "actual_original_function_entry_counts": {
+        "0x8c0f8c": 32768
+      },
+      "original_instruction_count": 43,
+      "target_instruction_count": 43,
+      "source_sha256": "126e92ce794fa8c9807a0e1ec6a9dd41bc7b976a059ccf5d5375de0aaba49750",
+      "module_sha256": [
+        "22c0594b7d324c311bd1fd1a8d00ff94cbc7cb3a873ce5681240e71472b07f62",
+        "1b0f404ab971ae62f01767ed64e45fa9adbc5c2520b1072fcdd781c9c383e6b6",
+        "7990fed419150abf2d6a46edbae535b916ef03bc4a6b77d626b105b7aaaf40b7"
+      ],
+      "complete_function_bounded_tests_passed": true,
+      "all_input_equivalence_proven": false,
+      "source_module_all_imports_resolved": true,
+      "limits": [
+        "Actual complete original entry-to-return and compiled entry-to-return; no external callees or fake stubs. Generic converter executes the real original recovered digit helpers.",
+        "uint32 values; all 35 valid bases 2..36 sampled for count/generic. Base 0/1 and bases outside the normal original caller domain excluded; no all-input claim.",
+        "Ordinary mapped destination memory with alignment varied; logical capacity -1,0 and digit-boundary sizes; compare entire public memory, return aggregate ABI, full callee-saved state/SP and FPCR/FPSR. Faults, MMIO, concurrent observers and wraparound pointers excluded.",
+        "Decimal writer has no capacity argument: tests allocate at least 10 physical output bytes and compare all writes. Original full image, code slice and digit-table hashes retained."
+      ],
+      "artifact_id": 12478598759,
+      "artifact_digest": "sha256:09eb4cbf4fb9b162c3478458ab8c7b7a2ea875ef93e965ec661ec56cea40e7db",
+      "run_id": 39901106837,
+      "evidence_group": "integer_digits"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8c10dc",
+      "end": "0x8c1144",
+      "original_bytes": 104,
+      "original_slice_sha256": "80706d274c18369bc98cfeed46513565d98dff0dbd9bbcc867dce9c5cc6b7185",
+      "lane": "count",
+      "cases": 32768,
+      "comparisons": 98304,
+      "passes_O0_O2_O3": [
+        32768,
+        32768,
+        32768
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "return": 32768
+      },
+      "actual_original_function_entry_counts": {
+        "0x8c10dc": 32768
+      },
+      "original_instruction_count": 26,
+      "target_instruction_count": 26,
+      "source_sha256": "126e92ce794fa8c9807a0e1ec6a9dd41bc7b976a059ccf5d5375de0aaba49750",
+      "module_sha256": [
+        "fd09acb1fc1a7e0bd40bf9c8e99882af948906e1a9d790ee1a77f9373dfb691c",
+        "8b57bfc4a59c07c42ca01e43a240d0028aff3f09749043268f87fd6eae9836b9",
+        "be04846e3fc2c2a81c016037db780354d300174aaf4aafbf3c9412fa4504ae62"
+      ],
+      "complete_function_bounded_tests_passed": true,
+      "all_input_equivalence_proven": false,
+      "source_module_all_imports_resolved": true,
+      "limits": [
+        "Actual complete original entry-to-return and compiled entry-to-return; no external callees or fake stubs. Generic converter executes the real original recovered digit helpers.",
+        "uint32 values; all 35 valid bases 2..36 sampled for count/generic. Base 0/1 and bases outside the normal original caller domain excluded; no all-input claim.",
+        "Ordinary mapped destination memory with alignment varied; logical capacity -1,0 and digit-boundary sizes; compare entire public memory, return aggregate ABI, full callee-saved state/SP and FPCR/FPSR. Faults, MMIO, concurrent observers and wraparound pointers excluded.",
+        "Decimal writer has no capacity argument: tests allocate at least 10 physical output bytes and compare all writes. Original full image, code slice and digit-table hashes retained."
+      ],
+      "artifact_id": 12478474367,
+      "artifact_digest": "sha256:51aecaccd69440cfbf482350df29249f263d523bf6571b75a946b9f799fd575d",
+      "run_id": 39901106837,
+      "evidence_group": "integer_digits"
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8c0eec",
+      "end": "0x8c0f8c",
+      "original_bytes": 160,
+      "original_slice_sha256": "dd4e56696d656f6f261bd5b1375c2292df76cf123237f58409b4c4ce5af85369",
+      "lane": "binary",
+      "cases": 32768,
+      "comparisons": 98304,
+      "passes_O0_O2_O3": [
+        32768,
+        32768,
+        32768
+      ],
+      "mismatches": 0,
+      "failures": [],
+      "outcomes": {
+        "capacity-error": 16348,
+        "success": 16420
+      },
+      "actual_original_function_entry_counts": {
+        "0x8c0eec": 32768
+      },
+      "original_instruction_count": 40,
+      "target_instruction_count": 40,
+      "source_sha256": "126e92ce794fa8c9807a0e1ec6a9dd41bc7b976a059ccf5d5375de0aaba49750",
+      "module_sha256": [
+        "fdc976953f5e8a0525f9c1081e1e1ac82a7fe6f747cf5daf5c22fc03302c8446",
+        "c5a842b2e7173f0079d1dbc9df36f289ff7bd67d44004ebb9ac01aa870287e14",
+        "e9eb1f6e9d37ec19dbd2da67d88161e9caf7c7fc8f65c755186c9c8f622258e2"
+      ],
+      "complete_function_bounded_tests_passed": true,
+      "all_input_equivalence_proven": false,
+      "source_module_all_imports_resolved": true,
+      "limits": [
+        "Actual complete original entry-to-return and compiled entry-to-return; no external callees or fake stubs. Generic converter executes the real original recovered digit helpers.",
+        "uint32 values; all 35 valid bases 2..36 sampled for count/generic. Base 0/1 and bases outside the normal original caller domain excluded; no all-input claim.",
+        "Ordinary mapped destination memory with alignment varied; logical capacity -1,0 and digit-boundary sizes; compare entire public memory, return aggregate ABI, full callee-saved state/SP and FPCR/FPSR. Faults, MMIO, concurrent observers and wraparound pointers excluded.",
+        "Decimal writer has no capacity argument: tests allocate at least 10 physical output bytes and compare all writes. Original full image, code slice and digit-table hashes retained."
+      ],
+      "artifact_id": 12478399687,
+      "artifact_digest": "sha256:caf2cd07c728ff5a01b14f4d508eb4773b0aa0a62496f2cabe1affbf101b24b8",
+      "run_id": 39901106837,
+      "evidence_group": "integer_digits"
+    }
+  ],
+  "pending_new_work": [
+    "Normalized comparison for compiler-private spec fill addresses in signed-int/visitor caller lanes; all public pointers and full 16-byte private spec state remain checked.",
+    "Actual buffer string/padding source with real memcpy/memmove/memset boundaries and growth callback cuts; no fake callback installed."
+  ],
+  "acceptance_remaining": [
+    "Actual output/copy/growth dependencies and exception runtime/unwind integration.",
+    "Remaining auto-failure implementations, flagged pseudocode candidates and compiler boundary queue.",
+    "All-image source builds and whole-payload runtime equivalence.",
+    "Exact final original filesystem parity, unchanged resources and no original executable passthrough for rebuilt components."
+  ],
+  "coverage_percentages": {
+    "current_decompilation": null,
+    "semantic_verification": null,
+    "compiled_source_bytes": null,
+    "complete_native_binary_rebuilds": 0,
+    "native_images_total": 59
+  },
+  "evidence_index": "CONTINUATION_EVIDENCE_INDEX.json",
+  "rejected_candidates_preserved": true
+}

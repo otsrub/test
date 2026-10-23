@@ -1,0 +1,297 @@
+{
+  "format_core": [
+    {
+      "id": 12478286935,
+      "name": "rea-format-core-fill-evidence",
+      "size_in_bytes": 29836,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478286935",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478286935/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:17:48Z",
+      "expires_at": "2027-01-21T04:16:05Z",
+      "updated_at": "2026-10-23T04:17:48Z",
+      "digest": "sha256:4ed0f5e5a1d619070bdae144d283b74e9cf7ec876038c292f498fc22dbb072e3",
+      "workflow_run": {
+        "id": 39899413663,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "890d3550d0d0d0f88a396e612ed1aae460ba19fc"
+      }
+    },
+    {
+      "id": 12478272094,
+      "name": "rea-format-core-core-evidence",
+      "size_in_bytes": 30843,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478272094",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478272094/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:18:43Z",
+      "expires_at": "2027-01-21T04:16:05Z",
+      "updated_at": "2026-10-23T04:18:43Z",
+      "digest": "sha256:3c71c9e727a8baf9fd8541707f9345f30e9e7011cf2c1f4b33170a437ef35580",
+      "workflow_run": {
+        "id": 39899413663,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "890d3550d0d0d0f88a396e612ed1aae460ba19fc"
+      }
+    }
+  ],
+  "validation": [
+    {
+      "id": 12478556946,
+      "name": "rea-format-validation-evidence",
+      "size_in_bytes": 11914,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478556946",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478556946/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:24:27Z",
+      "expires_at": "2027-01-21T04:22:19Z",
+      "updated_at": "2026-10-23T04:24:27Z",
+      "digest": "sha256:3dd46242f4d790326991a3c097c31ea00fb48ec29c5c364aefa2f9cc25305558",
+      "workflow_run": {
+        "id": 39899958313,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "20175260efa476863c77294117151b97157acd27"
+      }
+    }
+  ],
+  "integer_path_parent": [
+    {
+      "id": 12479115142,
+      "name": "rea-integer-path-visitor-tag3-evidence",
+      "size_in_bytes": 36383,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12479115142",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12479115142/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:29:27Z",
+      "expires_at": "2027-01-21T04:27:57Z",
+      "updated_at": "2026-10-23T04:29:27Z",
+      "digest": "sha256:676edbb635515259a09c6e7bf688c7ad7f97308dd35e131e0c0bca44a79fabe0",
+      "workflow_run": {
+        "id": 39900460000,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "7bc41f25b4795391b869eab84fa9315ed4429826"
+      }
+    },
+    {
+      "id": 12478722143,
+      "name": "rea-integer-path-resolve-errors-evidence",
+      "size_in_bytes": 38180,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478722143",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478722143/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:29:48Z",
+      "expires_at": "2027-01-21T04:27:57Z",
+      "updated_at": "2026-10-23T04:29:48Z",
+      "digest": "sha256:f5f6f61c799ea14434ce0914f2f82105c0178de2e67dc8774a77cfb6b7ee612c",
+      "workflow_run": {
+        "id": 39900460000,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "7bc41f25b4795391b869eab84fa9315ed4429826"
+      }
+    },
+    {
+      "id": 12478207749,
+      "name": "rea-integer-path-signed-int-evidence",
+      "size_in_bytes": 36348,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478207749",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478207749/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:29:30Z",
+      "expires_at": "2027-01-21T04:27:57Z",
+      "updated_at": "2026-10-23T04:29:30Z",
+      "digest": "sha256:9040f93e116c961d27d731a61b596259b6fd76295ca0e32e12f01647bb24f942",
+      "workflow_run": {
+        "id": 39900460000,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "7bc41f25b4795391b869eab84fa9315ed4429826"
+      }
+    }
+  ],
+  "integer_caller_rejected": [
+    {
+      "id": 12479255067,
+      "name": "rea-integer-caller-visitor-tag3-evidence",
+      "size_in_bytes": 40481,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12479255067",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12479255067/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:36:33Z",
+      "expires_at": "2027-01-21T04:35:11Z",
+      "updated_at": "2026-10-23T04:36:33Z",
+      "digest": "sha256:c76c9eb97aa8e48484d0b492750e0162209d54f7eee61c11f11b5908bf3af1f2",
+      "workflow_run": {
+        "id": 39901106895,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "af0a9b660bad073e3428562da72c795fb2e36983"
+      }
+    },
+    {
+      "id": 12479205871,
+      "name": "rea-integer-caller-signed-int-evidence",
+      "size_in_bytes": 40382,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12479205871",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12479205871/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:37:29Z",
+      "expires_at": "2027-01-21T04:35:11Z",
+      "updated_at": "2026-10-23T04:37:29Z",
+      "digest": "sha256:2e55b582dcff0eaa321304350da34ef0cdc48a95f1e2efb99319722f5e66c778",
+      "workflow_run": {
+        "id": 39901106895,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "af0a9b660bad073e3428562da72c795fb2e36983"
+      }
+    }
+  ],
+  "integer_digits": [
+    {
+      "id": 12479395277,
+      "name": "rea-integer-digits-clean-source-package",
+      "size_in_bytes": 11125639,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12479395277",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12479395277/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:37:50Z",
+      "expires_at": "2027-01-21T04:35:11Z",
+      "updated_at": "2026-10-23T04:37:50Z",
+      "digest": "sha256:98930e744ea2064a0371c7cc2b181752c76a044d0afed9a1bc33ce3c773176af",
+      "workflow_run": {
+        "id": 39901106837,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "af0a9b660bad073e3428562da72c795fb2e36983"
+      }
+    },
+    {
+      "id": 12479061949,
+      "name": "rea-integer-digits-decimal-evidence",
+      "size_in_bytes": 15269,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12479061949",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12479061949/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:36:22Z",
+      "expires_at": "2027-01-21T04:35:11Z",
+      "updated_at": "2026-10-23T04:36:22Z",
+      "digest": "sha256:fecaefe5b4affad828c29997e8c8988548413cc1fa8981f700982adf92d91941",
+      "workflow_run": {
+        "id": 39901106837,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "af0a9b660bad073e3428562da72c795fb2e36983"
+      }
+    },
+    {
+      "id": 12478748019,
+      "name": "rea-integer-digits-hex-evidence",
+      "size_in_bytes": 14728,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478748019",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478748019/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:36:20Z",
+      "expires_at": "2027-01-21T04:35:11Z",
+      "updated_at": "2026-10-23T04:36:20Z",
+      "digest": "sha256:381b3daf00b7fd9228a54a57a7b03ae192300198a487cb499dcebff0705fdd05",
+      "workflow_run": {
+        "id": 39901106837,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "af0a9b660bad073e3428562da72c795fb2e36983"
+      }
+    },
+    {
+      "id": 12478683378,
+      "name": "rea-integer-digits-generic-evidence",
+      "size_in_bytes": 15820,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478683378",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478683378/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:37:26Z",
+      "expires_at": "2027-01-21T04:35:11Z",
+      "updated_at": "2026-10-23T04:37:26Z",
+      "digest": "sha256:27ffba2d975fb2396791685250eb3037a0a11bd36ab91f8e9a6ef37b2d62f5f3",
+      "workflow_run": {
+        "id": 39901106837,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "af0a9b660bad073e3428562da72c795fb2e36983"
+      }
+    },
+    {
+      "id": 12478598759,
+      "name": "rea-integer-digits-octal-evidence",
+      "size_in_bytes": 14775,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478598759",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478598759/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:37:03Z",
+      "expires_at": "2027-01-21T04:35:11Z",
+      "updated_at": "2026-10-23T04:37:03Z",
+      "digest": "sha256:09eb4cbf4fb9b162c3478458ab8c7b7a2ea875ef93e965ec661ec56cea40e7db",
+      "workflow_run": {
+        "id": 39901106837,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "af0a9b660bad073e3428562da72c795fb2e36983"
+      }
+    },
+    {
+      "id": 12478474367,
+      "name": "rea-integer-digits-count-evidence",
+      "size_in_bytes": 14712,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478474367",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478474367/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:37:12Z",
+      "expires_at": "2027-01-21T04:35:11Z",
+      "updated_at": "2026-10-23T04:37:12Z",
+      "digest": "sha256:51aecaccd69440cfbf482350df29249f263d523bf6571b75a946b9f799fd575d",
+      "workflow_run": {
+        "id": 39901106837,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "af0a9b660bad073e3428562da72c795fb2e36983"
+      }
+    },
+    {
+      "id": 12478399687,
+      "name": "rea-integer-digits-binary-evidence",
+      "size_in_bytes": 14785,
+      "url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478399687",
+      "archive_download_url": "https://api.github.com/repos/otsrub/test/actions/artifacts/12478399687/zip",
+      "expired": false,
+      "created_at": "2026-10-23T04:37:00Z",
+      "expires_at": "2027-01-21T04:35:11Z",
+      "updated_at": "2026-10-23T04:37:00Z",
+      "digest": "sha256:caf2cd07c728ff5a01b14f4d508eb4773b0aa0a62496f2cabe1affbf101b24b8",
+      "workflow_run": {
+        "id": 39901106837,
+        "repository_id": 1416071951,
+        "head_repository_id": 1416071951,
+        "head_branch": "main",
+        "head_sha": "af0a9b660bad073e3428562da72c795fb2e36983"
+      }
+    }
+  ]
+}
