@@ -1,0 +1,50 @@
+{
+  "repository": "otsrub/test",
+  "status": "accepted_complete_function_bounded_tests_and_clean_source_module",
+  "image": "Frameworks/Logic.framework/Logic",
+  "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+  "functions": [
+    {"name": "RecordingOptionsAudioCycle getter", "entry": "0xd1243c", "end_exclusive": "0xd12448", "bytes": 12, "original_sha256": "5db4973a3ad033e0a2047f9b5a3611fe4c59a2683691bb7e81ddc4ad4cc7b04c"},
+    {"name": "SetRecordingOptionsAudioCycle", "entry": "0xd12448", "end_exclusive": "0xd12454", "bytes": 12, "original_sha256": "512b241e9e718a1770bb3920edaac115b0cfa36d2230937d9f2c51ec1f37dc81"},
+    {"name": "RecordingOptionsAudioNoCycle getter", "entry": "0xd12454", "end_exclusive": "0xd12460", "bytes": 12, "original_sha256": "e4483ad619b8ca66db57f15090faace1f35b3c3f564c695bd67d6ce6135f1879"},
+    {"name": "SetRecordingOptionsAudioNoCycle", "entry": "0xd12460", "end_exclusive": "0xd1246c", "bytes": 12, "original_sha256": "674fce4e30a081c187ce663c9a803411073a4995067e184888600393b926758a"}
+  ],
+  "verification": {
+    "run_id": 39948916945,
+    "job_id": 120398307262,
+    "artifact_id": 12499042992,
+    "artifact_zip_sha256": "a355d95943df1c45dd5e646ddbe4a7d8b18ca51a552fb743f209923af0b3454a",
+    "cases_per_function": 65536,
+    "comparisons": 786432,
+    "mismatches": 0,
+    "optimizations": ["O0", "O2", "O3"],
+    "original_instruction_locations_exercised": 12,
+    "note": "The run conclusion is failure only because the later packaging step selected GNU ld. The verification step itself completed successfully; its immutable artifact was consumed by the successful package-only run."
+  },
+  "clean_source_package": {
+    "run_id": 39949341604,
+    "job_id": 120399703995,
+    "commit": "3feb40747c1f05314a79ca8cdb9bc01a99511997",
+    "artifact_id": 12499766159,
+    "artifact_zip_sha256": "8dec2b3e94d61bbeef3ed5a92cbf69ecb8bfdb24df354165d90635e5db806847",
+    "module_sha256": "bf44cd87c2604042e65f2cb1cf6d10e5961cc4d5055cf86eebac94cc89a95dc4",
+    "native_imports": 0,
+    "source_sha256": "e56e6f4cc615f7d805dcdb6455df02fe9697ebed578d21290d038bfbc168cc95"
+  },
+  "failed_or_partial_runs_preserved": [
+    {"run_id": 39948757010, "artifact_id": 12499286676, "reason": "pre-comparison checkout-root path error"},
+    {"run_id": 39948916945, "reason": "semantic verification passed; package step failed because Make built-in LD overrode optional assignment"}
+  ],
+  "strict_record_after_acceptance": {
+    "complete_functions_across_checkpoints": 30,
+    "original_bytes_across_checkpoints": 4352,
+    "all_combined": false,
+    "all_input_equivalence_proven": false,
+    "complete_native_images_rebuilt": "0/59"
+  },
+  "limits": [
+    "Exhaustive over the 16-bit getter states and setter low-16 input domains, but not a concurrency, faulting-memory or all-program-state proof.",
+    "The clean module contains these four functions only; it is not a complete Logic.framework or Payload assembly.",
+    "Original virtual placement of the two shared globals remains a final whole-image link-layout requirement."
+  ]
+}
