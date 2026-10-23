@@ -1,0 +1,60 @@
+{
+  "repository": "otsrub/test",
+  "image": "MACore",
+  "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+  "original_function": {
+    "name": "_png_write_find_filter",
+    "entry": "0x3c144",
+    "whole_function_verified": false
+  },
+  "recovered_phase": {
+    "phase_entry": "0x3ce5c",
+    "return_exit": "0x3ce90",
+    "callback_tail_cut": "0x3ce7c",
+    "source": "reconstruction/macore_png_post_flush.c",
+    "verifier": "reconstruction/verify_macore_png_post_flush.py",
+    "source_sha256": "25077281ed8d93a86ac4921e745f012994257e415a98e6a94423843bea6a2895",
+    "cases": 32768,
+    "comparisons": 98304,
+    "passes_O0_O2_O3": [
+      32768,
+      32768,
+      32768
+    ],
+    "mismatches": 0,
+    "outcomes": {
+      "return": 8192,
+      "callback-tail": 24576
+    },
+    "original_instruction_count": 13,
+    "module_sha256_O0_O2_O3": [
+      "fb62e87c0c6951846bc1cf5d3dc9f0fb10498b8a1339c65d88224d9ac57dbfd1",
+      "e901c563ab5341f90217836fdd5ba3c25eb089e320ab7b47222760b80099f7d8",
+      "4143b2e52ff67504cc2fbd215847660ac7e947c429bf3e156e9b15db819f0744"
+    ],
+    "native_imports": 0,
+    "complete_function_bounded_test_accepted": false,
+    "all_input_equivalence_proven": false
+  },
+  "accepted_run": {
+    "run_id": 39989779503,
+    "job_id": 120538251003,
+    "head_commit": "54bae0e590200a323cc8c807f7f4c54928ca297c",
+    "artifact_id": 12516668153,
+    "artifact_name": "rea-macore-png-post-flush-evidence",
+    "artifact_zip_sha256": "5e04fdb5bbda967a19608e7d0f3496cca6bf2c7834c9b1081df0cbf6e74546ce"
+  },
+  "limits": [
+    "Synthetic entry after the real _png_compress_IDAT flush call returns; that dependency was neither executed nor stubbed.",
+    "The original executes uninterrupted to its epilogue or stops immediately before the optional callback branch. The callback is never invoked or faked.",
+    "Callback-null and diverse nonzero targets plus deterministic random public contexts are finite evidence, not an all-input proof.",
+    "This phase is not added to the strict complete-function count. The current strict record remains 33 functions / 5028 original bytes and 0/59 complete native image rebuilds."
+  ],
+  "adjacent_accepted_phase": {
+    "checkpoint": "reconstruction/MACORE_PNG_POST_FINISH_CHECKPOINT.json",
+    "phase_entry": "0x3ce1c",
+    "native_flush_call_cut": "0x3ce58",
+    "comparisons": 98304,
+    "mismatches": 0
+  }
+}
