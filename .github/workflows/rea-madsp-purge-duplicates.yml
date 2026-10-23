@@ -1,13 +1,6 @@
-name: REA flagged transient purge source
+name: REA corrected transient floating-state comparison
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - .github/workflows/rea-madsp-purge-duplicates.yml
-      - reconstruction/verify_madsp_purge_duplicates.py
-      - reconstruction/madsp_purge_duplicates.c
-      - reconstruction/madsp_purge_stale.c
-      - reconstruction/package_madsp_purge_source.py
 permissions:
   contents: read
   actions: read
@@ -18,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lane: [duplicates, stale]
+        lane: [stale]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -71,6 +64,8 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: rea-madsp-purge-duplicates-evidence
+          run-id: '39917894507'
+          github-token: ${{ github.token }}
           path: parents/duplicates
       - uses: actions/download-artifact@v4
         with:
