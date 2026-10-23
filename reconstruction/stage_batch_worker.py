@@ -81,15 +81,30 @@ def original_slice(raw, sections, start, end):
     raise ValueError('Boundary outside original instruction section')
 
 
+def history_addresses(value, image_sha, inherited_sha=None):
+    """Keep address identity scoped to its record's original image hash."""
+    found = set()
+    if isinstance(value, dict):
+        bound = next((value[k] for k in ('image_sha256', 'original_image_sha256',
+                                        'original_sha256') if k in value), inherited_sha)
+        for child in value.values():
+            found.update(history_addresses(child, image_sha, bound))
+    elif isinstance(value, list):
+        for child in value:
+            found.update(history_addresses(child, image_sha, inherited_sha))
+    elif isinstance(value, str) and inherited_sha == image_sha:
+        found.update(int(s, 16) for s in re.findall(r'0x[0-9a-fA-F]+', value))
+    return found
+
+
 def previous_addresses(root, image_sha):
-    # Conservative history exclusion also catches previously tested phase addresses.
     found = set()
     for p in root.rglob('*.json'):
         if p.stat().st_size > 8_000_000:
             continue
         text = p.read_text(errors='replace')
         if image_sha in text:
-            found.update(int(s, 16) for s in re.findall(r'0x[0-9a-fA-F]+', text))
+            found.update(history_addresses(json.loads(text), image_sha))
     return found
 
 
@@ -148,33 +163,18 @@ def verify_leaf(raw, address, code, source, offset, width, out, cases):
     out.mkdir(parents=True, exist_ok=True)
     src = out / 'recovered.c'
     src.write_text(source)
-def history_addresses(value, image_sha, inherited_sha=None):
-    """Keep address identity scoped to its record's original image hash."""
-    found = set()
-    if isinstance(value, dict):
-        bound = next((value[k] for k in ('image_sha256', 'original_image_sha256',
-                                        'original_sha256') if k in value), inherited_sha)
-        for child in value.values():
-            found.update(history_addresses(child, image_sha, bound))
-    elif isinstance(value, list):
-        for child in value:
-            found.update(history_addresses(child, image_sha, inherited_sha))
-    elif isinstance(value, str) and inherited_sha == image_sha:
-        found.update(int(s, 16) for s in re.findall(r'0x[0-9a-fA-F]+', value))
-    return found
-
-
-def previous_addresses(root, image_sha):
-    found = set()
-    for p in root.rglob('*.json'):
-        if p.stat().st_size > 8_000_000:
-            continue
-        text = p.read_text(errors='replace')
-        if image_sha in text:
-            found.update(history_addresses(json.loads(text), image_sha))
-    return found
-
-
+    engines, modules, diagnostics = [], [], []
+    for opt in (0, 2, 3):
+        obj, lib = out / f'O{opt}.o', out / f'O{opt}.dylib'
+        commands = [
+            ['clang-18', '-target', 'arm64-apple-ios17.0', f'-O{opt}', '-ffreestanding',
+             '-fno-builtin', '-fno-stack-protector', '-Wall', '-Wextra', '-Werror',
+             '-c', str(src), '-o', str(obj)],
+            ['ld64.lld-18', '-arch', 'arm64', '-platform_version', 'ios', '17.0',
+             '17.0', '-dylib', str(obj), '-o', str(lib)]]
+        for cmd in commands:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            diagnostics.append({'argv': cmd, 'returncode': result.returncode,
                                 'stdout': result.stdout, 'stderr': result.stderr})
             write(out / 'build.json', diagnostics)
             assert result.returncode == 0, result.stderr
@@ -295,6 +295,9 @@ def main():
                     if candidate is None:
                         continue
                     source, offset, width = candidate
+                    # Persist identity before compilation/emulation, including interruptions.
+                    pending = {'image_sha256': digest, 'address': hex(a), 'status': 'started'}
+                    write(out / digest[:12] / hex(a) / 'ATTEMPT.json', pending)
                     try:
                         result = verify_leaf(raw, a, code, source, offset, width,
                                              out / digest[:12] / hex(a), args.cases)
@@ -325,6 +328,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-                    # Persist identity before compilation/emulation, including interruptions.
-                    pending = {'image_sha256': digest, 'address': hex(a), 'status': 'started'}
-                    write(out / digest[:12] / hex(a) / 'ATTEMPT.json', pending)
