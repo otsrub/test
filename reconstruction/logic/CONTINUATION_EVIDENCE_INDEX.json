@@ -932,10 +932,10 @@
   ],
   "accepted_function_key_index": {
     "repository_path": "reconstruction/DEPENDENCY_CLOSURE_CHECKPOINT.json",
-    "artifact_id": 12564415646,
-    "artifact_member": "png-metadata-source-package/ALL_ACCEPTED_FUNCTION_KEYS.json",
-    "functions": 69,
-    "original_bytes": 7792,
+    "artifact_id": 12564343908,
+    "artifact_member": "png-color-source-package/ALL_ACCEPTED_FUNCTION_KEYS.json",
+    "functions": 80,
+    "original_bytes": 8640,
     "reindexed_historical_keys": 17,
     "remaining_unindexed_historical_keys": 0,
     "duplicate_keys": 0,
@@ -1030,5 +1030,51 @@
     "all_input_equivalence_proven": false
   },
   "current_progress_ledger": "reconstruction/PROGRESS_20261024.json",
-  "section_coverage_audit": "reconstruction/SECTION_COVERAGE_AUDIT_20261024.json"
+  "section_coverage_audit": "reconstruction/SECTION_COVERAGE_AUDIT_COLOR_20261024.json",
+  "png_color_transform_20261024": {
+    "checkpoint": "reconstruction/PNG_COLOR_CHECKPOINT_20261024.json",
+    "source_path": "reconstruction/macore_png_color_transform.c",
+    "source_sha256": "8ec4a7aee5625b1198d3eecad60b80351e889063939a0759da7cf75df62abd6b",
+    "evidence": [
+      {
+        "lane": "chromaticity",
+        "run_id": 40105489545,
+        "artifact_id": 12564368122,
+        "zip_sha256": "341dee301dccda6ad57b1e38c121183ce32eacf0053bc6e412acb9a9192cb663",
+        "report_sha256": "fd57eb0fea39be39cce93d0bde2763702a52d78e438d84f30bd82dbfffba52bb",
+        "comparisons": 98304,
+        "elapsed_seconds": 27.213898181915283
+      },
+      {
+        "lane": "configuration",
+        "run_id": 40105489545,
+        "artifact_id": 12564173874,
+        "zip_sha256": "5b1b20a57433645bc84834d4e489ca34afd9033d035bda1f5c54bfb8bfcc1bca",
+        "report_sha256": "65644305dbef6ef24fe41401a00ea3004ea6c4f7cc3b4b235fe87c3872b4a009",
+        "comparisons": 221184,
+        "elapsed_seconds": 26.3701491355896
+      }
+    ],
+    "clean_package": {
+      "run_id": 40105973714,
+      "job_id": 120907619713,
+      "commit": "50dba1831319b6dfdb8287f35328e26f4e302a93",
+      "artifact_id": 12564343908,
+      "artifact_name": "rea-png-color-clean-source-package",
+      "zip_sha256": "3f66fb0a40f2fd2d0e23409726c50982fadf85a0f624b2cada48ab536ce02041",
+      "source_sha256": "8ec4a7aee5625b1198d3eecad60b80351e889063939a0759da7cf75df62abd6b",
+      "module_sha256": "c481a5606cea68908c61e102fd019a933ae6c106548f4e78082a2f6db71eb0b1",
+      "text_sha256": "a6b5c2b84baf911f868cb32bc45f41fe0b32886ec67357a8b1af2a811dbbd015",
+      "run_url": "https://github.com/otsrub/test/actions/runs/40105973714",
+      "source_path": "reconstruction/macore_png_color_transform.c",
+      "parent_comparisons": 319488,
+      "new_runtime_comparisons_in_package": 0,
+      "text_identical_to_tested_O2": true,
+      "native_imports": 0,
+      "whole_image_replacement": false,
+      "payload_assembly": false
+    },
+    "separate_candidates": "reconstruction/PNG_FILLER_DEPENDENCIES_20261024.json",
+    "candidate_runtime_comparisons": 0
+  }
 }
