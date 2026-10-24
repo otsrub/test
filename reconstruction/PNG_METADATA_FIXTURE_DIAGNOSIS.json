@@ -1,0 +1,27 @@
+{
+  "failed_run": 40103959019,
+  "artifact_id": 12563509755,
+  "artifact_sha256": "cac7f0e574da6fca763d8db48ed6a54c80a645f9d4fbbab9ca2db61a5de217fa",
+  "failure": "coverage gate 35/36, no recorded mismatch",
+  "diagnosis": "color type3 was coupled to optional output bit0; nonpalette plus nonnull x2 required for original instruction0xf7164 was absent",
+  "focused_original_visited": [
+    "0xf70ec",
+    "0xf70f0",
+    "0xf70f4",
+    "0xf70f8",
+    "0xf70fc",
+    "0xf7100",
+    "0xf710c",
+    "0xf7110",
+    "0xf7114",
+    "0xf7130",
+    "0xf715c",
+    "0xf7160",
+    "0xf7164",
+    "0xf7168",
+    "0xf7178"
+  ],
+  "focused_unchanged_source_comparisons": 3,
+  "focused_mismatches": 0,
+  "repair": "Decouple color type from output bits, skip all15 previously completed field functions, test only tRNS and text. Source unchanged."
+}
