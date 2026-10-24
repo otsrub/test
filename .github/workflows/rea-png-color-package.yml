@@ -1,0 +1,55 @@
+name: REA PNG color source package and native dependency candidates
+'on':
+  push:
+    paths: [.github/workflows/rea-png-color-package.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-png-color-package
+  cancel-in-progress: false
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-color-chromaticity-evidence
+          run-id: '40105489545'
+          github-token: ${{ github.token }}
+          path: parents/chromaticity
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-color-configuration-evidence
+          run-id: '40105489545'
+          github-token: ${{ github.token }}
+          path: parents/configuration
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-closure-dossier
+          run-id: '40077336746'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-all-unsolved-dependencies
+          run-id: '40047056048'
+          github-token: ${{ github.token }}
+          path: inventory
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+      - run: python reconstruction/package_png_color_transform.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-png-color-clean-source-package
+          path: |
+            png-color-source-package/
+            reconstruction/package_png_color_transform.py
+            reconstruction/PNG_FILLER_DEPENDENCIES_20261024.json
+          retention-days: 90
+          if-no-files-found: error
