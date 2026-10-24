@@ -911,7 +911,7 @@
       "artifact": 12554122220,
       "sha256": "52f3e157cc27c7e071127a22fdcb4160ece22fbb7b847eb62f76d22346857fa1",
       "comparisons": 98304,
-      "scope": "actual original warning helper and uninterrupted claim→warning;139instructionlocations;callback/stdio cut"
+      "scope": "actual original warning helper and uninterrupted claim\u2192warning;139instructionlocations;callback/stdio cut"
     },
     {
       "run": 40078924285,
@@ -932,10 +932,10 @@
   ],
   "accepted_function_key_index": {
     "repository_path": "reconstruction/DEPENDENCY_CLOSURE_CHECKPOINT.json",
-    "artifact_id": 12553854912,
-    "artifact_member": "dependency-source-package/ACCEPTED_FUNCTION_KEYS.json",
-    "functions": 41,
-    "original_bytes": 5828,
+    "artifact_id": 12564415646,
+    "artifact_member": "png-metadata-source-package/ALL_ACCEPTED_FUNCTION_KEYS.json",
+    "functions": 69,
+    "original_bytes": 7792,
     "reindexed_historical_keys": 17,
     "remaining_unindexed_historical_keys": 0,
     "duplicate_keys": 0,
@@ -954,5 +954,81 @@
     "images": 3,
     "platform_location_candidate": "/usr/lib/swift/libswiftCore.dylib",
     "runtime_exports_verified": false
-  }
+  },
+  "png_metadata_20261024": {
+    "checkpoint": "reconstruction/PNG_METADATA_CHECKPOINT_20261024.json",
+    "source_path": "reconstruction/macore_png_metadata_fields.c",
+    "source_sha256": "68d73b6e1a4f9e3959f3f63b408e98e7578d87e62a68a3ebba1fa9fddb0e6002",
+    "evidence": [
+      {
+        "kind": "dimensions",
+        "run_id": 40103431929,
+        "artifact_id": 12563284660,
+        "zip_sha256": "57281f15247eb1ee481ebf5783ffec541add7fd8e0eb5df8aa45e8878c2240c6",
+        "functions": 7,
+        "comparisons": 86016,
+        "link": "https://github.com/otsrub/test/actions/runs/40103431929/artifacts/12563284660"
+      },
+      {
+        "kind": "floating",
+        "run_id": 40103431929,
+        "artifact_id": 12563671641,
+        "zip_sha256": "da0e9c4ee4350a9493c1b3be4cb4414b7bb2823a2cfd7e08d36e11ab9f96c3d7",
+        "functions": 4,
+        "comparisons": 98304,
+        "link": "https://github.com/otsrub/test/actions/runs/40103431929/artifacts/12563671641"
+      },
+      {
+        "kind": "prefix",
+        "run_id": 40103431929,
+        "artifact_id": 12562819268,
+        "zip_sha256": "d8e439354cac6ef605aa64e51938a9963ad734ee9912ad90a6b9bc9445454e77",
+        "functions": 7,
+        "comparisons": 86016,
+        "link": "https://github.com/otsrub/test/actions/runs/40103431929/artifacts/12562819268"
+      },
+      {
+        "kind": "middle",
+        "run_id": 40103959019,
+        "artifact_id": 12563509755,
+        "zip_sha256": "cac7f0e574da6fca763d8db48ed6a54c80a645f9d4fbbab9ca2db61a5de217fa",
+        "functions": 8,
+        "comparisons": 98304,
+        "link": "https://github.com/otsrub/test/actions/runs/40103959019/artifacts/12563509755"
+      },
+      {
+        "kind": "suffix",
+        "run_id": 40104315638,
+        "artifact_id": 12563861920,
+        "zip_sha256": "fe3f436ac069161d1ddeda67cf09df9a48b7b4628d982b839075594403d35f41",
+        "functions": 2,
+        "comparisons": 24576,
+        "link": "https://github.com/otsrub/test/actions/runs/40104315638/artifacts/12563861920"
+      }
+    ],
+    "clean_package": {
+      "run_id": 40104518981,
+      "job_id": 120903319233,
+      "commit": "5305f227ee2fbc6f673829c5aebc69bbe7af72be",
+      "artifact_id": 12564415646,
+      "artifact_name": "rea-png-metadata-clean-source-package",
+      "zip_sha256": "12d9f3c6a9be069a69077db10b18e436ec087f0b3e75409a88fd2211cbb666b2",
+      "source_sha256": "68d73b6e1a4f9e3959f3f63b408e98e7578d87e62a68a3ebba1fa9fddb0e6002",
+      "module_sha256": "1e3ade202d866d17e332899c53254c9fbe0dbe510a4d1061eb420fc5b14734c2",
+      "text_sha256": "6c0751394dbb3532e453dd38eea8c61bc90c4588dfc35410d0be22fcbc0a219e",
+      "run_url": "https://github.com/otsrub/test/actions/runs/40104518981",
+      "artifact_url": "https://github.com/otsrub/test/actions/runs/40104518981/artifacts/12564415646",
+      "source_path": "reconstruction/macore_png_metadata_fields.c",
+      "parent_comparisons": 393216,
+      "new_comparisons_in_packaging": 0,
+      "text_identical_to_tested_O2": true,
+      "native_imports": 0,
+      "whole_image_replacement": false,
+      "payload_assembly": false
+    },
+    "diagnosis": "reconstruction/PNG_METADATA_FIXTURE_DIAGNOSIS.json",
+    "all_input_equivalence_proven": false
+  },
+  "current_progress_ledger": "reconstruction/PROGRESS_20261024.json",
+  "section_coverage_audit": "reconstruction/SECTION_COVERAGE_AUDIT_20261024.json"
 }
