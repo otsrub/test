@@ -1,0 +1,39 @@
+name: REA actual returning native callback and PNG error composition
+'on':
+  push:
+    paths: [.github/workflows/rea-png-error-callback-composed.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-png-error-callback-composed
+  cancel-in-progress: false
+jobs:
+  first_call:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-closure-dossier
+          run-id: '40077336746'
+          github-token: ${{ github.token }}
+          path: prior
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+          python -m pip install unicorn==2.1.4
+      - run: python reconstruction/verify_png_error_boundaries.py --lane callback_return
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-png-error-returning-callback-evidence
+          path: |
+            png-error-callback_return/
+            reconstruction/macore_png_error_chain_candidates.c
+            reconstruction/verify_png_error_boundaries.py
+            reconstruction/macore_png_color_transform.c
+          retention-days: 90
+          if-no-files-found: error
