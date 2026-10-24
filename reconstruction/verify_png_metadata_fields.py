@@ -41,6 +41,16 @@ ref,_=load(raw);covered=set();bounds=[(0,0)]
 def hook(u,pc,size,_):
  assert bounds[0][0]<=pc<bounds[0][1],hex(pc);covered.add(pc)
 ref.hook_add(UC_HOOK_CODE,hook)
+# Resume only the never-completed field suffix; immutable prefix is preserved.
+prefix=[]
+if lane=='fields':
+ prefix_path=pathlib.Path('failed-parent/png-metadata-fields/INTERMEDIATE.json')
+ if prefix_path.exists():
+  parent=json.loads(prefix_path.read_text());assert not parent['failures']
+  prefix=parent['functions'];assert len(prefix)==7
+  for row in prefix:assert row['mismatches']==0 and row['all_original_instructions_exercised'] and row['passes']==[row['cases']]*3
+  done={int(row['entry'],0) for row in prefix};specs=[row for row in specs if row[0] not in done]
+  write(out/'PRESERVED_PREFIX.json',{'artifact_id':12562819268,'artifact_sha256':'d8e439354cac6ef605aa64e51938a9963ad734ee9912ad90a6b9bc9445454e77','functions':prefix,'new_comparisons':0,'unchanged_source':True,'reason':'Original run stopped during fixture packing for the next function; completed prefix is not rerun.'})
 preserved=[getattr(ac,f'UC_ARM64_REG_X{i}') for i in range(19,30)]+[getattr(ac,f'UC_ARM64_REG_D{i}') for i in range(8,16)]
 rng=random.Random(0xf6a68);cases=4096 if lane!='floating' else 8192;passes=[0,0,0];failures=[];rows=[]
 edges=[0,1,2,3,255,256,65535,65536,0x1000000,0x1000001,0x7ffffffe,0x7fffffff,0x80000000,0x80000001,0xfffffffe,0xffffffff]
@@ -53,7 +63,7 @@ for entry,n,name,mask in specs:
   struct.pack_into('<I',data,io+8,flags)
   special=rng.getrandbits(16)|mask
   if case%16==2:special&=~mask
-  struct.pack_into('<H',data,io+0x7e,special)
+  struct.pack_into('<H',data,io+0x7e,special & 0xffff)
   # Only iCCP dereferences a payload pointer. Pair loads capture this pointer
   # before aliased outputs; its memory remains physically mapped in all cases.
   struct.pack_into('<Q',data,io+0x88,MEM+0x2800+(case&15))
@@ -98,5 +108,5 @@ for entry,n,name,mask in specs:
  loc=sorted(covered-before);assert len(loc)==n//4,(name,len(loc),n//4)
  rows.append({'image_sha256':image,'entry':hex(entry),'end_exclusive':hex(entry+n),'original_bytes':n,'original_function_sha256':sha(read(entry,n)),'name':name,'cases':cases,'comparisons':cases*3,'passes':per,'mismatches':cases*3-sum(per),'original_instruction_locations':list(map(hex,loc)),'all_original_instructions_exercised':True,'aliased_output_cases':aliases,'optional_output_patterns':len(patterns),'return_outcomes':len(returns),'complete_function_bounded_test':True})
  write(out/'INTERMEDIATE.json',{'functions':rows,'failures':failures})
-report={'image_sha256':image,'lane':lane,'functions':rows,'complete_functions':len(rows),'original_bytes':sum(r['original_bytes'] for r in rows),'comparisons':sum(r['comparisons'] for r in rows),'passes':passes,'mismatches':sum(r['comparisons'] for r in rows)-sum(passes),'failures':failures,'source_sha256':sha(source.read_bytes()),'modules':modules,'native_imports':0,'native_callees':0,'native_stubs_used':False,'elapsed_seconds':time.time()-began,'limits':['Finite valid mapped ordinary memory only; no all-input equivalence proof.','Logical payload pointer values may be arbitrary when only returned, but physically read payload bytes remain mapped.','Aliased public output/info buffers and stack-passed pointer ABI covered; aliases with private ABI stack excluded.','Byte access widths/order, faults, MMIO, races and asynchronous observers not claimed equivalent.','Whole native-image and Payload integration remain open.']}
+report={'image_sha256':image,'lane':lane,'functions':rows,'complete_functions':len(rows),'original_bytes':sum(r['original_bytes'] for r in rows),'comparisons':sum(r['comparisons'] for r in rows),'passes':passes,'mismatches':sum(r['comparisons'] for r in rows)-sum(passes),'failures':failures,'source_sha256':sha(source.read_bytes()),'modules':modules,'native_imports':0,'native_callees':0,'native_stubs_used':False,'resumed_completed_prefix_functions':len(prefix),'resumed_completed_prefix_comparisons':sum(r['comparisons'] for r in prefix),'elapsed_seconds':time.time()-began,'limits':['Finite valid mapped ordinary memory only; no all-input equivalence proof.','Logical payload pointer values may be arbitrary when only returned, but physically read payload bytes remain mapped.','Aliased public output/info buffers and stack-passed pointer ABI covered; aliases with private ABI stack excluded.','Byte access widths/order, faults, MMIO, races and asynchronous observers not claimed equivalent.','Whole native-image and Payload integration remain open.']}
 write(out/'REPORT.json',report);print(json.dumps(report,indent=2));assert not failures and report['mismatches']==0
