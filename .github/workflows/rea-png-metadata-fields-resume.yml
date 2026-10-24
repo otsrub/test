@@ -1,0 +1,50 @@
+name: REA PNG metadata remaining field functions
+'on':
+  push:
+    paths: [.github/workflows/rea-png-metadata-fields-resume.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-png-metadata-fields
+  cancel-in-progress: false
+jobs:
+  differential:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-metadata-fields-evidence
+          run-id: '40103431929'
+          github-token: ${{ github.token }}
+          path: failed-parent
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-closure-dossier
+          run-id: '40077336746'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-all-unsolved-dependencies
+          run-id: '40047056048'
+          github-token: ${{ github.token }}
+          path: inventory
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+          python -m pip install unicorn==2.1.4
+      - run: python reconstruction/verify_png_metadata_fields.py --lane fields
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-png-metadata-fields-resumed-evidence
+          path: |
+            png-metadata-fields/
+            reconstruction/macore_png_metadata_fields.c
+            reconstruction/verify_png_metadata_fields.py
+          retention-days: 90
+          if-no-files-found: error
