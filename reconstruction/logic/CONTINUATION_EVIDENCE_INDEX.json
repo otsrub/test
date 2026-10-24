@@ -877,5 +877,82 @@
     "remaining_native_callees_executed": false,
     "native_stubs_used": false,
     "whole_function_verified": false
+  },
+  "dependency_closure_20261024": [
+    {
+      "run": 40077336746,
+      "artifact": 12552914348,
+      "sha256": "6a7918102bc16b5e530c59596992ddbc47cf301f434b0cc16724a1bd76f6c8e1",
+      "scope": "original data, native boundaries, exact LC_RPATHs"
+    },
+    {
+      "run": 40077814918,
+      "artifact": 12554210950,
+      "sha256": "2cf2627e62c3baceb0f29431504886c483be08ec586f865c4ddb3cf37f32b6e7",
+      "comparisons": 49152,
+      "scope": "complete mapper0x2dd78..0x2ddb4;15instructions"
+    },
+    {
+      "run": 40077814918,
+      "artifact": 12553967292,
+      "sha256": "a4f4f92d1f11ff25fc4d3dc3db97c5a7d9f22c583b85cff344d042f23a23207e",
+      "comparisons": 49152,
+      "scope": "claim0x38aa4 first actual warning/zlib calls;117instructionlocations;candidate retains actual imports"
+    },
+    {
+      "run": 40078307853,
+      "artifact": 12553104746,
+      "sha256": "6a8a847c30cc005d07854a6bd481b0cc3dd9c1386728003c5b82aaa7636cdcbf",
+      "comparisons": 294912,
+      "scope": "6complete primitives120bytes,30instructions,keys disjoint from historical34 and candidate64"
+    },
+    {
+      "run": 40078307853,
+      "artifact": 12554122220,
+      "sha256": "52f3e157cc27c7e071127a22fdcb4160ece22fbb7b847eb62f76d22346857fa1",
+      "comparisons": 98304,
+      "scope": "actual original warning helper and uninterrupted claim→warning;139instructionlocations;callback/stdio cut"
+    },
+    {
+      "run": 40078924285,
+      "artifact": 12553854912,
+      "sha256": "42ddd9bfd41b9798ceef8b442953d52264df2d69cdb402c3e0c622d162868a14",
+      "scope": "clean7leaf-source build,actual-import candidate objects,41-key reconciliation,795-row runpath refinement",
+      "module_sha256": "9cedf53c8546a46ca08c22970e0a0cbec43ac7f95afaecc3f4032dfe59167c56",
+      "native_imports": 0,
+      "combined_module_runtime_retested": false
+    },
+    {
+      "run": 40079174433,
+      "artifact": 12554577134,
+      "sha256": "9720534b87c197cf3a3cbe20ca1e1e12f7e95dd3f33d6b02f8f58b0504e781ca",
+      "comparisons": 49152,
+      "scope": "chunkwriter0x37c88..0x37e8c first actual callback/error or null return;57instructionlocations;whole candidate object retains crc32/png_error"
+    }
+  ],
+  "accepted_function_key_index": {
+    "repository_path": "reconstruction/DEPENDENCY_CLOSURE_CHECKPOINT.json",
+    "artifact_id": 12553854912,
+    "artifact_member": "dependency-source-package/ACCEPTED_FUNCTION_KEYS.json",
+    "functions": 41,
+    "original_bytes": 5828,
+    "reindexed_historical_keys": 17,
+    "remaining_unindexed_historical_keys": 0,
+    "duplicate_keys": 0,
+    "getter_candidates_separate": 64
+  },
+  "dependency_candidate_sources": {
+    "claim_source_sha256": "d2fef2b2d1a370cddc57147683a9470db6eb197f8a5e44816955c27cb2e7fbb4",
+    "warning_source_sha256": "c01064e59f062c44a37ad07dd8ad249b6274be6b018e16d5d9c7ad7a677d4cb7",
+    "chunk_source_sha256": "8ca7d37a16b2a78b4a274249c5450271254a2e615bbd367d77784b61b46c951d",
+    "whole_function_runtime_closure": false
+  },
+  "original_runpath_refinement": {
+    "artifact_id": 12553854912,
+    "member": "dependency-source-package/RUNPATH_REFINEMENT.json",
+    "declarations": 795,
+    "images": 3,
+    "platform_location_candidate": "/usr/lib/swift/libswiftCore.dylib",
+    "runtime_exports_verified": false
   }
 }
