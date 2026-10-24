@@ -1,0 +1,49 @@
+name: REA complete PNG chromaticity and transform source
+'on':
+  push:
+    paths: [.github/workflows/rea-png-color-transform.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-png-color-transform
+  cancel-in-progress: false
+jobs:
+  differential:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        lane: [chromaticity, configuration]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-closure-dossier
+          run-id: '40077336746'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-all-unsolved-dependencies
+          run-id: '40047056048'
+          github-token: ${{ github.token }}
+          path: inventory
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+          python -m pip install unicorn==2.1.4
+      - run: python reconstruction/verify_png_color_transform.py --lane ${{ matrix.lane }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-png-color-${{ matrix.lane }}-evidence
+          path: |
+            png-color-${{ matrix.lane }}/
+            reconstruction/macore_png_color_transform.c
+            reconstruction/verify_png_color_transform.py
+          retention-days: 90
+          if-no-files-found: error
