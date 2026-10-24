@@ -23,7 +23,7 @@
     },
     {
       "category": "exact_function_boundaries",
-      "numerator": 69,
+      "numerator": 80,
       "numerator_scope": "Accepted complete-function subset",
       "denominator": null,
       "percentage": null,
@@ -32,14 +32,14 @@
     },
     {
       "category": "compiled_source",
-      "numerator": 69,
+      "numerator": 80,
       "denominator": null,
       "percentage": null,
       "note": "Accepted source functions across separate checkpoints; whole software denominator not established.",
       "accepted_original_byte_coverage_of_enumerated_instruction_sections": {
-        "numerator": 7792,
+        "numerator": 8640,
         "denominator": 93551620,
-        "percentage": 0.008329091468432082,
+        "percentage": 0.009235542901341527,
         "scope": "accepted original-byte coverage of enumerated instruction sections",
         "limitations": [
           "Selected section flags may include padding or unmarked embedded data and may omit code outside flagged sections.",
@@ -51,10 +51,10 @@
     },
     {
       "category": "bounded_original_byte_equivalence",
-      "numerator": 69,
+      "numerator": 80,
       "denominator": null,
       "percentage": null,
-      "new_accepted_comparisons": 393216,
+      "new_accepted_comparisons": 319488,
       "new_mismatches": 0,
       "note": "Finite original-Unicorn versus compiled comparisons. No all-input proof or whole-app semantic percentage."
     },
@@ -75,25 +75,24 @@
     }
   ],
   "new_milestone": {
-    "complete_functions": 28,
-    "original_bytes": 1964,
-    "comparisons": 393216,
+    "complete_functions": 11,
+    "original_bytes": 848,
+    "comparisons": 319488,
     "mismatches": 0,
     "artifact": {
-      "run_id": 40104518981,
-      "job_id": 120903319233,
-      "commit": "5305f227ee2fbc6f673829c5aebc69bbe7af72be",
-      "artifact_id": 12564415646,
-      "artifact_name": "rea-png-metadata-clean-source-package",
-      "zip_sha256": "12d9f3c6a9be069a69077db10b18e436ec087f0b3e75409a88fd2211cbb666b2",
-      "source_sha256": "68d73b6e1a4f9e3959f3f63b408e98e7578d87e62a68a3ebba1fa9fddb0e6002",
-      "module_sha256": "1e3ade202d866d17e332899c53254c9fbe0dbe510a4d1061eb420fc5b14734c2",
-      "text_sha256": "6c0751394dbb3532e453dd38eea8c61bc90c4588dfc35410d0be22fcbc0a219e",
-      "run_url": "https://github.com/otsrub/test/actions/runs/40104518981",
-      "artifact_url": "https://github.com/otsrub/test/actions/runs/40104518981/artifacts/12564415646",
-      "source_path": "reconstruction/macore_png_metadata_fields.c",
-      "parent_comparisons": 393216,
-      "new_comparisons_in_packaging": 0,
+      "run_id": 40105973714,
+      "job_id": 120907619713,
+      "commit": "50dba1831319b6dfdb8287f35328e26f4e302a93",
+      "artifact_id": 12564343908,
+      "artifact_name": "rea-png-color-clean-source-package",
+      "zip_sha256": "3f66fb0a40f2fd2d0e23409726c50982fadf85a0f624b2cada48ab536ce02041",
+      "source_sha256": "8ec4a7aee5625b1198d3eecad60b80351e889063939a0759da7cf75df62abd6b",
+      "module_sha256": "c481a5606cea68908c61e102fd019a933ae6c106548f4e78082a2f6db71eb0b1",
+      "text_sha256": "a6b5c2b84baf911f868cb32bc45f41fe0b32886ec67357a8b1af2a811dbbd015",
+      "run_url": "https://github.com/otsrub/test/actions/runs/40105973714",
+      "source_path": "reconstruction/macore_png_color_transform.c",
+      "parent_comparisons": 319488,
+      "new_runtime_comparisons_in_package": 0,
       "text_identical_to_tested_O2": true,
       "native_imports": 0,
       "whole_image_replacement": false,
@@ -101,8 +100,8 @@
     }
   },
   "accepted_total": {
-    "functions": 69,
-    "original_byte_union": 7792,
+    "functions": 80,
+    "original_byte_union": 8640,
     "all_functions_combined": false
   },
   "separate_getter_candidates": {
@@ -110,12 +109,12 @@
     "original_bytes": 512
   },
   "throughput_observation": {
-    "start": "2026-10-24T14:38:55Z",
-    "end": "2026-10-24T14:51:15Z",
-    "interval_seconds": 740,
-    "functions_confirmed": 28,
-    "bytes_confirmed": 1964,
-    "scope": "CI confirmation window only, including fixture diagnosis. Excludes source recovery, package work and unresolved dependencies.",
+    "start": "2026-10-24T15:06:50Z",
+    "end": "2026-10-24T15:07:33Z",
+    "interval_seconds": 43,
+    "functions_confirmed": 11,
+    "bytes_confirmed": 848,
+    "scope": "CI confirmation window only. Excludes source recovery, candidate dependency analysis and package work.",
     "not_representative_of_full_reconstruction": true
   },
   "eta": {
@@ -123,9 +122,10 @@
     "status": "No defensible full-project ETA",
     "reason": "No proven remaining implementation count or representative dependency/integration throughput. Leaf-function CI timing cannot predict remaining runtime closure or whole-image builds.",
     "completed_tasks": [
-      "28 PNG metadata functions recovered and finite-tested",
+      "11 complete chromaticity and transform functions finite-tested",
       "isolated clean source package",
-      "69-key and original-byte section-union audit"
+      "80-key and original-byte section-union audit",
+      "four error/filler source candidates compiled with exact unresolved native imports"
     ]
   },
   "remaining": [
@@ -138,17 +138,80 @@
   "next_concrete_candidates": [
     {
       "image": "MACore",
-      "entry": "0xf6780",
-      "name": "png_get_cHRM",
-      "original_compiler_adjacent_bytes": 276,
-      "status": "new source not yet recovered; inspect helper calls before acceptance"
+      "entry": "0x100ad8",
+      "name": "png_set_filler",
+      "bytes": 196,
+      "status": "real source candidate built; warning/error runtime closure unresolved"
     },
     {
       "image": "MACore",
-      "entry": "0xf6894",
-      "name": "png_get_cHRM_XYZ",
-      "original_compiler_adjacent_bytes": 308,
-      "status": "new source not yet recovered; compose real helper rather than stubs"
+      "entry": "0x46fcc",
+      "name": "png_error",
+      "bytes": 48,
+      "status": "real source candidate built; optional callback and default error execution unverified"
+    },
+    {
+      "image": "MACore",
+      "entry": "0x46ffc",
+      "name": null,
+      "bytes": 88,
+      "status": "real source candidate built; first real stdio call, actual stderr and error transition unverified"
+    },
+    {
+      "image": "MACore",
+      "entry": "0x47054",
+      "name": "png_longjmp",
+      "bytes": 36,
+      "status": "real source candidate built; jump callback/nonlocal return and abort fallback unverified"
     }
-  ]
+  ],
+  "milestone_history": [
+    {
+      "complete_functions": 28,
+      "original_bytes": 1964,
+      "comparisons": 393216,
+      "mismatches": 0,
+      "artifact": {
+        "run_id": 40104518981,
+        "job_id": 120903319233,
+        "commit": "5305f227ee2fbc6f673829c5aebc69bbe7af72be",
+        "artifact_id": 12564415646,
+        "artifact_name": "rea-png-metadata-clean-source-package",
+        "zip_sha256": "12d9f3c6a9be069a69077db10b18e436ec087f0b3e75409a88fd2211cbb666b2",
+        "source_sha256": "68d73b6e1a4f9e3959f3f63b408e98e7578d87e62a68a3ebba1fa9fddb0e6002",
+        "module_sha256": "1e3ade202d866d17e332899c53254c9fbe0dbe510a4d1061eb420fc5b14734c2",
+        "text_sha256": "6c0751394dbb3532e453dd38eea8c61bc90c4588dfc35410d0be22fcbc0a219e",
+        "run_url": "https://github.com/otsrub/test/actions/runs/40104518981",
+        "artifact_url": "https://github.com/otsrub/test/actions/runs/40104518981/artifacts/12564415646",
+        "source_path": "reconstruction/macore_png_metadata_fields.c",
+        "parent_comparisons": 393216,
+        "new_comparisons_in_packaging": 0,
+        "text_identical_to_tested_O2": true,
+        "native_imports": 0,
+        "whole_image_replacement": false,
+        "payload_assembly": false
+      }
+    }
+  ],
+  "throughput_history": [
+    {
+      "start": "2026-10-24T14:38:55Z",
+      "end": "2026-10-24T14:51:15Z",
+      "interval_seconds": 740,
+      "functions_confirmed": 28,
+      "bytes_confirmed": 1964,
+      "scope": "CI confirmation window only, including fixture diagnosis. Excludes source recovery, package work and unresolved dependencies.",
+      "not_representative_of_full_reconstruction": true
+    }
+  ],
+  "separate_error_source_candidates": {
+    "functions": 4,
+    "original_bytes": 368,
+    "source_build": "objects with unresolved native imports",
+    "runtime_comparisons": 0,
+    "accepted_complete_functions": 0,
+    "dependency_record": "reconstruction/PNG_FILLER_DEPENDENCIES_20261024.json"
+  },
+  "latest_section_audit": "reconstruction/SECTION_COVERAGE_AUDIT_COLOR_20261024.json",
+  "latest_checkpoint": "reconstruction/PNG_COLOR_CHECKPOINT_20261024.json"
 }
