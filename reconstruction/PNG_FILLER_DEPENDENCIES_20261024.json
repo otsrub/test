@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-24",
+  "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+  "function": "png_set_filler",
+  "entry": "0x100ad8",
+  "end_exclusive": "0x100b9c",
+  "compiler_adjacent_bytes": 196,
+  "source_path": "reconstruction/macore_png_set_filler_candidate.c",
+  "source_sha256": "008a55b739da71dbc7d3dc8d850419929c0f05d823124aba03501b1155452695",
+  "status": "source candidate; native dependencies unresolved; not complete-function runtime evidence",
+  "native_dependencies": [
+    {
+      "symbol": "_png_warning",
+      "entry": "0x47204",
+      "compiler_adjacent_bytes": 396,
+      "call_sites": [
+        "0x100b68",
+        "0x100b80"
+      ],
+      "scope": "real native warning function; tail branches preserve original ABI. Callback and stdio paths remain unresolved."
+    },
+    {
+      "symbol": "_png_error",
+      "entry": "0x46fcc",
+      "compiler_adjacent_bytes": 48,
+      "call_sites": [
+        "0x100b8c",
+        "0x100b98"
+      ],
+      "scope": "real nonreturning error path; original optional error callback then0x46ffc unresolved."
+    }
+  ],
+  "literal_bytes": [
+    {
+      "address": "0x132149",
+      "utf8": "png_set_filler is invalid for low bit depth gray output",
+      "nul_terminated": true
+    },
+    {
+      "address": "0x132181",
+      "utf8": "png_set_filler: inappropriate color type",
+      "nul_terminated": true
+    }
+  ],
+  "fake_stubs": false,
+  "runtime_calls_executed": false,
+  "whole_function_accepted": false,
+  "notes": [
+    "Direct leaf chromaticity functions0xf6780/0xf6894 have no helper calls; source uses exact original binary64 literal0x3ee4f8b588e368f1.",
+    "No symbol-name inference is used to replace callback, stdio, longjmp/abort or external runtime behavior."
+  ]
+}
