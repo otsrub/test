@@ -1,4 +1,5 @@
-"""Actual original entries through first real dependency call. No callee executes.
+"""Original error-chain call boundaries. No external system callee executes.
+The callback_return lane executes a controlled actual native setter callback.
 These are call-boundary phases, never complete-function or runtime closure tests.
 """
 import argparse,hashlib,json,pathlib,random,struct,subprocess,time

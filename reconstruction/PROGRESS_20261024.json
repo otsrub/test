@@ -56,7 +56,14 @@
       "percentage": null,
       "new_accepted_comparisons": 319488,
       "new_mismatches": 0,
-      "note": "Finite original-Unicorn versus compiled comparisons. No all-input proof or whole-app semantic percentage."
+      "note": "Finite original-Unicorn versus compiled comparisons. No all-input proof or whole-app semantic percentage.",
+      "latest_call_boundary_phase_evidence": {
+        "comparisons": 49152,
+        "mismatches": 0,
+        "complete_functions_added": 0,
+        "checkpoint": "reconstruction/PNG_ERROR_BOUNDARY_CHECKPOINT_20261024.json",
+        "production_callbacks_verified": false
+      }
     },
     {
       "category": "whole_native_image_source_rebuilds",
@@ -125,7 +132,8 @@
       "11 complete chromaticity and transform functions finite-tested",
       "isolated clean source package",
       "80-key and original-byte section-union audit",
-      "four error/filler source candidates compiled with exact unresolved native imports"
+      "four error/filler source candidates compiled with exact unresolved native imports",
+      "First-call error/longjmp ABI phases and controlled actual native returning-callback composition passed49152comparisons; zero complete functions added."
     ]
   },
   "remaining": [
@@ -138,31 +146,23 @@
   "next_concrete_candidates": [
     {
       "image": "MACore",
-      "entry": "0x100ad8",
-      "name": "png_set_filler",
-      "bytes": 196,
-      "status": "real source candidate built; warning/error runtime closure unresolved"
-    },
-    {
-      "image": "MACore",
-      "entry": "0x46fcc",
-      "name": "png_error",
-      "bytes": 48,
-      "status": "real source candidate built; optional callback and default error execution unverified"
-    },
-    {
-      "image": "MACore",
       "entry": "0x46ffc",
-      "name": null,
       "bytes": 88,
-      "status": "real source candidate built; first real stdio call, actual stderr and error transition unverified"
+      "status": "source candidate tested through fprintf entry; actual stdio then fputc and longjmp continuation unresolved"
     },
     {
       "image": "MACore",
       "entry": "0x47054",
       "name": "png_longjmp",
       "bytes": 36,
-      "status": "real source candidate built; jump callback/nonlocal return and abort fallback unverified"
+      "status": "source candidate tested through actual jump callback/abort call boundary; real nonlocal return and abort behavior unresolved"
+    },
+    {
+      "image": "MACore",
+      "entry": "0x100ad8",
+      "name": "png_set_filler",
+      "bytes": 196,
+      "status": "source object and exact diagnostics/callees available; integrate verified error/warning source without fake dependencies"
     }
   ],
   "milestone_history": [
@@ -210,8 +210,69 @@
     "source_build": "objects with unresolved native imports",
     "runtime_comparisons": 0,
     "accepted_complete_functions": 0,
-    "dependency_record": "reconstruction/PNG_FILLER_DEPENDENCIES_20261024.json"
+    "dependency_record": "reconstruction/PNG_FILLER_DEPENDENCIES_20261024.json",
+    "partial_runtime_evidence": "reconstruction/PNG_ERROR_BOUNDARY_CHECKPOINT_20261024.json"
   },
   "latest_section_audit": "reconstruction/SECTION_COVERAGE_AUDIT_COLOR_20261024.json",
-  "latest_checkpoint": "reconstruction/PNG_COLOR_CHECKPOINT_20261024.json"
+  "latest_checkpoint": "reconstruction/PNG_COLOR_CHECKPOINT_20261024.json",
+  "new_phase_milestone": {
+    "repository_path": "reconstruction/PNG_ERROR_BOUNDARY_CHECKPOINT_20261024.json",
+    "source_path": "reconstruction/macore_png_error_chain_candidates.c",
+    "source_sha256": "1e45d876a0268ee02e36828b80405b61995e580e3558c9020778915ef18d2b4b",
+    "call_boundary_comparisons": 49152,
+    "mismatches": 0,
+    "complete_functions_added": 0,
+    "controlled_native_callback": "original0x100a88 / compiled ml_png_set_shift",
+    "production_callback_identity_verified": false,
+    "external_system_callee_bodies_executed": 0,
+    "evidence": [
+      {
+        "lane": "error",
+        "run_id": 40130517672,
+        "artifact_id": 12574024424,
+        "zip_sha256": "c7b5cf19ebfb734662acffbe5daf870c8a1683cf4c248832f5aec550edb1cfd3",
+        "report_sha256": "2815b14fc78810f747ec7d8b6313ef24c5021039b6c795395a8d1ed225e18793"
+      },
+      {
+        "lane": "default",
+        "run_id": 40130517672,
+        "artifact_id": 12574882417,
+        "zip_sha256": "472634d92dab793160473834c1e0a68d8f0c759d2dbd952e2e45ef9ecd533009",
+        "report_sha256": "73c77be9f56b80c79cb4b08d7499cf4c0b51c7c4dd98471e88e7e67ebe4cb072"
+      },
+      {
+        "lane": "longjmp",
+        "run_id": 40130517672,
+        "artifact_id": 12574114710,
+        "zip_sha256": "00c4961e3e68a87b28756b4731f3c84d472c21d25d7e5cb71789c01d601c992d",
+        "report_sha256": "921b4a595caff828f5ffb8aa8de3a0921bd98236529b8c8a143f454b1f4144fa"
+      },
+      {
+        "lane": "callback_return",
+        "run_id": 40131149807,
+        "artifact_id": 12575035951,
+        "zip_sha256": "d6b213d422a9f00f84477a0dcc043f37245d563d7dfe0089826f5ccb3ddbc1d8",
+        "report_sha256": "a0b14f088d95efc7a1873d3e0a13a632ecc14d5170ae8b67c5e3960a8adb524a"
+      }
+    ],
+    "original_instruction_union_count": 47,
+    "phase_union_overlaps_accepted_setter": true
+  },
+  "phase_throughput_observation": [
+    {
+      "start": "2026-10-24T20:36:12Z",
+      "end": "2026-10-24T20:37:11Z",
+      "comparisons": 36864,
+      "complete_functions_added": 0,
+      "scope": "CI confirmation window for first-call phases; not representative of whole reconstruction"
+    },
+    {
+      "start": "2026-10-24T20:44:35Z",
+      "end": "2026-10-24T20:45:13Z",
+      "comparisons": 12288,
+      "complete_functions_added": 0,
+      "scope": "CI confirmation window for controlled actual native-callback composition; not representative of whole reconstruction"
+    }
+  ],
+  "latest_phase_checkpoint": "reconstruction/PNG_ERROR_BOUNDARY_CHECKPOINT_20261024.json"
 }

@@ -1,0 +1,661 @@
+{
+  "date": "2026-10-24",
+  "status": "three first-call suites plus actual controlled returning native callback composition passed",
+  "source_path": "reconstruction/macore_png_error_chain_candidates.c",
+  "source_sha256": "1e45d876a0268ee02e36828b80405b61995e580e3558c9020778915ef18d2b4b",
+  "new_call_boundary_comparisons": 49152,
+  "mismatches": 0,
+  "complete_functions_added": 0,
+  "accepted_functions_unchanged": 80,
+  "accepted_original_byte_union_unchanged": 8640,
+  "original_instruction_locations_union": [
+    "0x46fcc",
+    "0x46fd0",
+    "0x46fd4",
+    "0x46fd8",
+    "0x46fdc",
+    "0x46fe0",
+    "0x46fe4",
+    "0x46fe8",
+    "0x46fec",
+    "0x46ff0",
+    "0x46ff4",
+    "0x46ff8",
+    "0x46ffc",
+    "0x47000",
+    "0x47004",
+    "0x47008",
+    "0x4700c",
+    "0x47010",
+    "0x47014",
+    "0x47018",
+    "0x4701c",
+    "0x47020",
+    "0x47024",
+    "0x47028",
+    "0x4702c",
+    "0x47030",
+    "0x47034",
+    "0x47038",
+    "0x47054",
+    "0x47058",
+    "0x4705c",
+    "0x47060",
+    "0x47064",
+    "0x47068",
+    "0x4706c",
+    "0x47070",
+    "0x47074",
+    "0x100a88",
+    "0x100a8c",
+    "0x100a90",
+    "0x100a94",
+    "0x100a98",
+    "0x100a9c",
+    "0x100aa0",
+    "0x100aa4",
+    "0x100aa8",
+    "0x100aac"
+  ],
+  "evidence": [
+    {
+      "lane": "error",
+      "run_id": 40130517672,
+      "artifact_id": 12574024424,
+      "zip_sha256": "c7b5cf19ebfb734662acffbe5daf870c8a1683cf4c248832f5aec550edb1cfd3",
+      "report_sha256": "2815b14fc78810f747ec7d8b6313ef24c5021039b6c795395a8d1ed225e18793",
+      "report": {
+        "status": "first real dependency call boundary verified; no callee body executed",
+        "lane": "error",
+        "original_entry": "0x46fcc",
+        "source_entry_symbol": "_ml_png_error_candidate",
+        "original_image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+        "source_sha256": "1e45d876a0268ee02e36828b80405b61995e580e3558c9020778915ef18d2b4b",
+        "cases": 4096,
+        "comparisons": 12288,
+        "passes": [
+          4096,
+          4096,
+          4096
+        ],
+        "mismatches": 0,
+        "original_instruction_locations": [
+          "0x46fcc",
+          "0x46fd0",
+          "0x46fd4",
+          "0x46fd8",
+          "0x46fdc",
+          "0x46fe0",
+          "0x46fe4",
+          "0x46fe8",
+          "0x46fec",
+          "0x46ff8",
+          "0x46ffc",
+          "0x47000",
+          "0x47004",
+          "0x47008",
+          "0x4700c",
+          "0x47010",
+          "0x47014",
+          "0x47018",
+          "0x4701c",
+          "0x47020",
+          "0x47024",
+          "0x47028",
+          "0x4702c",
+          "0x47030",
+          "0x47034",
+          "0x47038"
+        ],
+        "boundary_counts": {
+          "_fprintf": 2048,
+          "error_callback": 2048
+        },
+        "boundary_samples": {
+          "_fprintf": {
+            "kind": "_fprintf",
+            "arguments": {
+              "file_pointer": "0x0",
+              "format_bytes": "6c6962706e67206572726f723a202573",
+              "variadic_message_bytes": "756e646566696e6564"
+            },
+            "fpcr": 0,
+            "fpsr": 0
+          },
+          "error_callback": {
+            "kind": "error_callback",
+            "arguments": {
+              "object": "0x30000101",
+              "message_pointer": "0x30001001"
+            },
+            "fpcr": 4194304,
+            "fpsr": 1
+          }
+        },
+        "modules": [
+          {
+            "optimization": 0,
+            "sha256": "78688a861a90d088c0acc9b618b93f1cf6f8211b4286d70f997b50b651a8a3e7"
+          },
+          {
+            "optimization": 2,
+            "sha256": "2efa2e95d86c7f56955786cb0b7ecb8fea75751a7759ed3ae83206b4d9799034"
+          },
+          {
+            "optimization": 3,
+            "sha256": "7314a255408cd95a8ded2a5248f1fc66753c576e95c40eaf8a2a3d35295eda1a"
+          }
+        ],
+        "import_data_fixture_bindings": [
+          {
+            "original": true,
+            "stderr_import_data_slots": [
+              "0x15ce18"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          }
+        ],
+        "fake_callees": false,
+        "patched_instructions": false,
+        "real_dependency_callee_bodies_executed": 0,
+        "complete_functions_accepted": 0,
+        "all_input_proof": false,
+        "elapsed_seconds": 7.489287614822388,
+        "limits": [
+          "Stops before executing first callback, fprintf or abort. No fake dependency implementation.",
+          "The real original png_error to default-error transition executes when error callback is absent.",
+          "Only stderr import data slots are initialized to a synthetic allocated entry-state global; no instructions patched.",
+          "Compares actual call selection, callback integer/pointer arguments, Darwin variadic stack argument bytes, public memory, FPCR/FPSR.",
+          "Actual stdio FILE validity, callback behavior, longjmp/nonlocal returns and abort runtime behavior remain unverified.",
+          "Private stack-frame shape and callee-saved registers at an interior boundary are not equated.",
+          "No full-function, whole native-image or Payload acceptance follows."
+        ]
+      }
+    },
+    {
+      "lane": "default",
+      "run_id": 40130517672,
+      "artifact_id": 12574882417,
+      "zip_sha256": "472634d92dab793160473834c1e0a68d8f0c759d2dbd952e2e45ef9ecd533009",
+      "report_sha256": "73c77be9f56b80c79cb4b08d7499cf4c0b51c7c4dd98471e88e7e67ebe4cb072",
+      "report": {
+        "status": "first real dependency call boundary verified; no callee body executed",
+        "lane": "default",
+        "original_entry": "0x46ffc",
+        "source_entry_symbol": "_ml_png_default_error_candidate",
+        "original_image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+        "source_sha256": "1e45d876a0268ee02e36828b80405b61995e580e3558c9020778915ef18d2b4b",
+        "cases": 4096,
+        "comparisons": 12288,
+        "passes": [
+          4096,
+          4096,
+          4096
+        ],
+        "mismatches": 0,
+        "original_instruction_locations": [
+          "0x46ffc",
+          "0x47000",
+          "0x47004",
+          "0x47008",
+          "0x4700c",
+          "0x47010",
+          "0x47014",
+          "0x47018",
+          "0x4701c",
+          "0x47020",
+          "0x47024",
+          "0x47028",
+          "0x4702c",
+          "0x47030",
+          "0x47034",
+          "0x47038"
+        ],
+        "boundary_counts": {
+          "_fprintf": 4096
+        },
+        "boundary_samples": {
+          "_fprintf": {
+            "kind": "_fprintf",
+            "arguments": {
+              "file_pointer": "0x0",
+              "format_bytes": "6c6962706e67206572726f723a202573",
+              "variadic_message_bytes": "756e646566696e6564"
+            },
+            "fpcr": 0,
+            "fpsr": 0
+          }
+        },
+        "modules": [
+          {
+            "optimization": 0,
+            "sha256": "462567345dead134653a80e7839dfb6891d4e46b7389c548101e90c0a18827d1"
+          },
+          {
+            "optimization": 2,
+            "sha256": "b6b77d1e490a10a9146ce6d2e3f9524daaf8a975b8af70da90c182a0ed4328e5"
+          },
+          {
+            "optimization": 3,
+            "sha256": "81c81312eac5b321dc98bfa8aab3d740032b31801a40419d1a7c4dc047b14471"
+          }
+        ],
+        "import_data_fixture_bindings": [
+          {
+            "original": true,
+            "stderr_import_data_slots": [
+              "0x15ce18"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          }
+        ],
+        "fake_callees": false,
+        "patched_instructions": false,
+        "real_dependency_callee_bodies_executed": 0,
+        "complete_functions_accepted": 0,
+        "all_input_proof": false,
+        "elapsed_seconds": 5.175447463989258,
+        "limits": [
+          "Stops before executing first callback, fprintf or abort. No fake dependency implementation.",
+          "The real original png_error to default-error transition executes when error callback is absent.",
+          "Only stderr import data slots are initialized to a synthetic allocated entry-state global; no instructions patched.",
+          "Compares actual call selection, callback integer/pointer arguments, Darwin variadic stack argument bytes, public memory, FPCR/FPSR.",
+          "Actual stdio FILE validity, callback behavior, longjmp/nonlocal returns and abort runtime behavior remain unverified.",
+          "Private stack-frame shape and callee-saved registers at an interior boundary are not equated.",
+          "No full-function, whole native-image or Payload acceptance follows."
+        ]
+      }
+    },
+    {
+      "lane": "longjmp",
+      "run_id": 40130517672,
+      "artifact_id": 12574114710,
+      "zip_sha256": "00c4961e3e68a87b28756b4731f3c84d472c21d25d7e5cb71789c01d601c992d",
+      "report_sha256": "921b4a595caff828f5ffb8aa8de3a0921bd98236529b8c8a143f454b1f4144fa",
+      "report": {
+        "status": "first real dependency call boundary verified; no callee body executed",
+        "lane": "longjmp",
+        "original_entry": "0x47054",
+        "source_entry_symbol": "_ml_png_longjmp_candidate",
+        "original_image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+        "source_sha256": "1e45d876a0268ee02e36828b80405b61995e580e3558c9020778915ef18d2b4b",
+        "cases": 4096,
+        "comparisons": 12288,
+        "passes": [
+          4096,
+          4096,
+          4096
+        ],
+        "mismatches": 0,
+        "original_instruction_locations": [
+          "0x47054",
+          "0x47058",
+          "0x4705c",
+          "0x47060",
+          "0x47064",
+          "0x47068",
+          "0x4706c",
+          "0x47070",
+          "0x47074"
+        ],
+        "boundary_counts": {
+          "_abort": 3072,
+          "jump_callback": 1024
+        },
+        "boundary_samples": {
+          "_abort": {
+            "kind": "_abort",
+            "arguments": {},
+            "fpcr": 0,
+            "fpsr": 0
+          },
+          "jump_callback": {
+            "kind": "jump_callback",
+            "arguments": {
+              "jump_buffer": "0x30001803",
+              "integer_argument_low32": 2147483648
+            },
+            "fpcr": 12582912,
+            "fpsr": 3
+          }
+        },
+        "modules": [
+          {
+            "optimization": 0,
+            "sha256": "4351445528845aa6705cb6adf4d1091f5de42dd11a87989ed847cf30e6c9b269"
+          },
+          {
+            "optimization": 2,
+            "sha256": "ba910105fdfe6823e2a719dec0172a77f9d3a0941c1a729d92574c6e563a3226"
+          },
+          {
+            "optimization": 3,
+            "sha256": "32e77c833684c1a64d0d07b35fde3c9ccfe09639e0bbc59a75927c491c571a25"
+          }
+        ],
+        "import_data_fixture_bindings": [
+          {
+            "original": true,
+            "stderr_import_data_slots": [
+              "0x15ce18"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          }
+        ],
+        "fake_callees": false,
+        "patched_instructions": false,
+        "real_dependency_callee_bodies_executed": 0,
+        "complete_functions_accepted": 0,
+        "all_input_proof": false,
+        "elapsed_seconds": 10.783701658248901,
+        "limits": [
+          "Stops before executing first callback, fprintf or abort. No fake dependency implementation.",
+          "The real original png_error to default-error transition executes when error callback is absent.",
+          "Only stderr import data slots are initialized to a synthetic allocated entry-state global; no instructions patched.",
+          "Compares actual call selection, callback integer/pointer arguments, Darwin variadic stack argument bytes, public memory, FPCR/FPSR.",
+          "Actual stdio FILE validity, callback behavior, longjmp/nonlocal returns and abort runtime behavior remain unverified.",
+          "Private stack-frame shape and callee-saved registers at an interior boundary are not equated.",
+          "No full-function, whole native-image or Payload acceptance follows."
+        ]
+      }
+    },
+    {
+      "lane": "callback_return",
+      "run_id": 40131149807,
+      "commit": "8ba9d70386c35cfb74197b12993ae12512e2899a",
+      "job_id": 120982939072,
+      "artifact_id": 12575035951,
+      "zip_sha256": "d6b213d422a9f00f84477a0dcc043f37245d563d7dfe0089826f5ccb3ddbc1d8",
+      "report_sha256": "a0b14f088d95efc7a1873d3e0a13a632ecc14d5170ae8b67c5e3960a8adb524a",
+      "report": {
+        "status": "actual native callback return and error-to-default path through first fprintf verified",
+        "lane": "callback_return",
+        "original_entry": "0x46fcc",
+        "source_entry_symbol": "_ml_png_error_candidate",
+        "original_image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+        "source_sha256": "1e45d876a0268ee02e36828b80405b61995e580e3558c9020778915ef18d2b4b",
+        "cases": 4096,
+        "comparisons": 12288,
+        "passes": [
+          4096,
+          4096,
+          4096
+        ],
+        "mismatches": 0,
+        "original_instruction_locations": [
+          "0x46fcc",
+          "0x46fd0",
+          "0x46fd4",
+          "0x46fd8",
+          "0x46fdc",
+          "0x46fe0",
+          "0x46fe4",
+          "0x46fe8",
+          "0x46fec",
+          "0x46ff0",
+          "0x46ff4",
+          "0x46ff8",
+          "0x46ffc",
+          "0x47000",
+          "0x47004",
+          "0x47008",
+          "0x4700c",
+          "0x47010",
+          "0x47014",
+          "0x47018",
+          "0x4701c",
+          "0x47020",
+          "0x47024",
+          "0x47028",
+          "0x4702c",
+          "0x47030",
+          "0x47034",
+          "0x47038",
+          "0x100a88",
+          "0x100a8c",
+          "0x100a90",
+          "0x100a94",
+          "0x100a98",
+          "0x100a9c",
+          "0x100aa0",
+          "0x100aa4",
+          "0x100aa8",
+          "0x100aac"
+        ],
+        "boundary_counts": {
+          "_fprintf": 4096
+        },
+        "boundary_samples": {
+          "_fprintf": {
+            "kind": "_fprintf",
+            "arguments": {
+              "file_pointer": "0x0",
+              "format_bytes": "6c6962706e67206572726f723a202573",
+              "variadic_message_bytes": "233132332074657874"
+            },
+            "fpcr": 0,
+            "fpsr": 0
+          }
+        },
+        "modules": [
+          {
+            "optimization": 0,
+            "sha256": "cc2df40e44019f03c97ae54210010cbd926123f4de086a07fb2e6cfc88515faf"
+          },
+          {
+            "optimization": 2,
+            "sha256": "a42d238b3a6be8f1c846eb4959e447e7850fae60af52189087da84a67f6fcf2c"
+          },
+          {
+            "optimization": 3,
+            "sha256": "b9d27df6292fdad389d5e441b757ef402a41c62bd83671352c476e2dbcb4f2bd"
+          }
+        ],
+        "import_data_fixture_bindings": [
+          {
+            "original": true,
+            "stderr_import_data_slots": [
+              "0x15ce18"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          },
+          {
+            "original": false,
+            "stderr_import_data_slots": [
+              "0x8000"
+            ],
+            "bound_to_fixture_global": "0x30000080",
+            "external_functions_bound_or_faked": false
+          }
+        ],
+        "fake_callees": false,
+        "patched_instructions": false,
+        "real_dependency_callee_bodies_executed": 1,
+        "external_system_callee_bodies_executed": 0,
+        "controlled_returning_native_callback": {
+          "original_entry": "0x100a88",
+          "source_symbol": "_ml_png_set_shift",
+          "source_sha256": "8ec4a7aee5625b1198d3eecad60b80351e889063939a0759da7cf75df62abd6b",
+          "source_and_original_bodies_actually_executed": true,
+          "native_callback_instruction_locations": [
+            "0x100a88",
+            "0x100a8c",
+            "0x100a90",
+            "0x100a94",
+            "0x100a98",
+            "0x100a9c",
+            "0x100aa0",
+            "0x100aa4",
+            "0x100aa8",
+            "0x100aac"
+          ],
+          "code_pointer_normalization": "Only unchanged callback slot0xd8 is mapped to a common identity in comparison output. Actual execution uses each real native/source function address.",
+          "callback_addresses": [
+            "0x100a88",
+            "0x49f0",
+            "0x432c",
+            "0x432c"
+          ],
+          "production_callback_identity_claimed": false,
+          "abi_assumption": "Chosen implementations accept two pointer arguments in AAPCS64 registers; production callback semantics not claimed."
+        },
+        "complete_functions_accepted": 0,
+        "all_input_proof": false,
+        "elapsed_seconds": 18.150884866714478,
+        "limits": [
+          "Controlled real native and compiled setter callback executes and returns, then stops before fprintf. No production callback-identity claim.",
+          "The real original png_error invokes the chosen native callback body, accepts its return, restores arguments and enters its real default-error path.",
+          "Only stderr import data slots are initialized to a synthetic allocated entry-state global; no instructions patched.",
+          "Compares actual call selection, callback integer/pointer arguments, Darwin variadic stack argument bytes, public memory, FPCR/FPSR.",
+          "Actual stdio FILE validity, production callbacks, longjmp/nonlocal returns and abort runtime behavior remain unverified.",
+          "Private stack-frame shape and callee-saved registers at an interior boundary are not equated.",
+          "No full-function, whole native-image or Payload acceptance follows."
+        ]
+      }
+    }
+  ],
+  "runtime_callees_not_executed": [
+    "production_error_callbacks",
+    "production_jump_callbacks",
+    "fprintf",
+    "fputc",
+    "abort"
+  ],
+  "import_data_fixtures": "stderr import slots point to synthetic allocated entry-state global; no instruction patches",
+  "fake_callees": false,
+  "all_input_proof": false,
+  "production_callbacks_verified": false,
+  "whole_native_images_rebuilt": 0,
+  "total_native_images": 59,
+  "controlled_returning_callback_comparisons": 12288,
+  "controlled_returning_callback": {
+    "original_entry": "0x100a88",
+    "source_symbol": "_ml_png_set_shift",
+    "source_sha256": "8ec4a7aee5625b1198d3eecad60b80351e889063939a0759da7cf75df62abd6b",
+    "source_and_original_bodies_actually_executed": true,
+    "native_callback_instruction_locations": [
+      "0x100a88",
+      "0x100a8c",
+      "0x100a90",
+      "0x100a94",
+      "0x100a98",
+      "0x100a9c",
+      "0x100aa0",
+      "0x100aa4",
+      "0x100aa8",
+      "0x100aac"
+    ],
+    "code_pointer_normalization": "Only unchanged callback slot0xd8 is mapped to a common identity in comparison output. Actual execution uses each real native/source function address.",
+    "callback_addresses": [
+      "0x100a88",
+      "0x49f0",
+      "0x432c",
+      "0x432c"
+    ],
+    "production_callback_identity_claimed": false,
+    "abi_assumption": "Chosen implementations accept two pointer arguments in AAPCS64 registers; production callback semantics not claimed."
+  },
+  "external_system_callee_bodies_executed": 0,
+  "original_instruction_location_count": 47,
+  "phase_instruction_union_bytes": 188,
+  "phase_byte_ledger_limit": "Contains the already-accepted40-byte setter. This phase union overlaps accepted functions and must not be added to strict complete-function bytes.",
+  "remaining_runtime_unknowns": [
+    "Actual production callback identities and behavior",
+    "Actual stderr/FILE runtime and fprintf/fputc execution",
+    "Jump callback and nonlocal return behavior",
+    "Abort execution and complete caller termination/unwind",
+    "Whole native image and Payload integration"
+  ]
+}
