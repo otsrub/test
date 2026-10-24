@@ -1,0 +1,69 @@
+name: REA clean dependency source package and key reconciliation
+'on':
+  push:
+    paths: [.github/workflows/rea-dependency-source-package.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+jobs:
+  clean-package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-closure-dossier
+          run-id: '40077336746'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-mapper-evidence
+          run-id: '40077814918'
+          github-token: ${{ github.token }}
+          path: mapper-parent
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-claim-evidence
+          run-id: '40077814918'
+          github-token: ${{ github.token }}
+          path: claim-parent
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-extension-bits-evidence
+          run-id: '40078307853'
+          github-token: ${{ github.token }}
+          path: bits-parent
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-extension-warning-evidence
+          run-id: '40078307853'
+          github-token: ${{ github.token }}
+          path: warning-parent
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-all-unsolved-dependencies
+          run-id: '40047056048'
+          github-token: ${{ github.token }}
+          path: inventory
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-fourteen-function-logic-corrected-evidence
+          run-id: '38759132412'
+          github-token: ${{ github.token }}
+          path: history
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18 make
+      - run: python reconstruction/package_dependency_closure.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-dependency-clean-source-package
+          path: |
+            dependency-source-package/
+            reconstruction/package_dependency_closure.py
+          retention-days: 90
+          if-no-files-found: error
