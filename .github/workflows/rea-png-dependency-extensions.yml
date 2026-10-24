@@ -1,0 +1,48 @@
+name: REA complete integer primitives and real warning composition
+'on':
+  push:
+    paths: [.github/workflows/rea-png-dependency-extensions.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-png-dependency-extensions
+  cancel-in-progress: false
+jobs:
+  differential:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        mode: [bits, warning]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-closure-dossier
+          run-id: '40077336746'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-claim-evidence
+          run-id: '40077814918'
+          github-token: ${{ github.token }}
+          path: claim-parent
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+          python -m pip install unicorn==2.1.4
+      - run: python reconstruction/verify_png_dependency_extensions.py --mode ${{ matrix.mode }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-png-extension-${{ matrix.mode }}-evidence
+          path: |
+            png-extension-${{ matrix.mode }}/
+            reconstruction/verify_png_dependency_extensions.py
+          if-no-files-found: error
+          retention-days: 90
