@@ -1,0 +1,73 @@
+name: REA PNG metadata clean source and section audit
+'on':
+  push:
+    paths: [.github/workflows/rea-png-metadata-package.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-png-metadata-package
+  cancel-in-progress: false
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-metadata-dimensions-evidence
+          run-id: '40103431929'
+          github-token: ${{ github.token }}
+          path: parents/dimensions
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-metadata-floating-evidence
+          run-id: '40103431929'
+          github-token: ${{ github.token }}
+          path: parents/floating
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-metadata-fields-evidence
+          run-id: '40103431929'
+          github-token: ${{ github.token }}
+          path: parents/prefix
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-metadata-fields-resumed-evidence
+          run-id: '40103959019'
+          github-token: ${{ github.token }}
+          path: parents/middle
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-metadata-fields-final-evidence
+          run-id: '40104315638'
+          github-token: ${{ github.token }}
+          path: parents/suffix
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-closure-dossier
+          run-id: '40077336746'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-all-unsolved-dependencies
+          run-id: '40047056048'
+          github-token: ${{ github.token }}
+          path: inventory
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+      - run: python reconstruction/package_png_metadata_fields.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-png-metadata-clean-source-package
+          path: |
+            png-metadata-source-package/
+            reconstruction/PNG_METADATA_FIXTURE_DIAGNOSIS.json
+            reconstruction/package_png_metadata_fields.py
+          retention-days: 90
+          if-no-files-found: error
