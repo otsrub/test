@@ -1,0 +1,26 @@
+name: REA native dependency closure dossier
+'on':
+  push:
+    paths: [.github/workflows/rea-dependency-closure-dossier.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+jobs:
+  original-facts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install capstone==5.0.6
+      - run: curl -fL --retry 3 https://github.com/otsrub/test/releases/download/mobilelogic-3.4-archive/MobileLogic.zip -o MobileLogic.zip
+      - run: python reconstruction/prepare_dependency_closure.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-dependency-closure-dossier
+          path: |
+            dependency-closure-dossier/
+            reconstruction/prepare_dependency_closure.py
+          if-no-files-found: error
+          retention-days: 90
