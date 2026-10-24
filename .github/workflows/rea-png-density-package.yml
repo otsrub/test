@@ -1,0 +1,55 @@
+name: REA PNG density and packswap clean source package
+'on':
+  push:
+    paths: [.github/workflows/rea-png-density-package.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-png-density-package
+  cancel-in-progress: false
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-density-density-evidence
+          run-id: '40132077726'
+          github-token: ${{ github.token }}
+          path: parents/density
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-png-density-packswap-evidence
+          run-id: '40132235022'
+          github-token: ${{ github.token }}
+          path: parents/packswap
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-closure-dossier
+          run-id: '40077336746'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-all-unsolved-dependencies
+          run-id: '40047056048'
+          github-token: ${{ github.token }}
+          path: inventory
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+      - run: python reconstruction/package_png_density_packswap.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-png-density-clean-source-package
+          path: |
+            png-density-source-package/
+            reconstruction/package_png_density_packswap.py
+            reconstruction/PNG_DENSITY_PARENT_INPUTS.json
+          retention-days: 90
+          if-no-files-found: error
