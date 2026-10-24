@@ -1,0 +1,256 @@
+{
+  "date": "2026-10-24",
+  "original_parent_artifact_id": 12009754156,
+  "original_parent_zip_sha256": "9dea6c7b83c5ae92e0c1b52bfe6f63eb79c6ce80e36ccc42d1af89a2f3506830",
+  "queue_artifact_id": 12419388602,
+  "queue_unmodified": true,
+  "functions": [
+    {
+      "image_sha256": "74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4",
+      "entry": "0x2f7d8",
+      "end_exclusive": "0x2f824",
+      "original_bytes": 76,
+      "original_function_sha256": "57e832ce8443c5ac58221f2eba58b5f1b94dde518af1ec6c9d8c6c893fbe7bf9",
+      "original_queue_record": {
+        "image_sha256": "74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4",
+        "address": "0x2f7d8",
+        "name": "operator+",
+        "artifact_id": 11862473419,
+        "flags": [
+          "decompiler_warning"
+        ],
+        "instruction_count": 19,
+        "status": "requires_original_byte_and_source_review"
+      },
+      "original_instructions": [
+        {
+          "address": "0x2f7d8",
+          "mnemonic": "ldr",
+          "operands": "q0, [x0]"
+        },
+        {
+          "address": "0x2f7dc",
+          "mnemonic": "ldr",
+          "operands": "q1, [x1]"
+        },
+        {
+          "address": "0x2f7e0",
+          "mnemonic": "mov",
+          "operands": "v2.16b, v0.16b"
+        },
+        {
+          "address": "0x2f7e4",
+          "mnemonic": "mov",
+          "operands": "v2.d[1], v1.d[1]"
+        },
+        {
+          "address": "0x2f7e8",
+          "mnemonic": "mov",
+          "operands": "v3.16b, v1.16b"
+        },
+        {
+          "address": "0x2f7ec",
+          "mnemonic": "mov",
+          "operands": "v3.d[1], v0.d[1]"
+        },
+        {
+          "address": "0x2f7f0",
+          "mnemonic": "fcmgt",
+          "operands": "v2.4s, v3.4s, v2.4s"
+        },
+        {
+          "address": "0x2f7f4",
+          "mnemonic": "bif",
+          "operands": "v0.16b, v1.16b, v2.16b"
+        },
+        {
+          "address": "0x2f7f8",
+          "mnemonic": "ext",
+          "operands": "v1.16b, v0.16b, v0.16b, #8"
+        },
+        {
+          "address": "0x2f7fc",
+          "mnemonic": "fcmgt",
+          "operands": "v1.2s, v0.2s, v1.2s"
+        },
+        {
+          "address": "0x2f800",
+          "mnemonic": "dup",
+          "operands": "v2.2s, v1.s[1]"
+        },
+        {
+          "address": "0x2f804",
+          "mnemonic": "orr",
+          "operands": "v1.8b, v1.8b, v2.8b"
+        },
+        {
+          "address": "0x2f808",
+          "mnemonic": "dup",
+          "operands": "v1.4h, v1.h[0]"
+        },
+        {
+          "address": "0x2f80c",
+          "mnemonic": "sshll",
+          "operands": "v1.4s, v1.4h, #0"
+        },
+        {
+          "address": "0x2f810",
+          "mnemonic": "adrp",
+          "operands": "x9, #0x334000"
+        },
+        {
+          "address": "0x2f814",
+          "mnemonic": "ldr",
+          "operands": "q2, [x9, #0xd0]"
+        },
+        {
+          "address": "0x2f818",
+          "mnemonic": "bit",
+          "operands": "v0.16b, v2.16b, v1.16b"
+        },
+        {
+          "address": "0x2f81c",
+          "mnemonic": "str",
+          "operands": "q0, [x8]"
+        },
+        {
+          "address": "0x2f820",
+          "mnemonic": "ret",
+          "operands": ""
+        }
+      ],
+      "source_status": "candidate pending original-byte finite verification",
+      "native_calls": 0,
+      "hidden_result_pointer": "x8",
+      "accepted_complete_function": false
+    },
+    {
+      "image_sha256": "74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4",
+      "entry": "0x2f824",
+      "end_exclusive": "0x2f870",
+      "original_bytes": 76,
+      "original_function_sha256": "dc2d4bba7a5bc9eb7dad292b0abf8e0a2987bbc5765b1a0e19b856aff3c6d00b",
+      "original_queue_record": {
+        "image_sha256": "74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4",
+        "address": "0x2f824",
+        "name": "operator*",
+        "artifact_id": 11862473419,
+        "flags": [
+          "decompiler_warning"
+        ],
+        "instruction_count": 19,
+        "status": "requires_original_byte_and_source_review"
+      },
+      "original_instructions": [
+        {
+          "address": "0x2f824",
+          "mnemonic": "ldr",
+          "operands": "q0, [x0]"
+        },
+        {
+          "address": "0x2f828",
+          "mnemonic": "ldr",
+          "operands": "q1, [x1]"
+        },
+        {
+          "address": "0x2f82c",
+          "mnemonic": "mov",
+          "operands": "v2.16b, v0.16b"
+        },
+        {
+          "address": "0x2f830",
+          "mnemonic": "mov",
+          "operands": "v2.d[1], v1.d[1]"
+        },
+        {
+          "address": "0x2f834",
+          "mnemonic": "mov",
+          "operands": "v3.16b, v1.16b"
+        },
+        {
+          "address": "0x2f838",
+          "mnemonic": "mov",
+          "operands": "v3.d[1], v0.d[1]"
+        },
+        {
+          "address": "0x2f83c",
+          "mnemonic": "fcmgt",
+          "operands": "v2.4s, v2.4s, v3.4s"
+        },
+        {
+          "address": "0x2f840",
+          "mnemonic": "bif",
+          "operands": "v0.16b, v1.16b, v2.16b"
+        },
+        {
+          "address": "0x2f844",
+          "mnemonic": "ext",
+          "operands": "v1.16b, v0.16b, v0.16b, #8"
+        },
+        {
+          "address": "0x2f848",
+          "mnemonic": "fcmgt",
+          "operands": "v1.2s, v0.2s, v1.2s"
+        },
+        {
+          "address": "0x2f84c",
+          "mnemonic": "dup",
+          "operands": "v2.2s, v1.s[1]"
+        },
+        {
+          "address": "0x2f850",
+          "mnemonic": "orr",
+          "operands": "v1.8b, v1.8b, v2.8b"
+        },
+        {
+          "address": "0x2f854",
+          "mnemonic": "dup",
+          "operands": "v1.4h, v1.h[0]"
+        },
+        {
+          "address": "0x2f858",
+          "mnemonic": "sshll",
+          "operands": "v1.4s, v1.4h, #0"
+        },
+        {
+          "address": "0x2f85c",
+          "mnemonic": "adrp",
+          "operands": "x9, #0x334000"
+        },
+        {
+          "address": "0x2f860",
+          "mnemonic": "ldr",
+          "operands": "q2, [x9, #0xd0]"
+        },
+        {
+          "address": "0x2f864",
+          "mnemonic": "bit",
+          "operands": "v0.16b, v2.16b, v1.16b"
+        },
+        {
+          "address": "0x2f868",
+          "mnemonic": "str",
+          "operands": "q0, [x8]"
+        },
+        {
+          "address": "0x2f86c",
+          "mnemonic": "ret",
+          "operands": ""
+        }
+      ],
+      "source_status": "candidate pending original-byte finite verification",
+      "native_calls": 0,
+      "hidden_result_pointer": "x8",
+      "accepted_complete_function": false
+    }
+  ],
+  "shared_literal_address": "0x3340d0",
+  "shared_literal_bytes": "286b6e4e286b6e4e286b6ece286b6ece",
+  "source_path": "reconstruction/maplugingui_rect_candidates.cpp",
+  "source_sha256": "e0fabbafc28ad145e0a52c0f8076fcd9a7cb8d15de1878514975844002e6c15c",
+  "notes": [
+    "Nontrivial returned aggregate preserves original hidden-result x8 ABI; comparison tests must inspect returned memory.",
+    "NaN/signaling NaN, signed zeros, FPCR/FPSR, denormals and aliased output/input must be compared; no native callee contract exists.",
+    "Neither source inspection nor candidate compilation clears the original warning or increments accepted coverage."
+  ]
+}
