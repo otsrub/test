@@ -1,0 +1,348 @@
+{
+  "repository": "otsrub/test",
+  "scope": "Incomplete full reconstruction; original-byte finite tests and isolated source subsets only",
+  "strict_complete_function_bounded_test_record": {
+    "functions": 41,
+    "original_bytes": 5828,
+    "historical_keys_reconciled": 17,
+    "duplicate_keys": 0,
+    "all_input_proof": false,
+    "all_functions_combined": false
+  },
+  "accepted_function_keys": [
+    {
+      "image_sha256": "8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8",
+      "entry": "0xfdc4",
+      "original_bytes": 12,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8",
+      "entry": "0x10170",
+      "original_bytes": 16,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8",
+      "entry": "0x2505c",
+      "original_bytes": 12,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8",
+      "entry": "0x25068",
+      "original_bytes": 16,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8",
+      "entry": "0x9f7ec8",
+      "original_bytes": 152,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8",
+      "entry": "0xb519cc",
+      "original_bytes": 228,
+      "artifact_id": 12485921455
+    },
+    {
+      "image_sha256": "8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8",
+      "entry": "0xb51ab0",
+      "original_bytes": 248,
+      "artifact_id": 12498248049
+    },
+    {
+      "image_sha256": "336ec15bf6b5bf68e1ee82239949f4a04292700915cd2cb920e11ce588c59a31",
+      "entry": "0xe7a0",
+      "original_bytes": 20,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "3b2f5a621c47e3fa5abc9dd9c1c8586077f2fab09d67cc4d879d74d853f3c878",
+      "entry": "0x196020",
+      "original_bytes": 20,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "872b0b6e96d31d2e907a51a4bef55f35e2b8adc7f6622464d4f20ae27f2d61c7",
+      "entry": "0x9d80",
+      "original_bytes": 32,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "eab8c097b3c6b34bef0266b32408dc4b4e77617bc1f55018a77b5fd012a47ac0",
+      "entry": "0xeea0",
+      "original_bytes": 72,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "0ce6c433e9fc0d00f11b01d81cfa58d27cfaf07ae4a6b3022fb855894fc3f780",
+      "entry": "0x6004",
+      "original_bytes": 64,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "4d94d6673c528742370519a69768c8e1aaa3446f5cd1c28da3cacb2eaef1eddf",
+      "entry": "0x8bb4",
+      "original_bytes": 64,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0xa5e988",
+      "original_bytes": 48,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x587b3c",
+      "original_bytes": 28,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0xe949c",
+      "original_bytes": 100,
+      "artifact_id": 11984977224
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8be770",
+      "original_bytes": 204,
+      "artifact_id": 12472974246
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8ba1c0",
+      "original_bytes": 500,
+      "artifact_id": 12473812739
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8b88d0",
+      "original_bytes": 24,
+      "artifact_id": 12480635185
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0xd1243c",
+      "original_bytes": 12,
+      "artifact_id": 12499042992
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0xd12448",
+      "original_bytes": 12,
+      "artifact_id": 12499042992
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0xd12454",
+      "original_bytes": 12,
+      "artifact_id": 12499042992
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0xd12460",
+      "original_bytes": 12,
+      "artifact_id": 12499042992
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8b8cd0",
+      "original_bytes": 992,
+      "artifact_id": 12479061949
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8c1038",
+      "original_bytes": 164,
+      "artifact_id": 12478748019
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8c0d8c",
+      "original_bytes": 352,
+      "artifact_id": 12478683378
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8c0f8c",
+      "original_bytes": 172,
+      "artifact_id": 12478598759
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8c10dc",
+      "original_bytes": 104,
+      "artifact_id": 12478474367
+    },
+    {
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x8c0eec",
+      "original_bytes": 160,
+      "artifact_id": 12478399687
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0xce810",
+      "original_bytes": 500,
+      "artifact_id": 12474641213
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0xa918",
+      "original_bytes": 68,
+      "artifact_id": 12501390369
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0x505fc",
+      "original_bytes": 304,
+      "artifact_id": 12500906640
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0x4fe90",
+      "original_bytes": 304,
+      "artifact_id": 12500757942
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0x38838",
+      "original_bytes": 620,
+      "artifact_id": 12538909672
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0x2dd78",
+      "original_bytes": 60,
+      "artifact_id": 12554210950
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0xafeb0",
+      "original_bytes": 52,
+      "artifact_id": 12553104746
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0xafea4",
+      "original_bytes": 12,
+      "artifact_id": 12553104746
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0xafee4",
+      "original_bytes": 16,
+      "artifact_id": 12553104746
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0x37970",
+      "original_bytes": 12,
+      "artifact_id": 12553104746
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0x2d46c",
+      "original_bytes": 12,
+      "artifact_id": 12553104746
+    },
+    {
+      "image_sha256": "88a8d93c6cb4b411648601efdfc5ca2863c3b833339e55e2470369df1d3bc9d5",
+      "entry": "0x3797c",
+      "original_bytes": 16,
+      "artifact_id": 12553104746
+    }
+  ],
+  "separate_getter_candidates": {
+    "functions": 64,
+    "original_bytes": 512,
+    "included_in_strict_count": false
+  },
+  "new_complete_functions": 7,
+  "new_original_bytes": 180,
+  "new_original_comparisons": 540672,
+  "new_mismatches": 0,
+  "evidence": [
+    {
+      "run": 40077336746,
+      "artifact": 12552914348,
+      "sha256": "6a7918102bc16b5e530c59596992ddbc47cf301f434b0cc16724a1bd76f6c8e1",
+      "scope": "original data, native boundaries, exact LC_RPATHs"
+    },
+    {
+      "run": 40077814918,
+      "artifact": 12554210950,
+      "sha256": "2cf2627e62c3baceb0f29431504886c483be08ec586f865c4ddb3cf37f32b6e7",
+      "comparisons": 49152,
+      "scope": "complete mapper0x2dd78..0x2ddb4;15instructions"
+    },
+    {
+      "run": 40077814918,
+      "artifact": 12553967292,
+      "sha256": "a4f4f92d1f11ff25fc4d3dc3db97c5a7d9f22c583b85cff344d042f23a23207e",
+      "comparisons": 49152,
+      "scope": "claim0x38aa4 first actual warning/zlib calls;117instructionlocations;candidate retains actual imports"
+    },
+    {
+      "run": 40078307853,
+      "artifact": 12553104746,
+      "sha256": "6a8a847c30cc005d07854a6bd481b0cc3dd9c1386728003c5b82aaa7636cdcbf",
+      "comparisons": 294912,
+      "scope": "6complete primitives120bytes,30instructions,keys disjoint from historical34 and candidate64"
+    },
+    {
+      "run": 40078307853,
+      "artifact": 12554122220,
+      "sha256": "52f3e157cc27c7e071127a22fdcb4160ece22fbb7b847eb62f76d22346857fa1",
+      "comparisons": 98304,
+      "scope": "actual original warning helper and uninterrupted claim→warning;139instructionlocations;callback/stdio cut"
+    },
+    {
+      "run": 40078924285,
+      "artifact": 12553854912,
+      "sha256": "42ddd9bfd41b9798ceef8b442953d52264df2d69cdb402c3e0c622d162868a14",
+      "scope": "clean7leaf-source build,actual-import candidate objects,41-key reconciliation,795-row runpath refinement",
+      "module_sha256": "9cedf53c8546a46ca08c22970e0a0cbec43ac7f95afaecc3f4032dfe59167c56",
+      "native_imports": 0,
+      "combined_module_runtime_retested": false
+    },
+    {
+      "run": 40079174433,
+      "artifact": 12554577134,
+      "sha256": "9720534b87c197cf3a3cbe20ca1e1e12f7e95dd3f33d6b02f8f58b0504e781ca",
+      "comparisons": 49152,
+      "scope": "chunkwriter0x37c88..0x37e8c first actual callback/error or null return;57instructionlocations;whole candidate object retains crc32/png_error"
+    }
+  ],
+  "runpath_refinement": {
+    "declarations": 795,
+    "images": 3,
+    "original_library": "@rpath/libswiftCore.dylib",
+    "first_expanded_original_runpath": "/usr/lib/swift/libswiftCore.dylib",
+    "runtime_load_executed": false,
+    "runtime_exports_verified": false,
+    "original_inventory_preserved": true
+  },
+  "runtime_dependencies_remaining": [
+    "Actual zlib deflateInit2_/deflateReset/deflateEnd/deflate and crc32 integration",
+    "Warning callback at context+0xe0; write callback+0xf0; error callback+0xd8; alloc/free callbacks+0x3e8/+0x3f0",
+    "stdio, error/abort/longjmp, allocator, TLS, thread and dispatch behavior",
+    "Indirect target provenance, ObjC/Swift dispatch, dynamic lookup/resource-name construction",
+    "Whole-image source reconstruction and exact filesystem assembly/parity"
+  ],
+  "whole_native_images_rebuilt": 0,
+  "total_native_images": 59,
+  "payload_assembly": false,
+  "all_dependencies_resolved": false,
+  "notes": [
+    "Source and evidence stay outside Payload.",
+    "No native callee stub or original instruction patch used.",
+    "Data pointers receive authentic chained format6 rebase semantics; test canary/stderr import data bindings do not simulate callees.",
+    "The795declarations now have a documented platform location candidate; export presence and runtime behavior remain unverified.",
+    "Finite tests do not establish all-input or whole-app equivalence."
+  ]
+}
