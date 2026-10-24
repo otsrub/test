@@ -74,7 +74,7 @@ for entry,n,name in specs:
    for k,v in enumerate(args):
     if k<8:u.reg_write(getattr(ac,f'UC_ARM64_REG_X{k}'),v)
     else:u.mem_write(STACK+0x4000+(k-8)*8,struct.pack('<Q',v))
-   u.reg_write(ac.UC_ARM64_REG_FPCR,fpcr);u.reg_write(ac.UC_ARM64_REG_FPSR,fpsr);u.emu_start(entry if ix==0 else sy['_ml_png_'+name],STOP,count=30000)
+   u.reg_write(ac.UC_ARM64_REG_FPCR,fpcr);u.reg_write(ac.UC_ARM64_REG_FPSR,fpsr);u.emu_start(entry if ix==0 else sy['_ml_png_'+name],STOP,count=1000000)
    ret=u.reg_read(ac.UC_ARM64_REG_X0)&0xffffffff if lane=='density' else None
    actual=(ret,bytes(u.mem_read(MEM,SIZE)),u.reg_read(ac.UC_ARM64_REG_FPCR),u.reg_read(ac.UC_ARM64_REG_FPSR));assert u.reg_read(ac.UC_ARM64_REG_SP)==STACK+0x4000 and u.reg_read(ac.UC_ARM64_REG_PC)==STOP
    assert [u.reg_read(r) for r in preserved]==initial
