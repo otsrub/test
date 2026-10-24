@@ -1,0 +1,34 @@
+name: REA native PNG chunk writer source boundaries
+'on':
+  push:
+    paths: [.github/workflows/rea-png-chunk-writer.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+jobs:
+  differential:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-closure-dossier
+          run-id: '40077336746'
+          github-token: ${{ github.token }}
+          path: prior
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+          python -m pip install unicorn==2.1.4
+      - run: python reconstruction/verify_png_chunk_writer.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-png-chunk-writer-evidence
+          path: |
+            png-chunk-writer/
+            reconstruction/verify_png_chunk_writer.py
+          retention-days: 90
+          if-no-files-found: error
