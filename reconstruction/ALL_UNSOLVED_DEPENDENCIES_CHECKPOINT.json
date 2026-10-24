@@ -1,0 +1,107 @@
+{
+  "scope": "All 59 original native image identities; static dependency inventory, runtime closure incomplete",
+  "run_id": 40047056048,
+  "commit": "df42e45a446a840e4a928efdc7a5c9a14151d251",
+  "artifact": {
+    "id": 12541404276,
+    "name": "rea-all-unsolved-dependencies",
+    "zip_sha256": "78dfc43ebb80e866715d6a413278e27a23659435dc02953cf67467d8b3317727"
+  },
+  "summary": {
+    "images_scanned": 59,
+    "static_edges": 3114769,
+    "counts": {
+      "alignment_padding_bytes_excluded": 0,
+      "decoded_instructions": 23387887,
+      "native_target": 1256591,
+      "direct_branch_or_tail": 169646,
+      "direct_call": 2386915,
+      "runtime_target_unresolved": 392472,
+      "indirect_call": 327093,
+      "platform_external_contract_unverified": 1266845,
+      "indirect_branch_or_tail": 65379,
+      "runtime_trap_contract_unverified": 165638,
+      "runtime_exception_or_trap": 165638,
+      "symbol_unresolved": 2833,
+      "payload_symbol_resolved": 30372,
+      "undecoded_bytes": 72,
+      "cross_boundary_conditional": 80
+    },
+    "import_bindings": {
+      "symbol_unresolved": 795,
+      "payload_symbol_resolved": 16190,
+      "platform_external_contract_unverified": 48198,
+      "weak_lookup_unresolved": 549,
+      "dynamic_lookup_unresolved": 7
+    },
+    "repository_commit": "df42e45a446a840e4a928efdc7a5c9a14151d251",
+    "run_id": "40047056048",
+    "load_dependencies": 1718,
+    "load_binding_counts": {
+      "platform_dependency_contract_unverified": 1451,
+      "payload_image_identity_resolved": 264,
+      "load_identity_unresolved": 3
+    },
+    "targets_not_in_explicit_accepted_index": 194790,
+    "all_runtime_dependencies_known": false,
+    "all_dependencies_solved": false,
+    "whole_images_rebuilt": 0,
+    "limits": [
+      "All 59 image identities and instruction sections scanned within documented budgets.",
+      "Runtime targets, resource-name construction, reflection and external implementation behavior remain open.",
+      "Unknown history keys are kept distinct from definitely unrecovered source.",
+      "Native target resolution is static evidence, never all-input equivalence."
+    ]
+  },
+  "diagnosis": {
+    "unresolved_symbol_declarations": 795,
+    "all_795_library": "@rpath/libswiftCore.dylib",
+    "load_resolution_gap_images": [
+      "Frameworks/DequeModule.framework/DequeModule",
+      "Frameworks/InternalCollectionsUtilities.framework/InternalCollectionsUtilities",
+      "Frameworks/OrderedCollections.framework/OrderedCollections"
+    ],
+    "interpretation": "All symbol_unresolved declarations have the same unresolved @rpath library identity. No symbol absence is established; resolve actual dyld runpath/platform runtime contract before claiming missing exports.",
+    "weak_lookup_declarations": 549,
+    "dynamic_lookup_declarations": 7,
+    "unresolved_indirect_sites": 392472,
+    "undecoded_bytes": 72
+  },
+  "source_acceptance": {
+    "strict_historical_complete_function_bounded_tests": 34,
+    "original_bytes": 5648,
+    "explicit_keys_indexed": 17,
+    "historical_keys_still_to_reconcile": 17,
+    "additional_getter_candidates": 64,
+    "candidate_bytes": 512,
+    "whole_images_rebuilt": 0,
+    "all_input_proof": false
+  },
+  "required_work": [
+    "Resolve dyld @rpath runtime load contract for the three Swift library references and verify exact exports against the applicable runtime.",
+    "Reconcile 17 historical accepted source keys; do not label unindexed historical functions unrecovered or count getter candidates twice.",
+    "Recover and compile native source targets in the priority queue; 194790 target keys are static candidates outside the explicit accepted index, not a proven unsolved-function count.",
+    "Resolve indirect dispatch using actual pointer provenance, vtables, callbacks, ObjC/Swift dispatch and runtime evidence.",
+    "Verify platform API ABI, failure behavior, allocator, TLS, dispatch and math contracts at real integration boundaries; platform APIs need contract verification rather than replacement with fake implementations.",
+    "Investigate 72 undecoded bytes and compiler boundary/conditional branch uncertainty.",
+    "Preserve code/resource/dynamic-name and filesystem dependencies; static graph cannot establish exhaustive runtime closure.",
+    "Test composed whole functions and source-built images; assemble and validate exact original filesystem only after supported replacements exist."
+  ],
+  "artifact_contents": [
+    "SUMMARY.json",
+    "DEPENDENCY_EDGES.jsonl.gz",
+    "UNRESOLVED_IMPORTS.jsonl.gz",
+    "SOURCE_DEPENDENCY_PRIORITY_QUEUE.json",
+    "ALL_IMAGE_DEPENDENCY_METADATA.json",
+    "IMAGE_LOAD_GRAPH.json",
+    "ACCEPTED_INDEX_GAPS.json",
+    "IMAGE_SCAN_REPORTS.json",
+    "README.md"
+  ],
+  "notes": [
+    "UNRESOLVED_IMPORTS.jsonl.gz preserves all import declarations with individual binding status, including resolved declarations; filter binding for unresolved subsets.",
+    "3,114,769 static edges and 23,387,887 decoded instruction items are scan totals, not source recovery or semantic coverage.",
+    "No successful recovery suite was rerun by this inventory. Four bounded scan jobs and reconciliation passed.",
+    "No Payload replacement or modified IPA was published."
+  ]
+}
