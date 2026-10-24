@@ -1,0 +1,73 @@
+name: REA all-image unresolved dependency inventory
+'on':
+  push:
+    paths:
+      - .github/workflows/rea-all-unsolved-dependencies.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-all-unsolved-dependencies
+  cancel-in-progress: false
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-all-image-coverage-ledger
+          run-id: '39765831519'
+          github-token: ${{ github.token }}
+          path: ledger
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-stage-clean-source-packages
+          run-id: '40040395720'
+          github-token: ${{ github.token }}
+          path: stage-packages
+      - name: Install pinned ARM64 instruction decoder
+        run: python -m pip install capstone==5.0.6
+      - name: Retrieve immutable original archive
+        run: curl --fail --location --retry 3 --max-time 900 -o MobileLogic.zip https://github.com/otsrub/test/releases/download/mobilelogic-3.4-archive/MobileLogic.zip
+      - name: Inventory exact imports and scan disjoint original image set
+        run: python reconstruction/dependency_inventory.py --shard ${{ matrix.shard }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-dependency-shard-${{ matrix.shard }}
+          path: dependency-shard-${{ matrix.shard }}/
+          retention-days: 90
+          if-no-files-found: error
+  reconcile:
+    needs: scan
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rea-dependency-shard-*
+          path: shards
+      - name: Reconcile all 59 original image identities and unresolved requirements
+        run: python reconstruction/dependency_inventory.py --merge
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-all-unsolved-dependencies
+          path: |
+            all-unsolved-dependencies/
+            reconstruction/dependency_inventory.py
+          retention-days: 90
+          if-no-files-found: error
