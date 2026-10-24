@@ -50,6 +50,12 @@ if lane=='fields':
   prefix=parent['functions'];assert len(prefix)==7
   for row in prefix:assert row['mismatches']==0 and row['all_original_instructions_exercised'] and row['passes']==[row['cases']]*3
   done={int(row['entry'],0) for row in prefix};specs=[row for row in specs if row[0] not in done]
+  more_path=pathlib.Path('second-parent/png-metadata-fields/INTERMEDIATE.json')
+  if more_path.exists():
+   more=json.loads(more_path.read_text());assert not more['failures'] and len(more['functions'])==8
+   for row in more['functions']:assert row['mismatches']==0 and row['all_original_instructions_exercised'] and row['passes']==[row['cases']]*3
+   prefix+=more['functions'];done={int(row['entry'],0) for row in prefix};specs=[row for row in specs if row[0] not in done]
+   write(out/'PRESERVED_SECOND_PREFIX.json',{'artifact_id':12563509755,'artifact_sha256':'cac7f0e574da6fca763d8db48ed6a54c80a645f9d4fbbab9ca2db61a5de217fa','functions':more['functions'],'new_comparisons':0,'unchanged_source':True})
   write(out/'PRESERVED_PREFIX.json',{'artifact_id':12562819268,'artifact_sha256':'d8e439354cac6ef605aa64e51938a9963ad734ee9912ad90a6b9bc9445454e77','functions':prefix,'new_comparisons':0,'unchanged_source':True,'reason':'Original run stopped during fixture packing for the next function; completed prefix is not rerun.'})
 preserved=[getattr(ac,f'UC_ARM64_REG_X{i}') for i in range(19,30)]+[getattr(ac,f'UC_ARM64_REG_D{i}') for i in range(8,16)]
 rng=random.Random(0xf6a68);cases=4096 if lane!='floating' else 8192;passes=[0,0,0];failures=[];rows=[]
@@ -71,7 +77,7 @@ for entry,n,name,mask in specs:
   x=edges[case%len(edges)] if case<4096 else rng.getrandbits(32);y=edges[(case//len(edges))%len(edges)] if case<4096 else rng.getrandbits(32)
   if case&1:y=x
   struct.pack_into('<II',data,io+0xe0,x,y);struct.pack_into('<I',data,io+0x34,edges[(case//3)%len(edges)] if case<4096 else rng.getrandbits(32))
-  struct.pack_into('<II',data,io+0xd4,x,y);data[io+0xe8]=case%4;data[io+0xdc]=(case//4)%4;data[io+0x25]=3 if case&1 else rng.randrange(16)
+  struct.pack_into('<II',data,io+0xd4,x,y);data[io+0xe8]=case%4;data[io+0xdc]=(case//4)%4;data[io+0x25]=3 if (case//512)&1 else rng.randrange(16)
   pointers=[]
   for k in range(9):
    present=bool(case&(1<<k))
