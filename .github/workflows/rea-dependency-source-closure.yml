@@ -1,0 +1,42 @@
+name: REA dependency source and original-byte closure
+'on':
+  push:
+    paths: [.github/workflows/rea-dependency-source-closure.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-dependency-source-closure
+  cancel-in-progress: false
+jobs:
+  differential:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        mode: [mapper, claim]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-dependency-closure-dossier
+          run-id: '40077336746'
+          github-token: ${{ github.token }}
+          path: prior
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+          python -m pip install unicorn==2.1.4
+      - run: python reconstruction/verify_dependency_closure.py --mode ${{ matrix.mode }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-dependency-${{ matrix.mode }}-evidence
+          path: |
+            dependency-${{ matrix.mode }}/
+            reconstruction/verify_dependency_closure.py
+          if-no-files-found: error
+          retention-days: 90
