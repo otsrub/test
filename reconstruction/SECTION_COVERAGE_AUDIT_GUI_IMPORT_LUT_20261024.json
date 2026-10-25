@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-24",
+  "native_images": 59,
+  "enumerated_instruction_section_union_bytes": 93551620,
+  "excluded_stub_bytes": 446952,
+  "section_overlap_bytes": 0,
+  "compiler_starts_static_addresses_not_function_total": 456441,
+  "compiler_starts_outside_selected_sections": 0,
+  "accepted_functions": 88,
+  "accepted_original_byte_union": 9576,
+  "accepted_intervals_inside_sections": 88,
+  "accepted_interval_overlaps": [],
+  "scope": "accepted original-byte coverage of enumerated instruction sections",
+  "percentage": 0.01023606004898686,
+  "limits": [
+    "Selected section flags may include padding or unmarked embedded data and may omit code outside flagged sections.",
+    "No global software completeness bound follows from this section ratio.",
+    "Compiler starts are static candidate addresses, not a proven total implementation count.",
+    "Finite tests do not prove all-input semantic equivalence."
+  ]
+}

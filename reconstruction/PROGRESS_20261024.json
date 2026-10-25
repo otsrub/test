@@ -28,12 +28,16 @@
         {
           "image_sha256": "74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4",
           "entry": "0x2f824"
+        },
+        {
+          "image_sha256": "74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4",
+          "entry": "0x865e4"
         }
       ]
     },
     {
       "category": "exact_function_boundaries",
-      "numerator": 87,
+      "numerator": 88,
       "numerator_scope": "Accepted complete-function subset",
       "denominator": null,
       "percentage": null,
@@ -42,14 +46,14 @@
     },
     {
       "category": "compiled_source",
-      "numerator": 87,
+      "numerator": 88,
       "denominator": null,
       "percentage": null,
       "note": "Accepted source functions across separate checkpoints; whole software denominator not established.",
       "accepted_original_byte_coverage_of_enumerated_instruction_sections": {
-        "numerator": 9500,
+        "numerator": 9576,
         "denominator": 93551620,
-        "percentage": 0.010154821477169503,
+        "percentage": 0.01023606004898686,
         "scope": "accepted original-byte coverage of enumerated instruction sections",
         "limitations": [
           "Selected section flags may include padding or unmarked embedded data and may omit code outside flagged sections.",
@@ -61,10 +65,10 @@
     },
     {
       "category": "bounded_original_byte_equivalence",
-      "numerator": 87,
+      "numerator": 88,
       "denominator": null,
       "percentage": null,
-      "new_accepted_comparisons": 98304,
+      "new_accepted_comparisons": 49152,
       "new_mismatches": 0,
       "note": "Finite original-Unicorn versus compiled comparisons. No all-input proof or whole-app semantic percentage.",
       "latest_call_boundary_phase_evidence": {
@@ -92,29 +96,29 @@
     }
   ],
   "new_milestone": {
-    "complete_functions": 2,
-    "original_bytes": 152,
-    "comparisons": 98304,
+    "complete_functions": 1,
+    "original_bytes": 76,
+    "comparisons": 49152,
     "mismatches": 0,
     "artifact": {
-      "run_id": 40151735816,
-      "commit": "4afd840e152be0e9c52ee0522beb9767ff821506",
-      "artifact_id": 12581859617,
-      "artifact_name": "rea-gui-rect-clean-source-package",
-      "zip_sha256": "ac8afa69e0be21e6164098310f3110724643b7b27067caabbc9e2466126a6930",
-      "module_sha256": "ca4003b8840b2e2684ed102e7ea97b293c610e8382f23c1f1c4bf24394887f91",
-      "source_sha256": "e0fabbafc28ad145e0a52c0f8076fcd9a7cb8d15de1878514975844002e6c15c",
-      "text_sha256": "641a1d3881e0aab932e3bf4fbb52cb46adbaad0ba0ce68baf9802dfdae2bd380",
-      "source_path": "reconstruction/maplugingui_rect_candidates.cpp",
-      "run_url": "https://github.com/otsrub/test/actions/runs/40151735816",
-      "parent_comparisons": 98304,
+      "run_id": 40153024385,
+      "commit": "ba23c3ce24eda65c0d399c66abc67cde040068f7",
+      "artifact_id": 12583233239,
+      "artifact_name": "rea-gui-import-lut-clean-source-package",
+      "zip_sha256": "24471b3e556e5cd6eb9576e1f19bd3691819ae5a920288d99d67b6f3fc050388",
+      "module_sha256": "60f9e81f3ac1db65c914c11f358781dca728daf320dd0508ed655c4f71eaed59",
+      "source_sha256": "6507b3573e7032e1b7d0e415fc5f810ee03c34df6c732ecf3b11085497075977",
+      "text_sha256": "4d4a3751ccd114322402e81df399ad3ef037495c7351b0d0f854978dff967f41",
+      "source_path": "reconstruction/maplugingui_import_lut_source.cpp",
+      "run_url": "https://github.com/otsrub/test/actions/runs/40153024385",
+      "parent_comparisons": 49152,
       "new_package_runtime_comparisons": 0,
       "whole_image_replacement": false
     }
   },
   "accepted_total": {
-    "functions": 87,
-    "original_byte_union": 9500,
+    "functions": 88,
+    "original_byte_union": 9576,
     "all_functions_combined": false
   },
   "separate_getter_candidates": {
@@ -122,12 +126,13 @@
     "original_bytes": 512
   },
   "throughput_observation": {
-    "start": "2026-10-24T21:09:05Z",
-    "end": "2026-10-24T21:09:49Z",
-    "interval_seconds": 44,
-    "functions_confirmed": 2,
-    "bytes_confirmed": 152,
-    "scope": "CI confirmation window only; excludes recovery, packaging, runtime dependencies and integration",
+    "start": "2026-10-25T01:59:48Z",
+    "end": "2026-10-25T02:00:33Z",
+    "interval_seconds": 45,
+    "functions_confirmed": 1,
+    "bytes_confirmed": 76,
+    "suite_seconds": 23.97711682319641,
+    "scope": "CI confirmation window only; excludes source recovery, browser recovery, packaging, shared-state integration and full reconstruction.",
     "not_representative_of_full_reconstruction": true
   },
   "eta": {
@@ -139,7 +144,8 @@
       "isolated clean source package",
       "80-key and original-byte section-union audit",
       "four error/filler source candidates compiled with exact unresolved native imports",
-      "First-call error/longjmp ABI phases and controlled actual native returning-callback composition passed49152comparisons; zero complete functions added."
+      "First-call error/longjmp ABI phases and controlled actual native returning-callback composition passed49152comparisons; zero complete functions added.",
+      "Three flagged GUI functions reconciled across separate source modules: two rectangle operators98304prior comparisons and import-LUT49152fresh comparisons; no whole native image replacement."
     ]
   },
   "remaining": [
@@ -152,11 +158,10 @@
   "next_concrete_candidates": [
     {
       "image": "MAPlugInGUI",
-      "entry": "0x865e4",
-      "name": "GImage::SetImportLUT",
-      "bytes": 76,
-      "status": "new source/verifier; actual global symbol/data initialization recovered, original-byte tests pending",
-      "source_path": "reconstruction/maplugingui_import_lut_source.cpp"
+      "entry": "0x2e10e4",
+      "name": "GButton::OnAction",
+      "bytes": 72,
+      "status": "flagged function remains unverified; conditional original native call0x2e1744 and object-vector arithmetic need source/runtime dependency work"
     },
     {
       "image": "MACore",
@@ -251,6 +256,27 @@
         "new_package_runtime_comparisons": 0,
         "whole_image_replacement": false
       }
+    },
+    {
+      "complete_functions": 2,
+      "original_bytes": 152,
+      "comparisons": 98304,
+      "mismatches": 0,
+      "artifact": {
+        "run_id": 40151735816,
+        "commit": "4afd840e152be0e9c52ee0522beb9767ff821506",
+        "artifact_id": 12581859617,
+        "artifact_name": "rea-gui-rect-clean-source-package",
+        "zip_sha256": "ac8afa69e0be21e6164098310f3110724643b7b27067caabbc9e2466126a6930",
+        "module_sha256": "ca4003b8840b2e2684ed102e7ea97b293c610e8382f23c1f1c4bf24394887f91",
+        "source_sha256": "e0fabbafc28ad145e0a52c0f8076fcd9a7cb8d15de1878514975844002e6c15c",
+        "text_sha256": "641a1d3881e0aab932e3bf4fbb52cb46adbaad0ba0ce68baf9802dfdae2bd380",
+        "source_path": "reconstruction/maplugingui_rect_candidates.cpp",
+        "run_url": "https://github.com/otsrub/test/actions/runs/40151735816",
+        "parent_comparisons": 98304,
+        "new_package_runtime_comparisons": 0,
+        "whole_image_replacement": false
+      }
     }
   ],
   "throughput_history": [
@@ -280,6 +306,15 @@
       "bytes_confirmed": 708,
       "scope": "CI confirmation window including failed instruction budget diagnosis; excludes source recovery, packaging, runtime dependencies and integration",
       "not_representative_of_full_reconstruction": true
+    },
+    {
+      "start": "2026-10-24T21:09:05Z",
+      "end": "2026-10-24T21:09:49Z",
+      "interval_seconds": 44,
+      "functions_confirmed": 2,
+      "bytes_confirmed": 152,
+      "scope": "CI confirmation window only; excludes recovery, packaging, runtime dependencies and integration",
+      "not_representative_of_full_reconstruction": true
     }
   ],
   "separate_error_source_candidates": {
@@ -291,8 +326,8 @@
     "dependency_record": "reconstruction/PNG_FILLER_DEPENDENCIES_20261024.json",
     "partial_runtime_evidence": "reconstruction/PNG_ERROR_BOUNDARY_CHECKPOINT_20261024.json"
   },
-  "latest_section_audit": "reconstruction/SECTION_COVERAGE_AUDIT_GUI_RECT_20261024.json",
-  "latest_checkpoint": "reconstruction/GUI_RECT_CHECKPOINT_20261024.json",
+  "latest_section_audit": "reconstruction/SECTION_COVERAGE_AUDIT_GUI_IMPORT_LUT_20261024.json",
+  "latest_checkpoint": "reconstruction/GUI_IMPORT_LUT_CHECKPOINT_20261024.json",
   "new_phase_milestone": {
     "repository_path": "reconstruction/PNG_ERROR_BOUNDARY_CHECKPOINT_20261024.json",
     "source_path": "reconstruction/macore_png_error_chain_candidates.c",
@@ -834,5 +869,173 @@
     "original_warning_queue_modified": false,
     "source_return_abi": "original hidden-result x8 retained through nontrivial C++ aggregate result; actual returned buffer compared",
     "report_erratum": "Inherited generic report limit refers to void setters; these two routines return their aggregate through x8 and the result memory is compared. x0 result-register bits are unspecified, not a returned scalar."
-  }
+  },
+  "gui_import_lut_20261024": {
+    "date": "2026-10-24",
+    "functions": [
+      {
+        "image_sha256": "74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4",
+        "entry": "0x865e4",
+        "end_exclusive": "0x86630",
+        "name": "gui_set_import_lut",
+        "original_bytes": 76,
+        "original_function_sha256": "9d0cba5012bf1f21534eae50e3f5f4465b48bc620380b55ea2e707d0ab3eaa5c",
+        "cases": 16384,
+        "comparisons": 49152,
+        "passes": [
+          16384,
+          16384,
+          16384
+        ],
+        "mismatches": 0,
+        "all_original_instructions_exercised": true,
+        "original_instruction_locations": [
+          "0x865e4",
+          "0x865e8",
+          "0x865ec",
+          "0x865f0",
+          "0x865f4",
+          "0x865f8",
+          "0x865fc",
+          "0x86600",
+          "0x86604",
+          "0x86608",
+          "0x8660c",
+          "0x86610",
+          "0x86614",
+          "0x86618",
+          "0x8661c",
+          "0x86620",
+          "0x86624",
+          "0x86628",
+          "0x8662c"
+        ],
+        "aliased_cases": 10920,
+        "tested_alias_displacements": [
+          -128,
+          -127,
+          -64,
+          -63,
+          -32,
+          -31,
+          -16,
+          -15,
+          -8,
+          -7,
+          -4,
+          -3,
+          -2,
+          -1,
+          0,
+          1,
+          2,
+          3,
+          4,
+          7,
+          8,
+          15,
+          16,
+          31,
+          32,
+          63,
+          64,
+          127,
+          128,
+          255
+        ],
+        "output_patterns": 0,
+        "return_outcomes": 46,
+        "complete_function_bounded_test": true,
+        "artifact_id": 12583118121,
+        "evidence_group": "lut"
+      }
+    ],
+    "new_complete_functions": 1,
+    "new_original_byte_union": 76,
+    "new_comparisons": 49152,
+    "mismatches": 0,
+    "strict_accepted_functions": 88,
+    "strict_accepted_original_byte_union": 9576,
+    "clean_package": {
+      "run_id": 40153024385,
+      "commit": "ba23c3ce24eda65c0d399c66abc67cde040068f7",
+      "artifact_id": 12583233239,
+      "artifact_name": "rea-gui-import-lut-clean-source-package",
+      "zip_sha256": "24471b3e556e5cd6eb9576e1f19bd3691819ae5a920288d99d67b6f3fc050388",
+      "module_sha256": "60f9e81f3ac1db65c914c11f358781dca728daf320dd0508ed655c4f71eaed59",
+      "source_sha256": "6507b3573e7032e1b7d0e415fc5f810ee03c34df6c732ecf3b11085497075977",
+      "text_sha256": "4d4a3751ccd114322402e81df399ad3ef037495c7351b0d0f854978dff967f41",
+      "source_path": "reconstruction/maplugingui_import_lut_source.cpp",
+      "run_url": "https://github.com/otsrub/test/actions/runs/40153024385",
+      "parent_comparisons": 49152,
+      "new_package_runtime_comparisons": 0,
+      "whole_image_replacement": false
+    },
+    "parent_evidence": {
+      "run_id": 40152750128,
+      "artifact_id": 12583118121,
+      "artifact_name": "rea-gui-import-lut-evidence",
+      "zip_sha256": "748181fa0506cca6b0897306679b5ba29eda7c76cc400161b98f171a22149e2a"
+    },
+    "all_input_proof": false,
+    "whole_native_images_rebuilt": 0,
+    "total_native_images": 59,
+    "separate_getter_candidates": 64,
+    "production_shared_state_integration_verified": false,
+    "original_warning_queue_modified": false,
+    "original_mangled_function": "__ZN6GImage12SetImportLUTEPKh",
+    "original_parameter_type": "const unsigned char*",
+    "original_high_level_return_type": null,
+    "return_abi": "Original instruction stream preserves x0. Source conservatively returns input pointer; each execution must retain raw input pointer before shared-data address identity comparison.",
+    "shared_data_symbol": "__ZN6GImage12ms_ImportLUTE",
+    "original_shared_data_address": "0x474190",
+    "original_shared_data_span": 256,
+    "original_shared_data_zero_initialized": true,
+    "tested_signed_alias_displacements": [
+      -128,
+      -127,
+      -64,
+      -63,
+      -32,
+      -31,
+      -16,
+      -15,
+      -8,
+      -7,
+      -4,
+      -3,
+      -2,
+      -1,
+      0,
+      1,
+      2,
+      3,
+      4,
+      7,
+      8,
+      15,
+      16,
+      31,
+      32,
+      63,
+      64,
+      127,
+      128,
+      255
+    ],
+    "guard_conditions": [
+      "Compiled prefix256bytes verified zero and outside instruction sections; never written.",
+      "Only original __common data and compiled shared-data/trailing guard bytes initialized.",
+      "Full input, destination, prefix and trailing guard bytes compared without normalization."
+    ],
+    "historical_unaccepted_draft": "reconstruction/maplugingui_import_lut_candidate.c",
+    "limits": [
+      "Finite mapped ordinary memory and controlled entry states only, not all-input proof.",
+      "Other readers/writers and initialization sequencing of shared state remain unintegrated.",
+      "High-level return type remains unknown; exact machine x0 result preserved.",
+      "No fault/MMIO/concurrency/asynchronous observer guarantee.",
+      "Separate source modules do not replace a whole original image."
+    ]
+  },
+  "current_section_coverage_audit": "reconstruction/SECTION_COVERAGE_AUDIT_GUI_IMPORT_LUT_20261024.json"
 }
