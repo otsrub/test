@@ -1,0 +1,49 @@
+name: REA flagged GUI rectangle clean source package
+'on':
+  push:
+    paths: [.github/workflows/rea-gui-rect-package.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-gui-rect-package
+  cancel-in-progress: false
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-gui-rect-evidence
+          run-id: '40132939599'
+          github-token: ${{ github.token }}
+          path: parents
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-dossiers-evidence
+          run-id: '38815798247'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-all-unsolved-dependencies
+          run-id: '40047056048'
+          github-token: ${{ github.token }}
+          path: inventory
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+      - run: python reconstruction/package_gui_rect_source.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-gui-rect-clean-source-package
+          path: |
+            gui-rect-source-package/
+            reconstruction/package_gui_rect_source.py
+            reconstruction/GUI_RECT_REVIEW_20261024.json
+          retention-days: 90
+          if-no-files-found: error
