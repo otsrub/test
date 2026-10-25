@@ -1,0 +1,27 @@
+{
+  "date_utc": "2026-10-25",
+  "source_sha256": "d15cba6224c8dee2c992943c32b479a7e0c3babe717e1cda51a74f6659a83678",
+  "object_sha256": "3bcc191b4024516d990c790d82cb898ba4221aa1a8b391ba521d1f734302d5e5",
+  "compiler": "system G++13.3.0",
+  "command": [
+    "g++",
+    "-std=c++17",
+    "-O2",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-ffreestanding",
+    "-c",
+    "reconstruction/logic_genre_tables_dispatch.cpp",
+    "-o",
+    "shared-init-host/logic-genre-dispatch-host.o"
+  ],
+  "architecture": "x86_64 ELF host object",
+  "compile_succeeded": true,
+  "undefined_native_helper_symbols": 14,
+  "undefined_predicate_imports": 1,
+  "undefined_symbols_output": "                 U _ZN9Harmonies26CScaleAlternativesForChord15_GenreTables_VmEv\n                 U _ZN9Harmonies26CScaleAlternativesForChord16_GenreTables_IVmEv\n                 U _ZN9Harmonies26CScaleAlternativesForChord16_GenreTables_bIIEv\n                 U _ZN9Harmonies26CScaleAlternativesForChord16_GenreTables_bVIEv\n                 U _ZN9Harmonies26CScaleAlternativesForChord17_GenreTables_bIIIEv\n                 U _ZN9Harmonies26CScaleAlternativesForChord17_GenreTables_bVIIEv\n                 U _ZN9Harmonies26CScaleAlternativesForChord23_GenreTables_PassingDimEv\n                 U _ZN9Harmonies26CScaleAlternativesForChord25_GenreTables_SecondaryIImEv\n                 U _ZN9Harmonies26CScaleAlternativesForChord27_GenreTables_bVII_after_bVIEv\n                 U _ZN9Harmonies26CScaleAlternativesForChord28_GenreTables_bVI_before_bVIIEv\n                 U _ZN9Harmonies26CScaleAlternativesForChord30_GenreTables_SecondaryDominantEv\n                 U _ZN9Harmonies26CScaleAlternativesForChord58_GenreTables_SignKeyMajorDegreeI_and_SignKeyMinorDegreeIIIERK7CKeyEnh\n                 U _ZN9Harmonies26CScaleAlternativesForChord58_GenreTables_SignKeyMajorDegreeV_and_SignKeyMinorDegreeVIIERK7CKeyEnh\n                 U _ZN9Harmonies26CScaleAlternativesForChord59_GenreTables_SignKeyMajorDegreeVIm_and_SignKeyMinorDegreeImERK7CKeyEnh\n                 U _ZNK10CSemitones8HasIntvlEi\n",
+  "native_bodies_stubbed": false,
+  "arm64_source_compiled": false,
+  "runtime_differential_tested": false,
+  "accepted_function_increment": 0
+}

@@ -1,0 +1,80 @@
+{
+  "date_utc": "2026-10-25",
+  "accepted_complete_functions": 88,
+  "accepted_original_byte_union": 9576,
+  "new_accepted_functions": 0,
+  "new_cross_architecture_compiled_comparisons": 98304,
+  "cross_architecture_mismatches": 0,
+  "new_dispatch_original_only_executions": 4096,
+  "dispatch_mismatches": 0,
+  "new_dispatch_source_bytes": 292,
+  "new_pending_whole_function_sources": 1,
+  "pending_initializer_sources": 2,
+  "host_evidence_zip_sha256": "d710aef4c632977ae185ac3745a0dad17eda3f22de16ee874a695399daa27edf",
+  "accepted_baseline_commit": "afc8d8d04fd4d9f81839709cd1b89bac188a5781",
+  "metrics": {
+    "decompiler_output": {
+      "numerator": null,
+      "denominator": null,
+      "percent": null,
+      "unit": "current original native implementation coverage"
+    },
+    "reviewed_quality": {
+      "new_reviewed_flagged_candidates": 1,
+      "denominator": null,
+      "percent": null
+    },
+    "exact_boundaries": {
+      "accepted_functions": 88,
+      "new_confirmed_candidate_bytes": 292,
+      "denominator": null,
+      "percent": null
+    },
+    "compiled_source": {
+      "accepted_target_functions": 88,
+      "new_host_only_source_candidates": 2,
+      "denominator": null,
+      "percent": null
+    },
+    "bounded_original_equivalence": {
+      "accepted_target_functions": 88,
+      "denominator": null,
+      "percent": null
+    },
+    "whole_native_image_builds": {
+      "numerator": 0,
+      "denominator": 59,
+      "unit": "native images",
+      "percent": 0
+    },
+    "rebuilt_filesystem_parity": {
+      "numerator": null,
+      "denominator": 21435,
+      "unit": "reference filesystem entries",
+      "percent": null
+    },
+    "scoped_instruction_sections": {
+      "numerator": 9576,
+      "denominator": 93551620,
+      "unit": "non-stub instruction-section bytes",
+      "percent": 0.01023606004898686,
+      "global_completeness": false
+    }
+  },
+  "eta": "No defensible full-completion ETA: reliable remaining implementation denominator and representative dependency/integration throughput missing.",
+  "blockers": [
+    "Prior workflow-publication browser URL-policy rejection remains respected; no new publication attempt.",
+    "Independent official Zig compiler fails self-executable-path discovery locally; target compile pending."
+  ],
+  "next": [
+    "Target ARM64 compilation/differential execution of two initializers when legitimate supported compiler access is available.",
+    "Resolve14 actual harmony helper dependencies and CSemitones::HasIntvl; actual predicate-return paths unexecuted."
+  ],
+  "source_evidence_paths": [
+    "reconstruction/logic_genre_tables_dispatch.cpp",
+    "reconstruction/LOGIC_GENRE_DISPATCH_PREFLIGHT_20261025.json",
+    "reconstruction/SHARED_INITIALIZERS_HOST_EVIDENCE_20261025.json",
+    "reconstruction/LOCAL_COMPILER_DIAGNOSIS_20261025.json"
+  ],
+  "finite_tests_not_all_input_proof": true
+}

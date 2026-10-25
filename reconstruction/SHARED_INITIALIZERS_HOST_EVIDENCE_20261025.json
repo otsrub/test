@@ -1,0 +1,97 @@
+{
+  "date_utc": "2026-10-25",
+  "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+  "results": [
+    {
+      "image": "logic",
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x123dbc",
+      "end_exclusive": "0x123df0",
+      "original_bytes": 52,
+      "source_sha256": "cb925db98bd5db25bcd4df3179335bd80fdaa3fce0b4fc2fd50c23f4c782fc01",
+      "cases": 16384,
+      "comparisons": 49152,
+      "passes": [
+        16384,
+        16384,
+        16384
+      ],
+      "mismatches": 0,
+      "original_instruction_locations": 13,
+      "modules": [
+        {
+          "optimization": 0,
+          "sha256": "a29922b90e4bc725a910c8aebe6090cfbd93c29603188b600e98dd518e50f3e9",
+          "undefined_dynamic_symbols": "                 w _ITM_deregisterTMCloneTable\n                 w _ITM_registerTMCloneTable\n                 w __cxa_finalize\n                 w __gmon_start__\n",
+          "architecture": "x86_64 ELF, host ABI not ARM64"
+        },
+        {
+          "optimization": 2,
+          "sha256": "adda0dd0537f8f4c9edc07259445d2a0abe3c34c915c8af3518f7e105d451e1b",
+          "undefined_dynamic_symbols": "                 w _ITM_deregisterTMCloneTable\n                 w _ITM_registerTMCloneTable\n                 w __cxa_finalize\n                 w __gmon_start__\n",
+          "architecture": "x86_64 ELF, host ABI not ARM64"
+        },
+        {
+          "optimization": 3,
+          "sha256": "adda0dd0537f8f4c9edc07259445d2a0abe3c34c915c8af3518f7e105d451e1b",
+          "undefined_dynamic_symbols": "                 w _ITM_deregisterTMCloneTable\n                 w _ITM_registerTMCloneTable\n                 w __cxa_finalize\n                 w __gmon_start__\n",
+          "architecture": "x86_64 ELF, host ABI not ARM64"
+        }
+      ],
+      "target_arm64_source_compiled": false,
+      "target_abi_differential_tested": false,
+      "complete_function_accepted": false
+    },
+    {
+      "image": "madsp",
+      "image_sha256": "8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8",
+      "entry": "0x4f59b4",
+      "end_exclusive": "0x4f5a18",
+      "original_bytes": 100,
+      "source_sha256": "631f34c1b1b4a09f50a582cec89baa957dce9bf20c1c2723ee91477fb8ed6127",
+      "cases": 16384,
+      "comparisons": 49152,
+      "passes": [
+        16384,
+        16384,
+        16384
+      ],
+      "mismatches": 0,
+      "original_instruction_locations": 25,
+      "modules": [
+        {
+          "optimization": 0,
+          "sha256": "2825832f9f0f172e92f79ecd7905ae3da6b5f5a69310feb5a3508a6c4c436af4",
+          "undefined_dynamic_symbols": "                 w _ITM_deregisterTMCloneTable\n                 w _ITM_registerTMCloneTable\n                 w __cxa_finalize\n                 w __gmon_start__\n",
+          "architecture": "x86_64 ELF, host ABI not ARM64"
+        },
+        {
+          "optimization": 2,
+          "sha256": "1984e54f9528e32eab87650a3e18fb060869c1bdcf6abafa14b8004a0ed59ddf",
+          "undefined_dynamic_symbols": "                 w _ITM_deregisterTMCloneTable\n                 w _ITM_registerTMCloneTable\n                 w __cxa_finalize\n                 w __gmon_start__\n",
+          "architecture": "x86_64 ELF, host ABI not ARM64"
+        },
+        {
+          "optimization": 3,
+          "sha256": "1984e54f9528e32eab87650a3e18fb060869c1bdcf6abafa14b8004a0ed59ddf",
+          "undefined_dynamic_symbols": "                 w _ITM_deregisterTMCloneTable\n                 w _ITM_registerTMCloneTable\n                 w __cxa_finalize\n                 w __gmon_start__\n",
+          "architecture": "x86_64 ELF, host ABI not ARM64"
+        }
+      ],
+      "target_arm64_source_compiled": false,
+      "target_abi_differential_tested": false,
+      "complete_function_accepted": false
+    }
+  ],
+  "new_cross_architecture_original_vs_compiled_comparisons": 98304,
+  "mismatches": 0,
+  "new_accepted_functions": 0,
+  "elapsed_seconds": 3.4479212760925293,
+  "limits": [
+    "Actual native host C++ source execution, not target ARM64/iOS source execution.",
+    "Only table bytes and raw scalar x0 result cross-compared; ARM64 ABI/FP state checked on original only.",
+    "Original global guards checked; host global guards not allocated around exact symbol.",
+    "Host ELF source builds do not replace original binaries. ARM64 compilation, whole-image/shared-state integration pending.",
+    "Finite tests, not all-input proof."
+  ]
+}

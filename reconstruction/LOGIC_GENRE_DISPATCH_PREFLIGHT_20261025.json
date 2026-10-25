@@ -1,0 +1,156 @@
+{
+  "date_utc": "2026-10-25",
+  "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+  "entry": "0xe2d0c0",
+  "end_exclusive": "0xe2d1e4",
+  "original_bytes": 292,
+  "original_instruction_count": 73,
+  "flagged_decompiler_instruction_count": 17,
+  "original_warning_queue_artifact_id": 11881406780,
+  "source_path": "reconstruction/logic_genre_tables_dispatch.cpp",
+  "source_sha256": "d15cba6224c8dee2c992943c32b479a7e0c3babe717e1cda51a74f6659a83678",
+  "original_executions": 4096,
+  "mismatches": 0,
+  "observed_stop_counts": {
+    "0x50000000": 1325,
+    "0xe2f4d8": 241,
+    "0xe2fc6c": 241,
+    "0xe302d8": 241,
+    "0xe30910": 241,
+    "0xe30f48": 241,
+    "0xe31580": 241,
+    "0xe31bb8": 241,
+    "0xe3208c": 241,
+    "0xe32560": 241,
+    "0xe32b80": 241,
+    "0xe331a0": 241,
+    "0xf0ac2c": 60,
+    "0xe2ecb0": 60
+  },
+  "original_instruction_locations_exercised": [
+    "0xe2d0c0",
+    "0xe2d0c4",
+    "0xe2d0c8",
+    "0xe2d0cc",
+    "0xe2d0d0",
+    "0xe2d0d4",
+    "0xe2d0d8",
+    "0xe2d0dc",
+    "0xe2d0e0",
+    "0xe2d0e4",
+    "0xe2d0e8",
+    "0xe2d0ec",
+    "0xe2d0f0",
+    "0xe2d0f4",
+    "0xe2d0f8",
+    "0xe2d0fc",
+    "0xe2d100",
+    "0xe2d104",
+    "0xe2d108",
+    "0xe2d10c",
+    "0xe2d110",
+    "0xe2d114",
+    "0xe2d118",
+    "0xe2d11c",
+    "0xe2d120",
+    "0xe2d124",
+    "0xe2d128",
+    "0xe2d12c",
+    "0xe2d130",
+    "0xe2d134",
+    "0xe2d138",
+    "0xe2d13c",
+    "0xe2d140",
+    "0xe2d144",
+    "0xe2d148",
+    "0xe2d14c",
+    "0xe2d150",
+    "0xe2d154",
+    "0xe2d158",
+    "0xe2d15c",
+    "0xe2d160",
+    "0xe2d164",
+    "0xe2d168",
+    "0xe2d16c",
+    "0xe2d170",
+    "0xe2d174",
+    "0xe2d178",
+    "0xe2d17c",
+    "0xe2d180",
+    "0xe2d184",
+    "0xe2d188",
+    "0xe2d1a4",
+    "0xe2d1a8",
+    "0xe2d1ac",
+    "0xe2d1b0",
+    "0xe2d1b4",
+    "0xe2d1b8",
+    "0xe2d1bc",
+    "0xe2d1c0",
+    "0xe2d1c4",
+    "0xe2d1c8",
+    "0xe2d1cc",
+    "0xe2d1d0",
+    "0xe2d1d4"
+  ],
+  "symbols": {
+    "0xe31580": [
+      "__ZN9Harmonies26CScaleAlternativesForChord17_GenreTables_bIIIEv"
+    ],
+    "0xe32560": [
+      "__ZN9Harmonies26CScaleAlternativesForChord16_GenreTables_bVIEv"
+    ],
+    "0xe32b80": [
+      "__ZN9Harmonies26CScaleAlternativesForChord17_GenreTables_bVIIEv"
+    ],
+    "0xe331a0": [
+      "__ZN9Harmonies26CScaleAlternativesForChord23_GenreTables_PassingDimEv"
+    ],
+    "0xe2d1e4": [
+      "__ZN9Harmonies26CScaleAlternativesForChord58_GenreTables_SignKeyMajorDegreeI_and_SignKeyMinorDegreeIIIERK7CKeyEnh"
+    ],
+    "0xe30f48": [
+      "__ZN9Harmonies26CScaleAlternativesForChord16_GenreTables_bIIEv"
+    ],
+    "0xe2fc6c": [
+      "__ZN9Harmonies26CScaleAlternativesForChord25_GenreTables_SecondaryIImEv"
+    ],
+    "0xe3208c": [
+      "__ZN9Harmonies26CScaleAlternativesForChord15_GenreTables_VmEv"
+    ],
+    "0xf0ac2c": [],
+    "0xe302d8": [
+      "__ZN9Harmonies26CScaleAlternativesForChord28_GenreTables_bVI_before_bVIIEv"
+    ],
+    "0xe30910": [
+      "__ZN9Harmonies26CScaleAlternativesForChord27_GenreTables_bVII_after_bVIEv"
+    ],
+    "0xe2ecb0": [
+      "__ZN9Harmonies26CScaleAlternativesForChord59_GenreTables_SignKeyMajorDegreeVIm_and_SignKeyMinorDegreeImERK7CKeyEnh"
+    ],
+    "0xe2e72c": [
+      "__ZN9Harmonies26CScaleAlternativesForChord58_GenreTables_SignKeyMajorDegreeV_and_SignKeyMinorDegreeVIIERK7CKeyEnh"
+    ],
+    "0xe31bb8": [
+      "__ZN9Harmonies26CScaleAlternativesForChord16_GenreTables_IVmEv"
+    ],
+    "0xe2f4d8": [
+      "__ZN9Harmonies26CScaleAlternativesForChord30_GenreTables_SecondaryDominantEv"
+    ]
+  },
+  "exact_predicate_import": {
+    "stub": "0xf0ac2c",
+    "symbol": "__ZNK10CSemitones8HasIntvlEi",
+    "argument_x0": "object+0x50",
+    "argument_w1": 10
+  },
+  "source_compiled": false,
+  "complete_function_accepted": false,
+  "new_accepted_functions": 0,
+  "limits": [
+    "Original-only dispatch/call-boundary preflight; not source differential equivalence.",
+    "Stops before actual helper/import body. No fake body or instruction patch.",
+    "Predicate returning continuations at0xe2d18c..0xe2d1e0 remain unexecuted.",
+    "Hidden-result24-byte layout inferred; full class/production dependencies unresolved."
+  ]
+}

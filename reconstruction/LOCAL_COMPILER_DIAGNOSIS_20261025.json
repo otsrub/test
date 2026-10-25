@@ -1,0 +1,20 @@
+{
+  "date_utc": "2026-10-25",
+  "package": "ziglang",
+  "version": "0.13.0",
+  "registry": "PyPI",
+  "metadata_project_urls": [
+    "https://ziglang.org",
+    "https://github.com/ziglang/zig-pypi"
+  ],
+  "metadata_sha256": "6c0e3d5c912330f3bd12bdee8a556cd8b3177b3d4e99427f297a9fc15f56672b",
+  "executable_sha256": "7f9e3a661e909d5188d1b8b14f082b98a19c323a30d43bfdd1b2893ed37273e0",
+  "version_command_succeeded": true,
+  "arm64_compile_attempts_succeeded": false,
+  "error": "unable to find zig self exe path: FileNotFound",
+  "explicit_library_and_cache_path_attempt_same_error": true,
+  "apt_clang18_download": "E: Unable to locate package clang-18",
+  "no_source_compiled_with_zig": true,
+  "no_workflow_publication_attempt": true,
+  "independent_host_gcc_route": "real existing system G++ O0/O2/O3 cross-architecture data semantics only, ARM64 ABI acceptance pending"
+}

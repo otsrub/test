@@ -5119,5 +5119,16 @@
       "Separate source modules do not replace a whole original image."
     ]
   },
-  "current_section_coverage_audit": "reconstruction/SECTION_COVERAGE_AUDIT_GUI_IMPORT_LUT_20261024.json"
+  "current_section_coverage_audit": "reconstruction/SECTION_COVERAGE_AUDIT_GUI_IMPORT_LUT_20261024.json",
+  "local_continuation_pending_20261025": {
+    "progress_report": "reconstruction/PROGRESS_LOCAL_CONTINUATION_20261025.json",
+    "host_evidence": "reconstruction/SHARED_INITIALIZERS_HOST_EVIDENCE_20261025.json",
+    "new_dispatch_source": "reconstruction/logic_genre_tables_dispatch.cpp",
+    "dispatch_preflight": "reconstruction/LOGIC_GENRE_DISPATCH_PREFLIGHT_20261025.json",
+    "host_evidence_zip_sha256": "d710aef4c632977ae185ac3745a0dad17eda3f22de16ee874a695399daa27edf",
+    "target_source_acceptance_delta": 0,
+    "accepted_functions_unchanged": 88,
+    "accepted_byte_union_unchanged": 9576,
+    "production_integration_verified": false
+  }
 }
