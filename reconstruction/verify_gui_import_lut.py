@@ -38,13 +38,14 @@ ref.hook_add(UC_HOOK_CODE,hook)
 preserved=[getattr(ac,f'UC_ARM64_REG_X{i}') for i in range(19,30)]+[getattr(ac,f'UC_ARM64_REG_D{i}') for i in range(8,16)]
 rng=random.Random(0xf6178 if lane=='density' else 0x100f24);cases=16384;passes=[0,0,0];rows=[];failures=[];edges=[0,1,2,3,255,256,65535,65536,0x1000000,0x1000001,0x7ffffffe,0x7fffffff,0x80000000,0x80000001,0xfffffffe,0xffffffff]
 for entry,n,name in specs:
- bounds[0]=(entry,entry+n);before=set(covered);per=[0,0,0];aliases=0;patterns=set();outcomes=set()
+ bounds[0]=(entry,entry+n);before=set(covered);per=[0,0,0];aliases=0;tested_displacements=set();patterns=set();outcomes=set()
  for case in range(cases):
   data=bytearray(rng.randbytes(SIZE));obj=MEM+0x100+(case&15);io=obj-MEM;ctx=MEM+0x80;info=obj
   global_data=bytearray(rng.randbytes(1024))
   if case%5==0:global_data[:]=bytes(range(256))*4
   displacement=[-128,-127,-64,-63,-32,-31,-16,-15,-8,-7,-4,-3,-2,-1,0,1,2,3,4,7,8,15,16,31,32,63,64,127,128,255][case%30]
-  use_alias=case%3!=0;aliases+=int(use_alias)
+  use_alias=(case//30)%3!=0;aliases+=int(use_alias)
+  if use_alias:tested_displacements.add(displacement)
   args=[MEM+0x1000+(case&15)]+[rng.getrandbits(64) for _ in range(7)]
   initial=[rng.getrandbits(64) for _ in preserved];fpcr=((case//512)%4<<22)|((case//2048)%4<<24);fpsr=(case*0x01010101)&0xf800009f
   for ix,(u,sy) in enumerate([(ref,{})]+engines):
@@ -68,6 +69,6 @@ for entry,n,name in specs:
    else:
     failure={'entry':hex(entry),'name':name,'case':case,'optimization':[0,2,3][ix-1],'original_return':expected[0],'source_return':ret,'original_fpsr':expected[3],'source_fpsr':actual[3],'memory_first_difference':next((i for i,(a,b) in enumerate(zip(expected[1],actual[1])) if a!=b),None),'args':list(map(hex,args)),'global_first_difference':next((i for i,(a,b) in enumerate(zip(expected[4],actual[4])) if a!=b),None),'global_data_hex':bytes(global_data).hex(),'global_alias':use_alias,'displacement':displacement,'memory_hex':bytes(data).hex(),'fpcr':hex(fpcr),'fpsr':hex(fpsr)};failures.append(failure);write(out/'FIRST_MISMATCH.json',failure);raise AssertionError(str({k:v for k,v in failure.items() if k!='memory_hex'}))
   if case%2048==0:write(out/'PROGRESS.json',{'name':name,'case':case,'passes':passes})
- loc=sorted(covered-before);assert len(loc)==n//4,(name,len(loc),n//4)
- rows.append({'image_sha256':image,'entry':hex(entry),'end_exclusive':hex(entry+n),'name':name,'original_bytes':n,'original_function_sha256':sha(read(entry,n)),'cases':cases,'comparisons':cases*3,'passes':per,'mismatches':0,'all_original_instructions_exercised':True,'original_instruction_locations':list(map(hex,loc)),'aliased_cases':aliases,'output_patterns':len(patterns),'return_outcomes':len(outcomes),'complete_function_bounded_test':True});write(out/'INTERMEDIATE.json',{'functions':rows,'failures':failures})
+ loc=sorted(covered-before);assert len(loc)==n//4,(name,len(loc),n//4);assert len(tested_displacements)==30 and min(tested_displacements)==-128 and max(tested_displacements)==255
+ rows.append({'image_sha256':image,'entry':hex(entry),'end_exclusive':hex(entry+n),'name':name,'original_bytes':n,'original_function_sha256':sha(read(entry,n)),'cases':cases,'comparisons':cases*3,'passes':per,'mismatches':0,'all_original_instructions_exercised':True,'original_instruction_locations':list(map(hex,loc)),'aliased_cases':aliases,'tested_alias_displacements':sorted(tested_displacements),'output_patterns':len(patterns),'return_outcomes':len(outcomes),'complete_function_bounded_test':True});write(out/'INTERMEDIATE.json',{'functions':rows,'failures':failures})
 report={'image_sha256':image,'lane':lane,'table_checks':table_checks,'original_warning_queue_artifact_id':11862473419,'data_symbol':'__ZN6GImage12ms_ImportLUTE','compiled_prefix_guard_verified_zero_and_not_instruction_bytes':True,'compiled_prefix_guard_written':False,'x0_return_preserved_and_asserted_before_pointer_identity_normalization':True,'original_data_address':'0x474190','alias_scope':'source before/at/after shared destination, offsets-128..255; compiled prefix guard is verified zero non-instruction padding and never written','no_instruction_patch':True,'functions':rows,'complete_functions':len(rows),'original_bytes':sum(r['original_bytes'] for r in rows),'comparisons':sum(r['comparisons'] for r in rows),'passes':passes,'mismatches':0,'failures':failures,'source_sha256':sha(source.read_bytes()),'modules':modules,'native_imports':0,'native_callees':0,'native_stubs_used':False,'elapsed_seconds':time.time()-began,'limits':['Finite mapped ordinary-memory inputs and aliased public buffers only; not all-input proof.','No fault/MMIO/race or asynchronous observer equivalence.','Private stack alias inputs excluded.','Original high-level return type unknown; unchanged x0 is conservatively preserved and asserted in both executions before shared-data pointer identity normalization. All writes and guards compared without normalization.','Whole native image builds and Payload integration remain unresolved.']};write(out/'REPORT.json',report);print(json.dumps(report,indent=2))
