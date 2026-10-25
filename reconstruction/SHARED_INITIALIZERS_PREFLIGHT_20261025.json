@@ -1,0 +1,104 @@
+{
+  "date_utc": "2026-10-25",
+  "results": [
+    {
+      "image": "logic",
+      "image_sha256": "8dc0169c2d2bd0b15a48340a9f1c1508315cd33a2cce3f49704de5ba51734287",
+      "entry": "0x123dbc",
+      "bytes": 52,
+      "original_executions": 4096,
+      "instruction_locations": 13,
+      "mismatches": 0,
+      "guard_bytes_compared": 256,
+      "expected_table_hex": "414cae3eca15c43eb451df3e31b9023fb982183fdfd9283f7205313f995c413f8efa4e3fb4515f3f0000803ff59d8d3fea3b9b3fdfd9a83fd477b63fca15c43f",
+      "compiled_source_tested": false,
+      "complete_function_accepted": false
+    },
+    {
+      "image": "madsp",
+      "image_sha256": "8b7cbaa383d3050241921e74d1334b22703193afed6ea5e9388599cc42a60fe8",
+      "entry": "0x4f59b4",
+      "bytes": 100,
+      "original_executions": 4096,
+      "instruction_locations": 25,
+      "mismatches": 0,
+      "guard_bytes_compared": 256,
+      "expected_table_hex": "ffffffffffffffffffffffffffffffff000000000000000001000000000000000200000000000000030000000000000004000000000000000500000000000000ffffffffffffffff06000000000000000700000000000000080000000000000009000000000000000a000000000000000b00000000000000ffffffffffffffff0c00000000000000",
+      "compiled_source_tested": false,
+      "complete_function_accepted": false
+    }
+  ],
+  "new_accepted_functions": 0,
+  "blocker": "Workflow file upload protocol rejected by browser URL policy; supported GitHub contents API returned403. Source and verifier saved, compiled execution pending.",
+  "limits": [
+    "Original execution against literal/source-bit model only, not compiled-source equivalence.",
+    "Full shared-state/class integration, original high-level return type unresolved."
+  ],
+  "sources": [
+    {
+      "path": "reconstruction/logic_follow_staff_init.cpp",
+      "sha256": "cb925db98bd5db25bcd4df3179335bd80fdaa3fce0b4fc2fd50c23f4c782fc01"
+    },
+    {
+      "path": "reconstruction/madsp_fader_map_init.cpp",
+      "sha256": "631f34c1b1b4a09f50a582cec89baa957dce9bf20c1c2723ee91477fb8ed6127"
+    },
+    {
+      "path": "reconstruction/verify_shared_initializers.py",
+      "sha256": "f2611e48cf7c2ba9b1a2c327c28066c3f03a79c68573ae2b9c65ddb88b30c17a"
+    }
+  ],
+  "accepted_baseline": {
+    "functions": 88,
+    "union_original_bytes": 9576,
+    "commit": "afc8d8d04fd4d9f81839709cd1b89bac188a5781"
+  },
+  "metrics": {
+    "decompiler_output": {
+      "numerator": null,
+      "denominator": null,
+      "percent": null
+    },
+    "reviewed_quality": {
+      "new_preflight_candidates": 2,
+      "denominator": null,
+      "percent": null
+    },
+    "exact_boundaries": {
+      "accepted": 88,
+      "new_candidates": 2,
+      "denominator": null,
+      "percent": null
+    },
+    "compiled_source": {
+      "accepted": 88,
+      "pending_candidates": 2,
+      "denominator": null,
+      "percent": null
+    },
+    "bounded_original_equivalence": {
+      "accepted": 88,
+      "denominator": null,
+      "percent": null
+    },
+    "native_image_builds": {
+      "numerator": 0,
+      "denominator": 59,
+      "percent": 0
+    },
+    "rebuilt_filesystem_parity": {
+      "numerator": null,
+      "denominator": 21435,
+      "percent": null
+    },
+    "scoped_instruction_section_bytes": {
+      "numerator": 9576,
+      "denominator": 93551620,
+      "percent": 0.01023606004898686,
+      "unit": "original non-stub instruction-section bytes",
+      "global_completion": false
+    }
+  },
+  "eta": "No defensible full-completion ETA; reliable remaining implementation denominator and representative closure throughput missing.",
+  "workflow_publication_pending": true
+}
