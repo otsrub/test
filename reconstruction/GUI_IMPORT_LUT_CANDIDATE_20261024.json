@@ -116,7 +116,7 @@
   "original_shared_data_address": "0x474190",
   "dependency_status": "Original shared data resolved by exact GImage::ms_ImportLUT symbol and __common zerofill; other users and whole image integration remain open",
   "source_path": "reconstruction/maplugingui_import_lut_source.cpp",
-  "source_sha256": "83090ce66a8336dbebce465ee4988c0b9febc506cc945828826ea06a8e9b566b",
+  "source_sha256": "6507b3573e7032e1b7d0e415fc5f810ee03c34df6c732ecf3b11085497075977",
   "native_calls": 0,
   "status": "new full source and signed-alias verifier prepared; no runtime acceptance yet",
   "accepted_complete_functions": 0,
@@ -131,5 +131,7 @@
   "next_symbol": "__ZN6GNoise11ms_ValueTabE",
   "next_symbol_address": "0x474290",
   "zero_initialized_original_shared_data": true,
-  "previous_unverified_candidate": "reconstruction/maplugingui_import_lut_candidate.c"
+  "previous_unverified_candidate": "reconstruction/maplugingui_import_lut_candidate.c",
+  "return_type_status": "Original high-level return type unknown; instruction stream preserves x0 input and candidate conservatively returns input to retain exact machine register result.",
+  "return_abi_verification": "Both original and source x0 must equal actual input pointer before comparing logical shared-data identity; no memory writes normalized."
 }

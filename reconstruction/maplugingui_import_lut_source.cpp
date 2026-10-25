@@ -7,11 +7,12 @@
 typedef unsigned char u8;
 class GImage { public: static u8 ms_ImportLUT[256]; };
 u8 GImage::ms_ImportLUT[256];
-extern "C" void ml_gui_set_import_lut(const u8*input){
+extern "C" const u8* ml_gui_set_import_lut(const u8*input){
  for(unsigned group=0;group<4;group++){
   u8 loaded[64];
   for(unsigned k=0;k<64;k++)loaded[k]=input[group*64+k];
   for(unsigned k=32;k<64;k++)GImage::ms_ImportLUT[group*64+k]=loaded[k];
   for(unsigned k=0;k<32;k++)GImage::ms_ImportLUT[group*64+k]=loaded[k];
  }
+ return input; /* Original x0 remains unchanged, regardless of unknown high-level return type. */
 }
