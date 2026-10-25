@@ -1,0 +1,49 @@
+name: REA flagged GUI import LUT shared-data source
+'on':
+  push:
+    paths: [.github/workflows/rea-gui-import-lut.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-gui-import-lut
+  cancel-in-progress: false
+jobs:
+  differential:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        lane: [lut]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-dossiers-evidence
+          run-id: '38815798247'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-all-unsolved-dependencies
+          run-id: '40047056048'
+          github-token: ${{ github.token }}
+          path: inventory
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+          python -m pip install unicorn==2.1.4
+      - run: python reconstruction/verify_gui_import_lut.py --lane ${{ matrix.lane }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-gui-import-lut-evidence
+          path: |
+            gui-import-lut-source/
+            reconstruction/maplugingui_import_lut_source.cpp
+            reconstruction/verify_gui_import_lut.py
+          retention-days: 90
+          if-no-files-found: error
