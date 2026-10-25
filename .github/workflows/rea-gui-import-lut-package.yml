@@ -1,0 +1,49 @@
+name: REA shared import LUT clean source package
+'on':
+  push:
+    paths: [.github/workflows/rea-gui-import-lut-package.yml]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: rea-gui-import-lut-package
+  cancel-in-progress: false
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-gui-import-lut-evidence
+          run-id: '40152750128'
+          github-token: ${{ github.token }}
+          path: parents
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-continuation-dossiers-evidence
+          run-id: '38815798247'
+          github-token: ${{ github.token }}
+          path: prior
+      - uses: actions/download-artifact@v4
+        with:
+          name: rea-all-unsolved-dependencies
+          run-id: '40047056048'
+          github-token: ${{ github.token }}
+          path: inventory
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+      - run: python reconstruction/package_gui_import_lut.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rea-gui-import-lut-clean-source-package
+          path: |
+            gui-import-lut-source-package/
+            reconstruction/package_gui_import_lut.py
+            reconstruction/GUI_IMPORT_LUT_PARENT_INPUT.json
+          retention-days: 90
+          if-no-files-found: error
