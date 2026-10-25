@@ -1,0 +1,135 @@
+{
+  "date": "2026-10-24",
+  "image_sha256": "74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4",
+  "entry": "0x865e4",
+  "end_exclusive": "0x86630",
+  "original_bytes": 76,
+  "original_function_sha256": "9d0cba5012bf1f21534eae50e3f5f4465b48bc620380b55ea2e707d0ab3eaa5c",
+  "original_warning_queue_record": {
+    "image_sha256": "74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4",
+    "address": "0x865e4",
+    "name": "GImage::SetImportLUT",
+    "artifact_id": 11862473419,
+    "flags": [
+      "decompiler_warning"
+    ],
+    "instruction_count": 19,
+    "status": "requires_original_byte_and_source_review"
+  },
+  "original_instructions": [
+    {
+      "address": "0x865e4",
+      "mnemonic": "ldp",
+      "operands": "q0, q1, [x0]"
+    },
+    {
+      "address": "0x865e8",
+      "mnemonic": "ldp",
+      "operands": "q2, q3, [x0, #0x20]"
+    },
+    {
+      "address": "0x865ec",
+      "mnemonic": "adrp",
+      "operands": "x8, #0x474000"
+    },
+    {
+      "address": "0x865f0",
+      "mnemonic": "add",
+      "operands": "x8, x8, #0x190"
+    },
+    {
+      "address": "0x865f4",
+      "mnemonic": "stp",
+      "operands": "q2, q3, [x8, #0x20]"
+    },
+    {
+      "address": "0x865f8",
+      "mnemonic": "stp",
+      "operands": "q0, q1, [x8]"
+    },
+    {
+      "address": "0x865fc",
+      "mnemonic": "ldp",
+      "operands": "q0, q1, [x0, #0x40]"
+    },
+    {
+      "address": "0x86600",
+      "mnemonic": "ldp",
+      "operands": "q2, q3, [x0, #0x60]"
+    },
+    {
+      "address": "0x86604",
+      "mnemonic": "stp",
+      "operands": "q2, q3, [x8, #0x60]"
+    },
+    {
+      "address": "0x86608",
+      "mnemonic": "stp",
+      "operands": "q0, q1, [x8, #0x40]"
+    },
+    {
+      "address": "0x8660c",
+      "mnemonic": "ldp",
+      "operands": "q0, q1, [x0, #0x80]"
+    },
+    {
+      "address": "0x86610",
+      "mnemonic": "ldp",
+      "operands": "q2, q3, [x0, #0xa0]"
+    },
+    {
+      "address": "0x86614",
+      "mnemonic": "stp",
+      "operands": "q2, q3, [x8, #0xa0]"
+    },
+    {
+      "address": "0x86618",
+      "mnemonic": "stp",
+      "operands": "q0, q1, [x8, #0x80]"
+    },
+    {
+      "address": "0x8661c",
+      "mnemonic": "ldp",
+      "operands": "q0, q1, [x0, #0xc0]"
+    },
+    {
+      "address": "0x86620",
+      "mnemonic": "ldp",
+      "operands": "q2, q3, [x0, #0xe0]"
+    },
+    {
+      "address": "0x86624",
+      "mnemonic": "stp",
+      "operands": "q2, q3, [x8, #0xe0]"
+    },
+    {
+      "address": "0x86628",
+      "mnemonic": "stp",
+      "operands": "q0, q1, [x8, #0xc0]"
+    },
+    {
+      "address": "0x8662c",
+      "mnemonic": "ret",
+      "operands": ""
+    }
+  ],
+  "original_shared_data_address": "0x474190",
+  "dependency_status": "Original shared data resolved by exact GImage::ms_ImportLUT symbol and __common zerofill; other users and whole image integration remain open",
+  "source_path": "reconstruction/maplugingui_import_lut_source.cpp",
+  "source_sha256": "83090ce66a8336dbebce465ee4988c0b9febc506cc945828826ea06a8e9b566b",
+  "native_calls": 0,
+  "status": "new full source and signed-alias verifier prepared; no runtime acceptance yet",
+  "accepted_complete_functions": 0,
+  "runtime_comparisons": 0,
+  "required_tests": [
+    "Real data-slot binding with correct shared ownership; preserve original data initialization facts.",
+    "Input alias with shared destination before/at/after each64-byte group; all64bytes must load before stores32..63 then0..31.",
+    "Whole256-byte output, input-region memory, guard regions, callee-saved registers, SP, FPCR/FPSR."
+  ],
+  "baseline_warning_queue_modified": false,
+  "original_shared_data_symbol": "__ZN6GImage12ms_ImportLUTE",
+  "next_symbol": "__ZN6GNoise11ms_ValueTabE",
+  "next_symbol_address": "0x474290",
+  "zero_initialized_original_shared_data": true,
+  "previous_unverified_candidate": "reconstruction/maplugingui_import_lut_candidate.c"
+}

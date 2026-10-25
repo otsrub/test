@@ -119,10 +119,16 @@
           "operands": ""
         }
       ],
-      "source_status": "candidate pending original-byte finite verification",
+      "source_status": "clean source module built and complete-function bounded tests passed",
       "native_calls": 0,
       "hidden_result_pointer": "x8",
-      "accepted_complete_function": false
+      "accepted_complete_function": true,
+      "runtime_comparisons": 49152,
+      "mismatches": 0,
+      "verification_run_id": 40132939599,
+      "verification_artifact_id": 12575718260,
+      "clean_package_artifact_id": 12581859617,
+      "all_input_equivalence_proven": false
     },
     {
       "image_sha256": "74caec7240779c9be25d4dbf9fde574a2783c8192cca262866b1511bb01fe1b4",
@@ -238,10 +244,16 @@
           "operands": ""
         }
       ],
-      "source_status": "candidate pending original-byte finite verification",
+      "source_status": "clean source module built and complete-function bounded tests passed",
       "native_calls": 0,
       "hidden_result_pointer": "x8",
-      "accepted_complete_function": false
+      "accepted_complete_function": true,
+      "runtime_comparisons": 49152,
+      "mismatches": 0,
+      "verification_run_id": 40132939599,
+      "verification_artifact_id": 12575718260,
+      "clean_package_artifact_id": 12581859617,
+      "all_input_equivalence_proven": false
     }
   ],
   "shared_literal_address": "0x3340d0",
