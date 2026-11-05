@@ -149,8 +149,8 @@ jobs:
         SHARD: startup
         REA_GHIDRA_STARTUP_TIMEOUT_MS: '1800000'
         GHIDRA_HEADLESS_MAXMEM: 4G
-        FOCUS_PATHS: '["Frameworks/EmbeddedRemoteConfiguration.framework/EmbeddedRemoteConfiguration"]'
-        FUNCTION_FILTER: Remote|Config|URLSession|HTTP|Endpoint|URLRequest|Request|Fetch|Download|Cache|Bootstrap
+        FOCUS_PATHS: '["MobileLogic"]'
+        FUNCTION_FILTER: Remote|Config|Endpoint|Network|URL|Request|HTTP|Store|Bootstrap|Cloud|Subscription|Web
       run: |
         mkdir -p recovery
         cat > recovery/recover.mjs <<'SOURCE'
