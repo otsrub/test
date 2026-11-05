@@ -262,7 +262,7 @@ jobs:
               }
             } finally { await pseudoFile.close(); await asmFile.close(); }
             record.status = filter ? 'filtered_static_evidence' : record.errors || record.unmatched_compiler_function_starts.length || record.null_pseudocode ? 'partial' : 'complete_within_analyzed_function_inventory';
-            await call('close_binary');
+            for(const address of ['0x7716c0','0x7716b0','0x7716e0','0x7716d0','0x745820','0x745810']){try{await call('xrefs',{address});}catch(e){record.limitations.push('xrefs '+address+': '+e.message);}} await call('close_binary');
             connected = false;
           } catch (e) {
             record.status = 'failed';
