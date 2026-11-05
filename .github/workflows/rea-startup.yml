@@ -150,7 +150,7 @@ jobs:
         REA_GHIDRA_STARTUP_TIMEOUT_MS: '1800000'
         GHIDRA_HEADLESS_MAXMEM: 4G
         FOCUS_PATHS: '["MobileLogic","Frameworks/MAMobileAppCore.framework/MAMobileAppCore","Frameworks/MobileLogicAppFramework.framework/MobileLogicAppFramework"]'
-        FUNCTION_FILTER: SongOperationController|AppWorkflowControllerDelegate|ProductionSubscriptionStoreController
+        FUNCTION_FILTER: SongOperationController|AppWorkflowControllerDelegate|ProductionSubscriptionStoreController|ProductionFactory|MainFactoryProvider|MABootstrapper|SubscriptionStoreController|Bootstrap
       run: |
         mkdir -p recovery
         cat > recovery/recover.mjs <<'SOURCE'
