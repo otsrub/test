@@ -233,7 +233,7 @@ jobs:
             const asmFile = await fs.open(path.join(dest, 'recovered-assembly.txt'), 'w');
             try {
               await pseudoFile.write('/* Static Ghidra pseudocode recovered via REA. NOT original source or verified compilable C. */\n');
-              for (const p of procedures.filter(p => !filter || filter.test(p.value))) {
+              for (const p of procedures.filter(p => !filter || filter.test(p.value) || (Number(p.address) >= 0x208000 && Number(p.address) < 0x216400))) {
                 const status = { address: p.address, name: p.value, classification: p.procedure ?? null, pseudocode: 'not_attempted', assembly: 'not_attempted', info: 'not_attempted', references: 'not_attempted', errors: [] };
                 record.function_status.push(status);
                 if (p.procedure?.external === true) {
@@ -295,7 +295,7 @@ jobs:
         console.log(JSON.stringify({ shard, status: summary.status, images: summary.images.length, selected: selected.length }));
 
         SOURCE
-        node recovery/recover.mjs
+        cp MobileLogic.app/Frameworks/MobileLogicAppFramework.framework/MobileLogicAppFramework evidence/MobileLogicAppFramework.original && node recovery/recover.mjs
     - name: Retain pseudocode assembly and coverage
       if: always()
       uses: actions/upload-artifact@v4
