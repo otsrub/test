@@ -1,4 +1,4 @@
-name: Logic remote-config diagnostic tweak v2
+name: Logic remote-config diagnostic tweak v3
 on:
   push:
     branches: [logic-rc-diagnostic]
@@ -18,104 +18,33 @@ jobs:
           #import <objc/runtime.h>
           #import <dispatch/dispatch.h>
           #import <mach-o/dyld.h>
-
           typedef void (*FetchIMP)(id, SEL, id, dispatch_queue_t, id);
           static FetchIMP originalFetch;
-          static BOOL hookInstalled;
-          static dispatch_queue_t logQueue;
-          static NSString *logPath;
-          static int requestSequence;
-
-          static void Log(NSString *message) {
-            if (!logQueue) logQueue = dispatch_queue_create("com.logic.rcdiagnostic.log", DISPATCH_QUEUE_SERIAL);
-            dispatch_async(logQueue, ^{
-              @autoreleasepool {
-                if (!logPath) {
-                  NSString *dir = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject ?: NSTemporaryDirectory();
-                  logPath = [dir stringByAppendingPathComponent:@"LogicRemoteConfigDiagnostic-v2.txt"];
-                  if (![[NSFileManager defaultManager] fileExistsAtPath:logPath])
-                    [[NSString stringWithFormat:@"Logic remote-config diagnostic v2 %@\n", [NSDate date]] writeToFile:logPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
-                }
-                NSString *line = [NSString stringWithFormat:@"%@ %@\n", [NSDate date], message];
-                NSFileHandle *f = [NSFileHandle fileHandleForWritingAtPath:logPath];
-                if (f) { [f seekToEndOfFile]; [f writeData:[line dataUsingEncoding:NSUTF8StringEncoding]]; [f closeFile]; }
-                else [line writeToFile:logPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
-              }
-            });
+          static BOOL installed;
+          static dispatch_queue_t q;
+          static NSString *path;
+          static int seq;
+          static void Log(NSString *s) {
+            if (!q) q = dispatch_queue_create("logic.rcdiag.log", DISPATCH_QUEUE_SERIAL);
+            dispatch_async(q, ^{ @autoreleasepool {
+              if (!path) { NSString *d = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject ?: NSTemporaryDirectory(); path = [d stringByAppendingPathComponent:@"LogicRemoteConfigDiagnostic-v3.txt"]; if (![[NSFileManager defaultManager] fileExistsAtPath:path]) [[NSString stringWithFormat:@"Logic RC diagnostic v3 %@\n", [NSDate date]] writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil]; }
+              NSFileHandle *f = [NSFileHandle fileHandleForWritingAtPath:path]; NSString *line = [NSString stringWithFormat:@"%@ %@\n", [NSDate date], s]; if (f) { [f seekToEndOfFile]; [f writeData:[line dataUsingEncoding:NSUTF8StringEncoding]]; [f closeFile]; } else [line writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
+            }});
           }
-
-          static NSString *SafeKeys(NSDictionary *dict) {
-            if (![dict isKindOfClass:[NSDictionary class]] || !dict.count) return @"none";
-            NSMutableArray *keys = [NSMutableArray array];
-            for (id key in dict.allKeys) if ([key isKindOfClass:[NSString class]]) [keys addObject:key];
-            [keys sortUsingSelector:@selector(compare:)];
-            return keys.count ? [keys componentsJoinedByString:@","] : @"none";
+          static NSString *HTTP(NSError *e) {
+            NSDictionary *u=e.userInfo; id st=u[@"RCErrorHTTPStatusCode"]; id raw=u[@"RCErrorHTTPURL"]; NSURL *url=[raw isKindOfClass:[NSURL class]]?raw:([raw isKindOfClass:[NSString class]]?[NSURL URLWithString:raw]:nil); id h=u[@"RCErrorHTTPResponseHeaders"]; NSMutableArray *hs=[NSMutableArray array];
+            if ([h isKindOfClass:[NSDictionary class]]) for (NSString *k in @[@"Content-Type",@"Content-Length",@"Retry-After",@"Server",@"Via"]) { id v=h[k]?:h[k.lowercaseString]; if (v) [hs addObject:([k isEqualToString:@"Server"]||[k isEqualToString:@"Via"]?[k stringByAppendingString:@"=present"]:[NSString stringWithFormat:@"%@=%@",k,v])]; }
+            return [NSString stringWithFormat:@"http_status=%@ host=%@ headers={%@}",st?:@"none",url.host?:@"none",hs.count?[hs componentsJoinedByString:@","]:@"none"];
           }
-
-          static NSString *ErrorSummary(NSError *error) {
-            NSMutableArray *parts = [NSMutableArray array];
-            NSError *e = error;
-            for (int i = 0; e && i < 4; i++, e = e.userInfo[NSUnderlyingErrorKey])
-              [parts addObject:[NSString stringWithFormat:@"%@/%ld keys={%@}", e.domain ?: @"?", (long)e.code, SafeKeys(e.userInfo)]];
-            return parts.count ? [parts componentsJoinedByString:@" <- "] : @"none";
+          static void Hook(id self, SEL cmd, id settings, dispatch_queue_t queue, id object) {
+            void (^done)(id,id,id,NSError *)=object; if(!done||!originalFetch){if(originalFetch)originalFetch(self,cmd,settings,queue,object);return;}
+            int n=__sync_add_and_fetch(&seq,1); Log([NSString stringWithFormat:@"request=%d stack=%@",n,[[NSThread callStackSymbols] componentsJoinedByString:@" | "]]);
+            void (^cb)(id,id,id,NSError *)=^(id a,id b,id c,NSError *e){ if(!e){Log([NSString stringWithFormat:@"request=%d result=success",n]);done(a,b,c,nil);return;} Log([NSString stringWithFormat:@"request=%d result=error domain=%@ code=%ld %@",n,e.domain,(long)e.code,HTTP(e)]); done(a,b,c,e); };
+            originalFetch(self,cmd,settings,queue,[cb copy]);
           }
-
-          static NSString *SettingsSummary(id settings) {
-            if (!settings) return @"nil";
-            NSString *className = NSStringFromClass([settings class]) ?: @"unknown";
-            if ([settings isKindOfClass:[NSDictionary class]])
-              return [NSString stringWithFormat:@"%@ keys={%@}", className, SafeKeys(settings)];
-            return className;
-          }
-
-          static BOOL ShouldRetry(NSError *error) {
-            if (!error || ([error.domain isEqualToString:NSURLErrorDomain] && error.code == NSURLErrorCancelled)) return NO;
-            NSString *s = error.localizedDescription.lowercaseString ?: @"";
-            return ![s containsString:@"unauthorized"] && ![s containsString:@"forbidden"] && ![s containsString:@"not authorized"];
-          }
-
-          static void HookedFetch(id self, SEL cmd, id settings, dispatch_queue_t queue, id completionObject) {
-            void (^completion)(id, id, id, NSError *) = completionObject;
-            if (!completion || !originalFetch) { if (originalFetch) originalFetch(self, cmd, settings, queue, completionObject); return; }
-            int request = __sync_add_and_fetch(&requestSequence, 1);
-            Log([NSString stringWithFormat:@"request=%d settings=%@ callstack=%@", request, SettingsSummary(settings), [[NSThread callStackSymbols] componentsJoinedByString:@" | "]]);
-            Log([NSString stringWithFormat:@"request=%d attempt=1 started", request]);
-            void (^first)(id, id, id, NSError *) = ^(id data, id treatmentIDs, id segmentIDs, NSError *error) {
-              if (!error) { Log([NSString stringWithFormat:@"request=%d attempt=1 result=success", request]); completion(data, treatmentIDs, segmentIDs, nil); return; }
-              BOOL retry = ShouldRetry(error);
-              Log([NSString stringWithFormat:@"request=%d attempt=1 result=error details=%@ retry=%@", request, ErrorSummary(error), retry ? @"yes" : @"no"]);
-              if (!retry) { completion(nil, nil, nil, error); return; }
-              Log([NSString stringWithFormat:@"request=%d attempt=2 started", request]);
-              void (^second)(id, id, id, NSError *) = ^(id retryData, id retryTreatmentIDs, id retrySegmentIDs, NSError *retryError) {
-                Log(retryError ? [NSString stringWithFormat:@"request=%d attempt=2 result=error details=%@", request, ErrorSummary(retryError)] : [NSString stringWithFormat:@"request=%d attempt=2 result=success", request]);
-                completion(retryData, retryTreatmentIDs, retrySegmentIDs, retryError);
-              };
-              originalFetch(self, cmd, settings, queue, [second copy]);
-            };
-            originalFetch(self, cmd, settings, queue, [first copy]);
-          }
-
-          static void TryInstall(void) {
-            if (hookInstalled) return;
-            Class cls = objc_getClass("RCEConfigurationManager");
-            SEL sel = sel_registerName("fetchSingleConfigurationWithSettings:completionQueue:completion:");
-            Method m = cls ? class_getInstanceMethod(cls, sel) : NULL;
-            if (m) {
-              originalFetch = (FetchIMP)method_getImplementation(m);
-              method_setImplementation(m, (IMP)HookedFetch);
-              hookInstalled = YES;
-              Log(@"hook installed");
-            }
-          }
-
-          static void ImageAdded(const struct mach_header *mh, intptr_t slide) { (void)mh; (void)slide; TryInstall(); }
-          __attribute__((constructor)) static void StartDiagnostic(void) {
-            if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"]) return;
-            Log(@"tweak v2 loaded for Logic");
-            TryInstall();
-            _dyld_register_func_for_add_image(ImageAdded);
-            for (int i = 1; i <= 60; i++) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)i * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ TryInstall(); });
-          }
+          static void Try(void){if(installed)return;Class c=objc_getClass("RCEConfigurationManager");SEL s=sel_registerName("fetchSingleConfigurationWithSettings:completionQueue:completion:");Method m=c?class_getInstanceMethod(c,s):NULL;if(m){originalFetch=(FetchIMP)method_getImplementation(m);method_setImplementation(m,(IMP)Hook);installed=YES;Log(@"hook installed");}}
+          static void Added(const struct mach_header *h,intptr_t s){(void)h;(void)s;Try();}
+          __attribute__((constructor)) static void Start(void){if(![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"])return;Log(@"tweak v3 loaded");Try();_dyld_register_func_for_add_image(Added);for(int i=1;i<=60;i++)dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)i*NSEC_PER_SEC),dispatch_get_main_queue(),^{Try();});}
           OBJC
           SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
           xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicRCDiagnostic.dylib -framework Foundation -framework UIKit -o LogicRCDiagnostic.dylib LogicRCDiagnostic.m
@@ -124,7 +53,8 @@ jobs:
       - name: Retain tweak artifact
         uses: actions/upload-artifact@v4
         with:
-          name: logic-rc-diagnostic-v2-dylib
+          name: logic-rc-diagnostic-v3-dylib
           path: LogicRCDiagnostic.dylib
           retention-days: 30
           if-no-files-found: error
+
