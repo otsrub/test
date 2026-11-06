@@ -1,0 +1,88 @@
+name: Logic launch gate patch v26
+on:
+  push:
+    branches: [logic-startup-visible-v16]
+    paths: [.github/workflows/logic-launch-gate-v26.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Build targeted launch gate tweak
+        run: |
+          cat > LaunchGate.m <<'OBJC'
+          #import <Foundation/Foundation.h>
+          #import <UIKit/UIKit.h>
+          #import <objc/runtime.h>
+          #import <dispatch/dispatch.h>
+          #import <stdlib.h>
+          #import <string.h>
+          typedef void (*LaunchDecisionIMP)(id, SEL, id, BOOL, BOOL *);
+          static LaunchDecisionIMP OriginalDecision;
+          static BOOL Installed;
+          static dispatch_queue_t LogQueue;
+          static NSMutableArray<NSString *> *Lines;
+          static UITextView *Overlay;
+          static void WriteLog(NSString *message) {
+            if (!LogQueue) LogQueue = dispatch_queue_create("logic.launchgate.patch", DISPATCH_QUEUE_SERIAL);
+            dispatch_async(LogQueue, ^{
+              NSDateFormatter *fmt=[NSDateFormatter new]; fmt.dateFormat=@"HH:mm:ss";
+              NSString *line=[NSString stringWithFormat:@"%@ %@",[fmt stringFromDate:NSDate.date],message];
+              NSString *dir=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject ?: NSTemporaryDirectory();
+              NSString *path=[dir stringByAppendingPathComponent:@"LogicLaunchGate-v26.txt"];
+              NSFileHandle *handle=[NSFileHandle fileHandleForWritingAtPath:path];
+              NSData *data=[[line stringByAppendingString:@"\n"] dataUsingEncoding:NSUTF8StringEncoding];
+              if(handle){[handle seekToEndOfFile];[handle writeData:data];[handle closeFile];}else [data writeToFile:path atomically:YES];
+              if(!Lines) Lines=[NSMutableArray new]; [Lines addObject:line];
+              if(Lines.count>240) [Lines removeObjectsInRange:NSMakeRange(0,Lines.count-240)];
+              dispatch_async(dispatch_get_main_queue(), ^{
+                UIWindow *window=UIApplication.sharedApplication.keyWindow ?: UIApplication.sharedApplication.windows.firstObject;
+                if(!window)return;
+                if(!Overlay){Overlay=[UITextView new]; Overlay.backgroundColor=[UIColor colorWithWhite:0 alpha:.88]; Overlay.textColor=UIColor.whiteColor; Overlay.font=[UIFont monospacedSystemFontOfSize:12 weight:UIFontWeightRegular]; Overlay.editable=NO; Overlay.selectable=YES; Overlay.scrollEnabled=YES; Overlay.alwaysBounceVertical=YES; Overlay.userInteractionEnabled=YES; Overlay.layer.cornerRadius=10; Overlay.clipsToBounds=YES; Overlay.accessibilityLabel=@"Logic launch gate diagnostics"; [window addSubview:Overlay];}
+                CGFloat top=MAX(window.safeAreaInsets.top,28)+8;
+                Overlay.frame=CGRectMake(8,top,window.bounds.size.width-16,window.bounds.size.height*.55);
+                BOOL wasAtBottom=Overlay.contentOffset.y+Overlay.bounds.size.height>=Overlay.contentSize.height-48;
+                Overlay.text=[Lines componentsJoinedByString:@"\n"];
+                if(wasAtBottom)[Overlay scrollRangeToVisible:NSMakeRange(Overlay.text.length,0)];
+                [window bringSubviewToFront:Overlay];
+              });
+            });
+          }
+          static void PatchedDecision(id self,SEL cmd,id workflow,BOOL requestCancelled,BOOL *shouldDismiss) {
+            if(OriginalDecision) OriginalDecision(self,cmd,workflow,requestCancelled,shouldDismiss);
+            BOOL originalAfter=shouldDismiss?*shouldDismiss:NO;
+            if(!requestCancelled && shouldDismiss) *shouldDismiss=YES;
+            WriteLog([NSString stringWithFormat:@"LAUNCH DECISION cancelled=%@ original_shouldDismiss=%@ patched_shouldDismiss=%@",requestCancelled?@"yes":@"no",originalAfter?@"yes":@"no",(!requestCancelled&&shouldDismiss&&*shouldDismiss)?@"yes":@"no"]);
+          }
+          static void TryInstall(void) {
+            if(Installed)return;
+            int count=objc_getClassList(NULL,0); if(count<=0)return;
+            Class *classes=(__unsafe_unretained Class*)calloc((size_t)count,sizeof(Class)); if(!classes)return;
+            count=objc_getClassList(classes,count);
+            for(int i=0;i<count;i++){
+              const char *name=class_getName(classes[i]); if(!name||!strstr(name,"NCAppWorkflowControllerDelegate"))continue;
+              SEL selector=sel_registerName("appWorkflowController:appDidLaunchWithoutAnyActionRequest:urlRequestWasCancelled:shouldDismissLaunchViewController:");
+              Method method=class_getInstanceMethod(classes[i],selector); if(!method)continue;
+              OriginalDecision=(LaunchDecisionIMP)method_getImplementation(method);
+              method_setImplementation(method,(IMP)PatchedDecision); Installed=YES;
+              WriteLog([NSString stringWithFormat:@"PATCH INSTALLED class=%s selector=%s",name,sel_getName(selector)]); break;
+            }
+            free(classes);
+          }
+          __attribute__((constructor)) static void StartPatch(void) {
+            if(![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"])return;
+            WriteLog(@"PATCH LOADED; waiting for launch workflow class");
+            TryInstall();
+            for(int i=1;i<=180;i++) dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)i*NSEC_PER_SEC),dispatch_get_main_queue(),^{TryInstall();});
+          }
+          OBJC
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -framework Foundation -framework UIKit -o LogicLaunchGate-v26.dylib LaunchGate.m
+          file LogicLaunchGate-v26.dylib
+      - uses: actions/upload-artifact@v4
+        with:
+          name: logic-launch-gate-v26-dylib
+          path: LogicLaunchGate-v26.dylib
+          retention-days: 30
