@@ -1,4 +1,4 @@
-name: Logic startup download progress and iPad config v19
+name: Logic startup file processing trace v20
 on:
   push:
     branches: [logic-startup-visible-v16]
@@ -19,7 +19,7 @@ jobs:
           #import <objc/runtime.h>
           typedef void (^Completion)(NSData*,NSURLResponse*,NSError*);
           typedef id (*TaskIMP)(id,SEL,NSURLRequest*,Completion);
-          static TaskIMP originalTask; static void Log(NSString *s); typedef void (*ResumeIMP)(id,SEL); static ResumeIMP originalResume; static char progressKey;
+          static TaskIMP originalTask; static void Log(NSString *s); typedef void (*ResumeIMP)(id,SEL); static ResumeIMP originalResume; static char progressKey;          typedef BOOL (*CopyURLIMP)(id,SEL,NSURL*,NSURL*,NSError**); typedef BOOL (*CopyPathIMP)(id,SEL,NSString*,NSString*,NSError**); static CopyURLIMP originalCopyURL; static CopyPathIMP originalCopyPath;
           static void PollTask(NSURLSessionTask *task, NSString *path, NSUInteger sample) {
             NSInteger state=task.state, code=0;
             long long received=task.countOfBytesReceived, expected=task.countOfBytesExpectedToReceive;
@@ -28,7 +28,7 @@ jobs:
             if (state!=NSURLSessionTaskStateCompleted && sample<18) dispatch_after(dispatch_time(DISPATCH_TIME_NOW,10*NSEC_PER_SEC),dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{ PollTask(task,path,sample+1); });
           }
           static void ResumeHook(id self,SEL cmd){ NSURLRequest *r=nil; @try { r=[self currentRequest]; } @catch(__unused NSException *e) {} if (r.URL) Log([NSString stringWithFormat:@"TASK RESUME %@ %@",r.HTTPMethod?:@"?",r.URL.path?:@"/"]); originalResume(self,cmd); if (!objc_getAssociatedObject(self,&progressKey)) { objc_setAssociatedObject(self,&progressKey,@YES,OBJC_ASSOCIATION_RETAIN_NONATOMIC); NSString *path=r.URL.path?:@"?"; NSURLSessionTask *task=self; dispatch_after(dispatch_time(DISPATCH_TIME_NOW,10*NSEC_PER_SEC),dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{ PollTask(task,path,0); }); } }
-          static NSString *subscriptionID;
+                    static NSString *ShortPath(id p) { if ([p isKindOfClass:NSString.class]) return [p lastPathComponent] ?: @"?"; if ([p isKindOfClass:NSURL.class]) return [p lastPathComponent] ?: @"?"; return @"?"; }          static BOOL CopyURLHook(id self,SEL cmd,NSURL *src,NSURL *dst,NSError **err) { NSDate *start=[NSDate date]; BOOL ok=originalCopyURL(self,cmd,src,dst,err); NSDictionary *a=[NSFileManager.defaultManager attributesOfItemAtPath:src.path error:nil]; long long size=[a fileSize]; Log([NSString stringWithFormat:@"FILE COPY %@ -> %@ ok=%d source_bytes=%lld elapsed=%.2f error=%@",ShortPath(src),(dst.path?:@"?"),ok,size,-[start timeIntervalSinceNow],(err&&*err)?[NSString stringWithFormat:@"%@/%ld",(*err).domain,(long)(*err).code]:@"none"]); return ok; }          static BOOL CopyPathHook(id self,SEL cmd,NSString *src,NSString *dst,NSError **err) { NSDate *start=[NSDate date]; BOOL ok=originalCopyPath(self,cmd,src,dst,err); NSDictionary *a=[NSFileManager.defaultManager attributesOfItemAtPath:src error:nil]; long long size=[a fileSize]; Log([NSString stringWithFormat:@"FILE COPY %@ -> %@ ok=%d source_bytes=%lld elapsed=%.2f error=%@",ShortPath(src),ShortPath(dst),ok,size,-[start timeIntervalSinceNow],(err&&*err)?[NSString stringWithFormat:@"%@/%ld",(*err).domain,(long)(*err).code]:@"none"]); return ok; }          static NSString *subscriptionID;
           static dispatch_queue_t logQueue;
           static NSMutableArray *lines;
           static UITextView *label;
@@ -65,7 +65,7 @@ jobs:
               NSDateFormatter *f=[NSDateFormatter new]; f.dateFormat=@"HH:mm:ss";
               NSString *line=[NSString stringWithFormat:@"%@ %@",[f stringFromDate:[NSDate date]],s];
               NSString *dir=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();
-              NSString *path=[dir stringByAppendingPathComponent:@"LogicStartupFix-v19.txt"];
+              NSString *path=[dir stringByAppendingPathComponent:@"LogicStartupFix-v20.txt"];
               NSFileHandle *h=[NSFileHandle fileHandleForWritingAtPath:path];
               NSData *d=[line dataUsingEncoding:NSUTF8StringEncoding]; NSMutableData *md=[NSMutableData dataWithData:d]; uint8_t nl=10; [md appendBytes:&nl length:1]; d=md;
               if (h) { [h seekToEndOfFile]; [h writeData:d]; [h closeFile]; } else [d writeToFile:path atomically:YES];
@@ -108,7 +108,9 @@ jobs:
           }
           __attribute__((constructor)) static void Start(void) {
             if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"]) return;
-            logQueue=dispatch_queue_create("logic.visible.status.v19",DISPATCH_QUEUE_SERIAL); lines=[NSMutableArray new];
+            logQueue=dispatch_queue_create("logic.visible.status.v20",DISPATCH_QUEUE_SERIAL); lines=[NSMutableArray new];
+            Method cu=class_getInstanceMethod(NSFileManager.class,@selector(copyItemAtURL:toURL:error:)); if (cu) { originalCopyURL=(CopyURLIMP)method_getImplementation(cu); method_setImplementation(cu,(IMP)CopyURLHook); Log(@"FILE COPY URL HOOK INSTALLED"); }
+            Method cp=class_getInstanceMethod(NSFileManager.class,@selector(copyItemAtPath:toPath:error:)); if (cp) { originalCopyPath=(CopyPathIMP)method_getImplementation(cp); method_setImplementation(cp,(IMP)CopyPathHook); Log(@"FILE COPY PATH HOOK INSTALLED"); }
             Log(@"PATCH LOADED; WAITING FOR CONFIG");
             Method tm=class_getInstanceMethod(objc_getClass("NSURLSessionTask"),@selector(resume)); if (tm) { originalResume=(ResumeIMP)method_getImplementation(tm); method_setImplementation(tm,(IMP)ResumeHook); } Method m=class_getInstanceMethod(objc_getClass("NSURLSession"),@selector(dataTaskWithRequest:completionHandler:));
             if (m) { originalTask=(TaskIMP)method_getImplementation(m); method_setImplementation(m,(IMP)Hook); }
@@ -118,9 +120,9 @@ jobs:
           SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
           xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicStartupVisible.dylib -framework Foundation -framework UIKit -framework CoreGraphics -o LogicStartupVisible.dylib Fix.m
           file LogicStartupVisible.dylib
-      - name: Upload v19 startup progress and compatibility tweak
+      - name: Upload v20 file-processing trace and compatibility tweak
         uses: actions/upload-artifact@v4
         with:
-          name: logic-startup-visible-v19-dylib
+          name: logic-startup-visible-v20-dylib
           path: LogicStartupVisible.dylib
           retention-days: 30
