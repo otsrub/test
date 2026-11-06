@@ -1,0 +1,37 @@
+name: Logic request schema trace v8
+on:
+  push:
+    branches: [logic-rc-diagnostic]
+    paths: [.github/workflows/logic-rc-diagnostic-v8.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Build v8 diagnostic dylib
+        shell: bash
+        run: |
+          cat > Trace.m <<'OBJC'
+          #import <Foundation/Foundation.h>
+          #import <objc/runtime.h>
+          #import <dispatch/dispatch.h>
+          typedef id (*TaskIMP)(id,SEL,NSURLRequest*,id);
+          static TaskIMP originalTask; static dispatch_queue_t logQueue; static NSString *logPath; static NSUInteger seq;
+          static void Log(NSString *s){if(!logQueue)logQueue=dispatch_queue_create("logic.nettrace.v8",DISPATCH_QUEUE_SERIAL);dispatch_async(logQueue,^{@autoreleasepool{if(!logPath){NSString*d=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();logPath=[d stringByAppendingPathComponent:@"LogicNetworkTrace-v8.txt"];}NSFileHandle*f=[NSFileHandle fileHandleForWritingAtPath:logPath];NSString*l=[NSString stringWithFormat:@"%@ %@\n",[NSDate date],s];if(f){[f seekToEndOfFile];[f writeData:[l dataUsingEncoding:NSUTF8StringEncoding]];[f closeFile];}else[l writeToFile:logPath atomically:YES encoding:NSUTF8StringEncoding error:nil];}});}
+          static NSString*Kind(id v){if(!v||v==[NSNull null])return @"null";if([v isKindOfClass:NSDictionary.class])return [NSString stringWithFormat:@"object(%lu)",(unsigned long)[v count]];if([v isKindOfClass:NSArray.class])return [NSString stringWithFormat:@"array(%lu)",(unsigned long)[v count]];if([v isKindOfClass:NSString.class])return [NSString stringWithFormat:@"string(%lu)",(unsigned long)[v length]];if([v isKindOfClass:NSNumber.class])return CFBooleanGetTypeID()==CFGetTypeID((__bridge CFTypeRef)v)?@"boolean":@"number";return @"other";}
+          static void Describe(id v,NSString*p,NSMutableArray*out,NSUInteger depth){if(out.count>=100)return;[out addObject:[NSString stringWithFormat:@"%@=%@",p,Kind(v)]];if(depth>=4)return;if([v isKindOfClass:NSDictionary.class]){for(id k in [[v allKeys] sortedArrayUsingSelector:@selector(compare:)]){if(![k isKindOfClass:NSString.class])continue;Describe(v[k],[p stringByAppendingFormat:@".%@",k],out,depth+1);if(out.count>=100)break;}}else if([v isKindOfClass:NSArray.class]){NSUInteger n=MIN([v count],12);for(NSUInteger i=0;i<n&&out.count<100;i++)Describe(v[i],[p stringByAppendingFormat:@"[%lu]",(unsigned long)i],out,depth+1);}}
+          static id Hook(id self,SEL cmd,NSURLRequest*r,id completion){NSUInteger n=__atomic_add_fetch(&seq,1,__ATOMIC_RELAXED);NSData*b=r.HTTPBody;NSMutableArray*a=[NSMutableArray array];if(b.length){id j=[NSJSONSerialization JSONObjectWithData:b options:NSJSONReadingFragmentsAllowed error:nil];if(j)Describe(j,@"$",a,0);}Log([NSString stringWithFormat:@"request #%lu method=%@ host=%@ path=%@ bytes=%lu schema={%@}",(unsigned long)n,r.HTTPMethod?:@"GET",r.URL.host?:@"none",r.URL.path?:@"/",(unsigned long)b.length,[a componentsJoinedByString:@";"]]);return originalTask(self,cmd,r,completion);}
+          __attribute__((constructor))static void Start(void){if(![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"])return;Log(@"v8 request-schema trace loaded; original completion handler passed through unchanged");Class c=objc_getClass("NSURLSession");SEL s=@selector(dataTaskWithRequest:completionHandler:);Method m=class_getInstanceMethod(c,s);if(m){originalTask=(TaskIMP)method_getImplementation(m);method_setImplementation(m,(IMP)Hook);Log(@"NSURLSession request hook installed");}}
+          OBJC
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicNetworkTrace.dylib -framework Foundation -o LogicNetworkTrace.dylib Trace.m
+          file LogicNetworkTrace.dylib
+      - name: Upload v8 dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: logic-request-schema-trace-v8-dylib
+          path: LogicNetworkTrace.dylib
+          retention-days: 30
+          if-no-files-found: error
