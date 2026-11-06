@@ -1,0 +1,39 @@
+name: Logic response-shape trace v14
+on:
+  push:
+    branches: [logic-rc-diagnostic]
+    paths: [.github/workflows/logic-rc-diagnostic-v14.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Build v14 response schema trace
+        shell: bash
+        run: |
+          cat > Trace.m <<'OBJC'
+          #import <Foundation/Foundation.h>
+          #import <objc/runtime.h>
+          #import <dispatch/dispatch.h>
+          typedef void (^Completion)(NSData*,NSURLResponse*,NSError*);
+          typedef id (*TaskIMP)(id,SEL,NSURLRequest*,Completion);
+          typedef void (*ResumeIMP)(id,SEL);
+          static TaskIMP originalTask; static ResumeIMP originalResume; static dispatch_queue_t q; static NSString *path; static NSString *validID; static NSUInteger seq;
+          static void Log(NSString*s){if(!q)q=dispatch_queue_create("logic.trace.v14",DISPATCH_QUEUE_SERIAL);dispatch_async(q,^{@autoreleasepool{if(!path){NSString*d=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();path=[d stringByAppendingPathComponent:@"LogicNetworkTrace-v14.txt"];}NSFileHandle*f=[NSFileHandle fileHandleForWritingAtPath:path];NSString*l=[NSString stringWithFormat:@"%@ %@\n",[NSDate date],s];if(f){[f seekToEndOfFile];[f writeData:[l dataUsingEncoding:NSUTF8StringEncoding]];[f closeFile];}else[l writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];}});}
+          static BOOL UUID(id x){if(![x isKindOfClass:NSString.class])return NO;NSRegularExpression*r=[NSRegularExpression regularExpressionWithPattern:@"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$" options:0 error:nil];return [r firstMatchInString:x options:0 range:NSMakeRange(0,[x length])]!=nil;}
+          static NSString*Shape(NSData*d,NSString*p){if(!d.length)return @"empty";if([p containsString:@".plist"]){id v=[NSPropertyListSerialization propertyListWithData:d options:NSPropertyListImmutable format:nil error:nil];if([v isKindOfClass:NSDictionary.class])return [NSString stringWithFormat:@"plist_keys=%@",[[[v allKeys] valueForKey:@"description"] componentsJoinedByString:@","]];return [NSString stringWithFormat:@"plist_root=%@",NSStringFromClass([v class])];}id v=[NSJSONSerialization JSONObjectWithData:d options:NSJSONReadingFragmentsAllowed error:nil];if([v isKindOfClass:NSDictionary.class]){NSMutableArray*a=[NSMutableArray new];for(id k in [[v allKeys] sortedArrayUsingSelector:@selector(compare:)]){id x=v[k];[a addObject:[NSString stringWithFormat:@"%@:%@",k,NSStringFromClass([x class])]];if([k isEqual:@"errorWrapper"]&&[x isKindOfClass:NSDictionary.class]){id es=x[@"errors"];if([es isKindOfClass:NSArray.class]&&[es.firstObject isKindOfClass:NSDictionary.class])[a addObject:[NSString stringWithFormat:@"errorCode=%@",es.firstObject[@"errorCode"]?:@"none"]];}}return [NSString stringWithFormat:@"json_bytes=%lu top={%@}",(unsigned long)d.length,[a componentsJoinedByString:@","]];}return [NSString stringWithFormat:@"body_bytes=%lu root=%@",(unsigned long)d.length,NSStringFromClass([v class])?:@"unparsed"];}
+          static id RequestHook(id self,SEL cmd,NSURLRequest*r,Completion cb){NSUInteger n=__atomic_add_fetch(&seq,1,__ATOMIC_RELAXED);NSURLRequest*out=r;NSDictionary*b=r.HTTPBody?[NSJSONSerialization JSONObjectWithData:r.HTTPBody options:NSJSONReadingFragmentsAllowed error:nil]:nil;id candidate=nil;NSString*action=@"unchanged";if([b isKindOfClass:NSDictionary.class]){candidate=b[@"feldsparId"];if(b[@"appSubscriptionsConfigRequest"]&&UUID(candidate)){@synchronized([NSURLSession class]){validID=[candidate copy];}action=@"captured-valid-subscriptions-id";}else if(b[@"logicProConfigRequest"]){NSString*x=nil;@synchronized([NSURLSession class]){x=[validID copy];}if(UUID(x)){NSMutableDictionary*m=[b mutableCopy];m[@"feldsparId"]=x;NSData*data=[NSJSONSerialization dataWithJSONObject:m options:0 error:nil];if(data){NSMutableURLRequest*z=[r mutableCopy];z.HTTPBody=data;out=z;action=@"logic-id-replaced-with-session-uuid";}}}}Log([NSString stringWithFormat:@"request #%lu %@ %@ host=%@ action=%@",(unsigned long)n,r.HTTPMethod?:@"?",r.URL.path?:@"/",r.URL.host?:@"",action]);Completion wrapped=cb?^(NSData*d,NSURLResponse*resp,NSError*e){NSString*p=r.URL.path?:@"/";if([p isEqual:@"/v1/configs"]||[p containsString:@"upgradeinfo"]||[p containsString:@"contentversion"]){NSInteger status=[resp isKindOfClass:NSHTTPURLResponse.class]?((NSHTTPURLResponse*)resp).statusCode:0;Log([NSString stringWithFormat:@"response-shape host=%@ path=%@ status=%ld mime=%@ error=%@/%ld %@",r.URL.host?:@"",p,(long)status,resp.MIMEType?:@"none",e.domain?:@"none",(long)e.code,Shape(d,p)]);}if(cb)cb(d,resp,e);}:nil;return originalTask(self,cmd,out,wrapped);}
+          static void ResumeHook(id self,SEL cmd){NSURLSessionTask*t=(id)self;NSURLRequest*r=t.originalRequest?:t.currentRequest;Log([NSString stringWithFormat:@"task resumed id=%lu method=%@ host=%@ path=%@",(unsigned long)t.taskIdentifier,r.HTTPMethod?:@"?",r.URL.host?:@"",r.URL.path?:@"/"]);if(originalResume)originalResume(self,cmd);}
+          __attribute__((constructor))static void Start(void){if(![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"])return;Log(@"v14 response-shape trace loaded; response bodies summarized, never written raw");Method m=class_getInstanceMethod(objc_getClass("NSURLSession"),@selector(dataTaskWithRequest:completionHandler:));if(m){originalTask=(TaskIMP)method_getImplementation(m);method_setImplementation(m,(IMP)RequestHook);Log(@"NSURLSession response hook installed");}Method rm=class_getInstanceMethod(objc_getClass("NSURLSessionTask"),@selector(resume));if(rm){originalResume=(ResumeIMP)method_getImplementation(rm);method_setImplementation(rm,(IMP)ResumeHook);Log(@"NSURLSessionTask resume hook installed");}}
+          OBJC
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicNetworkTrace.dylib -framework Foundation -o LogicNetworkTrace.dylib Trace.m
+          file LogicNetworkTrace.dylib
+      - name: Upload v14 dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: logic-response-shape-trace-v14-dylib
+          path: LogicNetworkTrace.dylib
+          retention-days: 30
