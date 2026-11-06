@@ -1,4 +1,4 @@
-name: Logic visible startup status v16
+name: Logic visible startup status v17
 on:
   push:
     branches: [logic-startup-visible-v16]
@@ -23,29 +23,33 @@ jobs:
           static NSString *subscriptionID;
           static dispatch_queue_t logQueue;
           static NSMutableArray *lines;
-          static UILabel *label;
+          static UITextView *label;
           static BOOL UUID(id v) {
             if (![v isKindOfClass:NSString.class]) return NO;
             NSRegularExpression *r=[NSRegularExpression regularExpressionWithPattern:@"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$" options:0 error:nil];
             return [r firstMatchInString:v options:0 range:NSMakeRange(0,[v length])]!=nil;
           }
           static void Show(NSString *s) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-              UIWindow *w=nil;
-              for (UIWindow *x in UIApplication.sharedApplication.windows) if (x.isKeyWindow) { w=x; break; }
-              if (!w) w=UIApplication.sharedApplication.windows.firstObject;
-              if (!w) return;
-              if (!label || label.superview!=w) {
-                label=[[UILabel alloc] initWithFrame:CGRectZero];
-                label.backgroundColor=[UIColor colorWithWhite:0 alpha:0.85];
-                label.textColor=UIColor.whiteColor;
-                label.font=[UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
-                label.numberOfLines=6; label.layer.cornerRadius=10; label.clipsToBounds=YES;
-                label.userInteractionEnabled=NO; [w addSubview:label];
-              }
-              label.frame=CGRectMake(10,MAX(w.safeAreaInsets.top,24)+6,w.bounds.size.width-20,112);
-              label.text=[@"  " stringByAppendingString:s]; [w bringSubviewToFront:label];
-            });
+          dispatch_async(dispatch_get_main_queue(), ^{
+            UIWindow *w=nil;
+            for (UIWindow *x in UIApplication.sharedApplication.windows) if (x.isKeyWindow) { w=x; break; }
+            if (!w) w=UIApplication.sharedApplication.windows.firstObject;
+            if (!w) return;
+            if (!label || label.superview!=w) {
+              label=[[UITextView alloc] initWithFrame:CGRectZero];
+              label.backgroundColor=[UIColor colorWithWhite:0 alpha:0.88];
+              label.textColor=UIColor.whiteColor;
+              label.font=[UIFont monospacedSystemFontOfSize:13 weight:UIFontWeightRegular];
+              label.editable=NO; label.selectable=YES; label.scrollEnabled=YES; label.alwaysBounceVertical=YES;
+              label.textContainerInset=UIEdgeInsetsMake(10,10,10,10);
+              label.layer.cornerRadius=12; label.clipsToBounds=YES;
+              [w addSubview:label];
+            }
+            CGFloat top=MAX(w.safeAreaInsets.top,24)+8;
+            CGFloat height=MIN(w.bounds.size.height*0.45,w.bounds.size.height-top-12);
+            label.frame=CGRectMake(10,top,w.bounds.size.width-20,height);
+            label.text=s; [w bringSubviewToFront:label];
+          });
           }
           static void Log(NSString *s) {
             if (!logQueue) return;
@@ -53,12 +57,12 @@ jobs:
               NSDateFormatter *f=[NSDateFormatter new]; f.dateFormat=@"HH:mm:ss";
               NSString *line=[NSString stringWithFormat:@"%@ %@",[f stringFromDate:[NSDate date]],s];
               NSString *dir=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();
-              NSString *path=[dir stringByAppendingPathComponent:@"LogicStartupFix-v16.txt"];
+              NSString *path=[dir stringByAppendingPathComponent:@"LogicStartupFix-v17.txt"];
               NSFileHandle *h=[NSFileHandle fileHandleForWritingAtPath:path];
               NSData *d=[line dataUsingEncoding:NSUTF8StringEncoding]; NSMutableData *md=[NSMutableData dataWithData:d]; uint8_t nl=10; [md appendBytes:&nl length:1]; d=md;
               if (h) { [h seekToEndOfFile]; [h writeData:d]; [h closeFile]; } else [d writeToFile:path atomically:YES];
-              [lines addObject:line]; while (lines.count>6) [lines removeObjectAtIndex:0];
-              Show([lines componentsJoinedByString:@" | "]);
+              [lines addObject:line]; while (lines.count>100) [lines removeObjectAtIndex:0];
+              Show([lines componentsJoinedByString:@"\n"]);
             });
           }
           static id Hook(id self,SEL cmd,NSURLRequest *req,Completion cb) {
@@ -94,7 +98,7 @@ jobs:
           }
           __attribute__((constructor)) static void Start(void) {
             if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"]) return;
-            logQueue=dispatch_queue_create("logic.visible.status.v16",DISPATCH_QUEUE_SERIAL); lines=[NSMutableArray new];
+            logQueue=dispatch_queue_create("logic.visible.status.v17",DISPATCH_QUEUE_SERIAL); lines=[NSMutableArray new];
             Log(@"PATCH LOADED; WAITING FOR CONFIG");
             Method tm=class_getInstanceMethod(objc_getClass("NSURLSessionTask"),@selector(resume)); if (tm) { originalResume=(ResumeIMP)method_getImplementation(tm); method_setImplementation(tm,(IMP)ResumeHook); } Method m=class_getInstanceMethod(objc_getClass("NSURLSession"),@selector(dataTaskWithRequest:completionHandler:));
             if (m) { originalTask=(TaskIMP)method_getImplementation(m); method_setImplementation(m,(IMP)Hook); }
@@ -104,9 +108,9 @@ jobs:
           SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
           xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicStartupVisible.dylib -framework Foundation -framework UIKit -framework CoreGraphics -o LogicStartupVisible.dylib Fix.m
           file LogicStartupVisible.dylib
-      - name: Upload visible startup status tweak
+      - name: Upload v17 scrollable diagnostic tweak
         uses: actions/upload-artifact@v4
         with:
-          name: logic-startup-visible-v16-dylib
+          name: logic-startup-visible-v17-dylib
           path: LogicStartupVisible.dylib
           retention-days: 30
