@@ -1,4 +1,4 @@
-name: Logic startup file move trace v22
+name: Logic startup file move trace v23
 on:
   push:
     branches: [logic-startup-visible-v16]
@@ -21,7 +21,8 @@ jobs:
           typedef id (*TaskIMP)(id,SEL,NSURLRequest*,Completion);
           typedef void (^DownloadCompletion)(NSURL*,NSURLResponse*,NSError*);
           typedef id (*DownloadTaskIMP)(id,SEL,NSURLRequest*,DownloadCompletion);
-          static DownloadTaskIMP originalDownloadTask;
+          typedef id (*DownloadURLIMP)(id,SEL,NSURL*,DownloadCompletion);
+          static DownloadTaskIMP originalDownloadTask; static DownloadURLIMP originalDownloadURL;
           static TaskIMP originalTask; static void Log(NSString *s); typedef void (*ResumeIMP)(id,SEL); static ResumeIMP originalResume; static char progressKey; typedef BOOL (*MoveURLIMP)(id,SEL,NSURL*,NSURL*,NSError**); typedef BOOL (*MovePathIMP)(id,SEL,NSString*,NSString*,NSError**); static MoveURLIMP originalMoveURL; static MovePathIMP originalMovePath;          typedef BOOL (*CopyURLIMP)(id,SEL,NSURL*,NSURL*,NSError**); typedef BOOL (*CopyPathIMP)(id,SEL,NSString*,NSString*,NSError**); static CopyURLIMP originalCopyURL; static CopyPathIMP originalCopyPath;
           static void PollTask(NSURLSessionTask *task, NSString *path, NSUInteger sample) {
             NSInteger state=task.state, code=0;
@@ -68,7 +69,7 @@ jobs:
               NSDateFormatter *f=[NSDateFormatter new]; f.dateFormat=@"HH:mm:ss";
               NSString *line=[NSString stringWithFormat:@"%@ %@",[f stringFromDate:[NSDate date]],s];
               NSString *dir=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();
-              NSString *path=[dir stringByAppendingPathComponent:@"LogicStartupFix-v22.txt"];
+              NSString *path=[dir stringByAppendingPathComponent:@"LogicStartupFix-v23.txt"];
               NSFileHandle *h=[NSFileHandle fileHandleForWritingAtPath:path];
               NSData *d=[line dataUsingEncoding:NSUTF8StringEncoding]; NSMutableData *md=[NSMutableData dataWithData:d]; uint8_t nl=10; [md appendBytes:&nl length:1]; d=md;
               if (h) { [h seekToEndOfFile]; [h writeData:d]; [h closeFile]; } else [d writeToFile:path atomically:YES];
@@ -109,26 +110,44 @@ jobs:
             }:nil;
             return originalTask(self,cmd,out,wrapped);
           }
-          typedef NSFileHandle *(*OpenURLIMP)(id,SEL,NSURL*,NSError**);
-          static id DownloadHook(id self,SEL cmd,NSURLRequest *req,DownloadCompletion cb) {
-            NSString *path=req.URL.path?:@"?";
-            DownloadCompletion wrapped=cb?^(NSURL *location,NSURLResponse *resp,NSError *err) {
+          static DownloadCompletion ObserveDownload(NSString *path,DownloadCompletion cb) {
+            return cb?^(NSURL *location,NSURLResponse *resp,NSError *err) {
               long long size=-1; NSString *name=location.lastPathComponent?:@"none"; NSString *sig=@"none";
               if (location) { NSDictionary *a=[NSFileManager.defaultManager attributesOfItemAtPath:location.path error:nil]; if (a) size=[a fileSize]; NSError *readErr=nil; NSFileHandle *h=[NSFileHandle fileHandleForReadingFromURL:location error:&readErr]; if (h) { NSData *head=[h readDataOfLength:8]; NSMutableString *hex=[NSMutableString string]; const unsigned char *p=head.bytes; for (NSUInteger i=0;i<head.length;i++) [hex appendFormat:@"%02x",p[i]]; sig=hex.length?hex:@"empty"; [h closeFile]; } else sig=[NSString stringWithFormat:@"read-error:%ld",(long)readErr.code]; }
               NSInteger code=[resp isKindOfClass:NSHTTPURLResponse.class]?((NSHTTPURLResponse*)resp).statusCode:0; NSString *mime=resp.MIMEType?:@"none";
               Log([NSString stringWithFormat:@"DOWNLOAD COMPLETE %@ status=%ld mime=%@ temp=%@ bytes=%lld sig8=%@ error=%@",path,(long)code,mime,name,size,sig,err?[NSString stringWithFormat:@"%@/%ld",err.domain,(long)err.code]:@"none"]);
               cb(location,resp,err);
             }:nil;
-            return originalDownloadTask(self,cmd,req,wrapped);
+          }
+          static id DownloadHook(id self,SEL cmd,NSURLRequest *req,DownloadCompletion cb) {
+            return originalDownloadTask(self,cmd,req,ObserveDownload(req.URL.path?:@"?",cb));
+          }
+          static id DownloadURLHook(id self,SEL cmd,NSURL *url,DownloadCompletion cb) {
+            return originalDownloadURL(self,cmd,url,ObserveDownload(url.path?:@"?",cb));
+          }
+          static NSMutableDictionary *snapshotState;
+          static void SnapshotContentFiles(NSUInteger sample) {
+            NSArray *roots=@[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:@"",NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory,NSUserDomainMask,YES).firstObject?:@"",NSSearchPathForDirectoriesInDomains(NSCachesDirectory,NSUserDomainMask,YES).firstObject?:@"",NSTemporaryDirectory()?:@""];
+            NSMutableDictionary *now=[NSMutableDictionary new]; NSUInteger seen=0; NSFileManager *fm=NSFileManager.defaultManager;
+            for (NSString *root in roots) { if (!root.length) continue; NSDirectoryEnumerator *e=[fm enumeratorAtURL:[NSURL fileURLWithPath:root] includingPropertiesForKeys:@[NSURLIsRegularFileKey,NSURLFileSizeKey] options:NSDirectoryEnumerationSkipsHiddenFiles errorHandler:nil]; for (NSURL *u in e) { if (++seen>2500) break; NSString *ext=u.pathExtension.lowercaseString; NSString *low=u.path.lowercaseString; if (![(@[@"aar",@"db",@"sqlite",@"sqlite3"]) containsObject:ext] && ![low containsString:@"contentdatabase"] && ![low containsString:@"contentdb"]) continue; NSDictionary *a=[fm attributesOfItemAtPath:u.path error:nil]; long long size=a?[a fileSize]:-1; NSString *key=[NSString stringWithFormat:@"%@/%@",u.URLByDeletingLastPathComponent.lastPathComponent?:@"?",u.lastPathComponent?:@"?"]; NSString *value=[NSString stringWithFormat:@"%lld",size]; now[key]=value; if (![snapshotState[key] isEqual:value]) Log([NSString stringWithFormat:@"CONTENT FILE path=%@ bytes=%lld",key,size]); } if (seen>2500) break; }
+            for (NSString *key in snapshotState) if (!now[key]) Log([NSString stringWithFormat:@"CONTENT FILE REMOVED path=%@",key]); snapshotState=now;
+            if (sample<12) dispatch_after(dispatch_time(DISPATCH_TIME_NOW,5*NSEC_PER_SEC),dispatch_get_global_queue(QOS_CLASS_UTILITY,0),^{ SnapshotContentFiles(sample+1); });
+          }
+          static void InstallLifecycleTrace(void) {
+            NSArray *names=@[UIApplicationDidBecomeActiveNotification,UIApplicationWillResignActiveNotification,UIApplicationDidEnterBackgroundNotification,UIApplicationWillEnterForegroundNotification];
+            for (NSNotificationName n in names) [[NSNotificationCenter defaultCenter] addObserverForName:n object:nil queue:nil usingBlock:^(NSNotification *note){ Log([NSString stringWithFormat:@"LIFECYCLE %@",note.name]); }];
+            Log([NSString stringWithFormat:@"APP STATE AT HOOK state=%ld windows=%lu",(long)UIApplication.sharedApplication.applicationState,(unsigned long)UIApplication.sharedApplication.windows.count]);
           }
           __attribute__((constructor)) static void Start(void) {
             if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"]) return;
-            logQueue=dispatch_queue_create("logic.visible.status.v22",DISPATCH_QUEUE_SERIAL); lines=[NSMutableArray new];
+            logQueue=dispatch_queue_create("logic.visible.status.v23",DISPATCH_QUEUE_SERIAL); lines=[NSMutableArray new];
+            Method du=class_getInstanceMethod(NSURLSession.class,@selector(downloadTaskWithURL:completionHandler:)); if (du) { originalDownloadURL=(DownloadURLIMP)method_getImplementation(du); method_setImplementation(du,(IMP)DownloadURLHook); Log(@"DOWNLOAD URL COMPLETION HOOK INSTALLED"); }
             Method dm=class_getInstanceMethod(NSURLSession.class,@selector(downloadTaskWithRequest:completionHandler:)); if (dm) { originalDownloadTask=(DownloadTaskIMP)method_getImplementation(dm); method_setImplementation(dm,(IMP)DownloadHook); Log(@"DOWNLOAD COMPLETION HOOK INSTALLED"); }
             Method cu=class_getInstanceMethod(NSFileManager.class,@selector(copyItemAtURL:toURL:error:)); if (cu) { originalCopyURL=(CopyURLIMP)method_getImplementation(cu); method_setImplementation(cu,(IMP)CopyURLHook); Log(@"FILE COPY URL HOOK INSTALLED"); }
             Method cp=class_getInstanceMethod(NSFileManager.class,@selector(copyItemAtPath:toPath:error:)); if (cp) { originalCopyPath=(CopyPathIMP)method_getImplementation(cp); method_setImplementation(cp,(IMP)CopyPathHook); Log(@"FILE COPY PATH HOOK INSTALLED"); }
             Method mu=class_getInstanceMethod(NSFileManager.class,@selector(moveItemAtURL:toURL:error:)); if (mu) { originalMoveURL=(MoveURLIMP)method_getImplementation(mu); method_setImplementation(mu,(IMP)MoveURLHook); Log(@"FILE MOVE URL HOOK INSTALLED"); }
             Method mp=class_getInstanceMethod(NSFileManager.class,@selector(moveItemAtPath:toPath:error:)); if (mp) { originalMovePath=(MovePathIMP)method_getImplementation(mp); method_setImplementation(mp,(IMP)MovePathHook); Log(@"FILE MOVE PATH HOOK INSTALLED"); }
+            InstallLifecycleTrace(); SnapshotContentFiles(0);
             Log(@"PATCH LOADED; WAITING FOR CONFIG");
             Method tm=class_getInstanceMethod(objc_getClass("NSURLSessionTask"),@selector(resume)); if (tm) { originalResume=(ResumeIMP)method_getImplementation(tm); method_setImplementation(tm,(IMP)ResumeHook); } Method m=class_getInstanceMethod(objc_getClass("NSURLSession"),@selector(dataTaskWithRequest:completionHandler:));
             if (m) { originalTask=(TaskIMP)method_getImplementation(m); method_setImplementation(m,(IMP)Hook); }
@@ -138,9 +157,9 @@ jobs:
           SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
           xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicStartupVisible.dylib -framework Foundation -framework UIKit -framework CoreGraphics -o LogicStartupVisible.dylib Fix.m
           file LogicStartupVisible.dylib
-      - name: Upload v22 file-processing trace and compatibility tweak
+      - name: Upload v23 file-processing trace and compatibility tweak
         uses: actions/upload-artifact@v4
         with:
-          name: logic-startup-visible-v22-dylib
+          name: logic-startup-visible-v23-dylib
           path: LogicStartupVisible.dylib
           retention-days: 30
