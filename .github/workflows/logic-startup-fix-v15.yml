@@ -1,0 +1,62 @@
+name: Logic startup compatibility fix v15
+on:
+  push:
+    branches: [logic-startup-patch-v15]
+    paths: [.github/workflows/logic-startup-fix-v15.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Build startup compatibility dylib
+        shell: bash
+        run: |
+          cat > Fix.m <<'OBJC'
+          #import <Foundation/Foundation.h>
+          #import <objc/runtime.h>
+          typedef void (^Completion)(NSData*,NSURLResponse*,NSError*);
+          typedef id (*TaskIMP)(id,SEL,NSURLRequest*,Completion);
+          static TaskIMP originalTask;
+          static NSString *subscriptionID;
+          static BOOL IsUUID(id x) {
+            if (![x isKindOfClass:NSString.class]) return NO;
+            NSRegularExpression *r=[NSRegularExpression regularExpressionWithPattern:@"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$" options:0 error:nil];
+            return [r firstMatchInString:x options:0 range:NSMakeRange(0,[x length])]!=nil;
+          }
+          static id FixedTask(id self,SEL cmd,NSURLRequest *request,Completion completion) {
+            NSURLRequest *out=request;
+            NSData *body=request.HTTPBody;
+            id json=body?[NSJSONSerialization JSONObjectWithData:body options:NSJSONReadingFragmentsAllowed error:nil]:nil;
+            if ([json isKindOfClass:NSDictionary.class]) {
+              id fid=json[@"feldsparId"];
+              if (json[@"appSubscriptionsConfigRequest"] && IsUUID(fid)) @synchronized([NSURLSession class]) { subscriptionID=[fid copy]; }
+              if (json[@"logicProConfigRequest"] && !IsUUID(fid)) {
+                NSString *replacement=nil;
+                @synchronized([NSURLSession class]) { replacement=[subscriptionID copy]; }
+                if (IsUUID(replacement)) {
+                  NSMutableDictionary *fixed=[json mutableCopy];
+                  fixed[@"feldsparId"]=replacement;
+                  NSData *newBody=[NSJSONSerialization dataWithJSONObject:fixed options:0 error:nil];
+                  if (newBody) { NSMutableURLRequest *mutable=[request mutableCopy]; mutable.HTTPBody=newBody; out=mutable; }
+                }
+              }
+            }
+            return originalTask(self,cmd,out,completion);
+          }
+          __attribute__((constructor)) static void Start(void) {
+            if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"]) return;
+            Method m=class_getInstanceMethod(objc_getClass("NSURLSession"),@selector(dataTaskWithRequest:completionHandler:));
+            if (m) { originalTask=(TaskIMP)method_getImplementation(m); method_setImplementation(m,(IMP)FixedTask); }
+          }
+          OBJC
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicStartupFix.dylib -framework Foundation -o LogicStartupFix.dylib Fix.m
+          file LogicStartupFix.dylib
+      - name: Upload startup fix dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: logic-startup-fix-v15-dylib
+          path: LogicStartupFix.dylib
+          retention-days: 30
