@@ -19,7 +19,7 @@ jobs:
           #import <objc/runtime.h>
           typedef void (^Completion)(NSData*,NSURLResponse*,NSError*);
           typedef id (*TaskIMP)(id,SEL,NSURLRequest*,Completion);
-          static TaskIMP originalTask;
+          static TaskIMP originalTask; static void Log(NSString *s); typedef void (*ResumeIMP)(id,SEL); static ResumeIMP originalResume; static void ResumeHook(id self,SEL cmd){ NSURLRequest *r=nil; @try { r=[self currentRequest]; } @catch(__unused NSException *e) {} if (r.URL) Log([NSString stringWithFormat:@"TASK RESUME %@ %@",r.HTTPMethod?:@"?",r.URL.path?:@"/"]); originalResume(self,cmd); }
           static NSString *subscriptionID;
           static dispatch_queue_t logQueue;
           static NSMutableArray *lines;
@@ -84,9 +84,9 @@ jobs:
             NSString *path=req.URL.path?:@"/";
             Completion wrapped=cb?^(NSData *data,NSURLResponse *resp,NSError *err) {
               NSInteger code=[resp isKindOfClass:NSHTTPURLResponse.class]?((NSHTTPURLResponse*)resp).statusCode:0;
-              if ([path isEqual:@"/v1/configs"]) Log([NSString stringWithFormat:@"%@ HTTP %ld",kind,(long)code]);
-              else if ([path containsString:@"contentDB_"]) Log([NSString stringWithFormat:@"%@ HTTP %ld (%lu bytes)",path.lastPathComponent,(long)code,(unsigned long)data.length]);
-              else if ([path containsString:@"contentversion"]) Log([NSString stringWithFormat:@"CONTENT VERSION HTTP %ld",(long)code]);
+              Log([NSString stringWithFormat:@"TASK COMPLETE %@ HTTP %ld (%lu bytes)",path,(long)code,(unsigned long)data.length]);
+              
+              
               if (err) Log([NSString stringWithFormat:@"ERROR %@/%ld",err.domain,(long)err.code]);
               cb(data,resp,err);
             }:nil;
@@ -96,7 +96,7 @@ jobs:
             if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"]) return;
             logQueue=dispatch_queue_create("logic.visible.status.v16",DISPATCH_QUEUE_SERIAL); lines=[NSMutableArray new];
             Log(@"PATCH LOADED; WAITING FOR CONFIG");
-            Method m=class_getInstanceMethod(objc_getClass("NSURLSession"),@selector(dataTaskWithRequest:completionHandler:));
+            Method tm=class_getInstanceMethod(objc_getClass("NSURLSessionTask"),@selector(resume)); if (tm) { originalResume=(ResumeIMP)method_getImplementation(tm); method_setImplementation(tm,(IMP)ResumeHook); } Method m=class_getInstanceMethod(objc_getClass("NSURLSession"),@selector(dataTaskWithRequest:completionHandler:));
             if (m) { originalTask=(TaskIMP)method_getImplementation(m); method_setImplementation(m,(IMP)Hook); }
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW,2*NSEC_PER_SEC),dispatch_get_main_queue(),^{ Log(@"APP ACTIVE; STATUS OVERLAY READY"); });
           }
