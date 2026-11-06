@@ -1,0 +1,111 @@
+name: Logic remote-config diagnostic tweak
+on:
+  push:
+    branches: [logic-rc-diagnostic]
+    paths: [.github/workflows/logic-rc-diagnostic.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Build arm64 diagnostic dylib
+        shell: bash
+        run: |
+          cat > LogicRCDiagnostic.m <<'OBJC'
+          #import <Foundation/Foundation.h>
+          #import <objc/runtime.h>
+          #import <dispatch/dispatch.h>
+          #import <mach-o/dyld.h>
+
+          typedef void (*FetchIMP)(id, SEL, id, dispatch_queue_t, id);
+          static FetchIMP originalFetch;
+          static BOOL hookInstalled;
+          static dispatch_queue_t logQueue;
+          static NSString *logPath;
+
+          static void Log(NSString *message) {
+            if (!logQueue) logQueue = dispatch_queue_create("com.logic.rcdiagnostic.log", DISPATCH_QUEUE_SERIAL);
+            dispatch_async(logQueue, ^{
+              @autoreleasepool {
+                if (!logPath) {
+                  NSString *dir = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject ?: NSTemporaryDirectory();
+                  logPath = [dir stringByAppendingPathComponent:@"LogicRemoteConfigDiagnostic.txt"];
+                  if (![[NSFileManager defaultManager] fileExistsAtPath:logPath])
+                    [[NSString stringWithFormat:@"Logic remote-config diagnostic %@\n", [NSDate date]] writeToFile:logPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+                }
+                NSString *line = [NSString stringWithFormat:@"%@ %@\n", [NSDate date], message];
+                NSFileHandle *f = [NSFileHandle fileHandleForWritingAtPath:logPath];
+                if (f) { [f seekToEndOfFile]; [f writeData:[line dataUsingEncoding:NSUTF8StringEncoding]]; [f closeFile]; }
+                else [line writeToFile:logPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+              }
+            });
+          }
+
+          static NSString *ErrorSummary(NSError *error) {
+            NSMutableArray *parts = [NSMutableArray array];
+            NSError *e = error;
+            for (int i = 0; e && i < 4; i++, e = e.userInfo[NSUnderlyingErrorKey])
+              [parts addObject:[NSString stringWithFormat:@"%@/%ld", e.domain ?: @"?", (long)e.code]];
+            return parts.count ? [parts componentsJoinedByString:@" <- "] : @"none";
+          }
+
+          static BOOL ShouldRetry(NSError *error) {
+            if (!error || ([error.domain isEqualToString:NSURLErrorDomain] && error.code == NSURLErrorCancelled)) return NO;
+            NSString *s = error.localizedDescription.lowercaseString ?: @"";
+            return ![s containsString:@"unauthorized"] && ![s containsString:@"forbidden"] && ![s containsString:@"not authorized"];
+          }
+
+          static void HookedFetch(id self, SEL cmd, id settings, dispatch_queue_t queue, id completionObject) {
+            void (^completion)(id, id, id, NSError *) = completionObject;
+            if (!completion || !originalFetch) { if (originalFetch) originalFetch(self, cmd, settings, queue, completionObject); return; }
+            Log(@"remote-config attempt=1 started");
+            void (^first)(id, id, id, NSError *) = ^(id data, id treatmentIDs, id segmentIDs, NSError *error) {
+              if (!error) { Log(@"remote-config attempt=1 result=success"); completion(data, treatmentIDs, segmentIDs, nil); return; }
+              BOOL retry = ShouldRetry(error);
+              Log([NSString stringWithFormat:@"remote-config attempt=1 result=error details=%@ retry=%@", ErrorSummary(error), retry ? @"yes" : @"no"]);
+              if (!retry) { completion(nil, nil, nil, error); return; }
+              Log(@"remote-config attempt=2 started");
+              void (^second)(id, id, id, NSError *) = ^(id retryData, id retryTreatmentIDs, id retrySegmentIDs, NSError *retryError) {
+                Log(retryError ? [NSString stringWithFormat:@"remote-config attempt=2 result=error details=%@", ErrorSummary(retryError)] : @"remote-config attempt=2 result=success");
+                completion(retryData, retryTreatmentIDs, retrySegmentIDs, retryError);
+              };
+              originalFetch(self, cmd, settings, queue, [second copy]);
+            };
+            originalFetch(self, cmd, settings, queue, [first copy]);
+          }
+
+          static void TryInstall(void) {
+            if (hookInstalled) return;
+            Class cls = objc_getClass("RCEConfigurationManager");
+            SEL sel = sel_registerName("fetchSingleConfigurationWithSettings:completionQueue:completion:");
+            Method m = cls ? class_getInstanceMethod(cls, sel) : NULL;
+            if (m) {
+              originalFetch = (FetchIMP)method_getImplementation(m);
+              method_setImplementation(m, (IMP)HookedFetch);
+              hookInstalled = YES;
+              Log(@"hook installed");
+            }
+          }
+
+          static void ImageAdded(const struct mach_header *mh, intptr_t slide) { (void)mh; (void)slide; TryInstall(); }
+          __attribute__((constructor)) static void StartDiagnostic(void) {
+            if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"]) return;
+            Log(@"tweak loaded for Logic");
+            TryInstall();
+            _dyld_register_func_for_add_image(ImageAdded);
+            for (int i = 1; i <= 60; i++) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)i * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ TryInstall(); });
+          }
+          OBJC
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicRCDiagnostic.dylib -framework Foundation -framework UIKit -o LogicRCDiagnostic.dylib LogicRCDiagnostic.m
+          file LogicRCDiagnostic.dylib
+          shasum -a 256 LogicRCDiagnostic.dylib
+      - name: Retain tweak artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: logic-rc-diagnostic-dylib
+          path: LogicRCDiagnostic.dylib
+          retention-days: 30
+          if-no-files-found: error
