@@ -1,0 +1,43 @@
+name: REA startup gate trace v25
+on:
+  push:
+    branches: [logic-startup-visible-v16]
+    paths: [.github/workflows/logic-startup-rea-v25.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Build startup gate tracer
+        run: |
+          cat > Fix.m <<'OBJC'
+          #import <Foundation/Foundation.h>
+          #import <UIKit/UIKit.h>
+          #import <objc/runtime.h>
+          #import <dlfcn.h>
+          #import <sqlite3.h>
+          #import <ctype.h>
+          #import <string.h>
+          typedef int (*Open)(const char*,sqlite3**,int,const char*); static Open oldOpen;
+          typedef int (*Prep)(sqlite3*,const char*,int,sqlite3_stmt**,const char**); static Prep oldPrep;
+          typedef int (*Step)(sqlite3_stmt*); static Step oldStep;
+          static NSMutableArray *L; static dispatch_queue_t Q; static UITextView *V; static NSString *subID;
+          static void Log(NSString *s){ dispatch_async(Q,^{ NSDateFormatter*f=[NSDateFormatter new];f.dateFormat=@"HH:mm:ss";NSString*x=[NSString stringWithFormat:@"%@ %@",[f stringFromDate:NSDate.date],s];NSString*p=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject stringByAppendingPathComponent:@"LogicStartupFix-v25.txt"];NSFileHandle*h=[NSFileHandle fileHandleForWritingAtPath:p];NSData*d=[[x stringByAppendingString:@"\n"] dataUsingEncoding:NSUTF8StringEncoding];if(h){[h seekToEndOfFile];[h writeData:d];[h closeFile];}else[d writeToFile:p atomically:YES];[L addObject:x];if(L.count>80)[L removeObjectAtIndex:0];dispatch_async(dispatch_get_main_queue(),^{UIWindow*w=UIApplication.sharedApplication.keyWindow?:UIApplication.sharedApplication.windows.firstObject;if(!w)return;if(!V){V=[UITextView new];V.backgroundColor=[UIColor colorWithWhite:0 alpha:.9];V.textColor=UIColor.whiteColor;V.font=[UIFont monospacedSystemFontOfSize:13 weight:0];V.editable=NO;V.scrollEnabled=YES;V.alwaysBounceVertical=YES;[w addSubview:V];}V.frame=CGRectMake(8,MAX(w.safeAreaInsets.top,24)+8,w.bounds.size.width-16,w.bounds.size.height*.5);BOOL follow=V.contentOffset.y>=MAX(0,V.contentSize.height-V.bounds.size.height-40);V.text=[L componentsJoinedByString:@"\n"];if(follow)[V scrollRangeToVisible:NSMakeRange(V.text.length,0)];[w bringSubviewToFront:V];});});}
+          static int O(const char*f,sqlite3**d,int flags,const char*v){int r=oldOpen(f,d,flags,v);if(f)Log([NSString stringWithFormat:@"SQLITE OPEN %@ rc=%d %@",[NSString stringWithUTF8String:strrchr(f,'/')?strrchr(f,'/')+1:f]?:@"?",r,(r||!*d)?@"":[NSString stringWithUTF8String:sqlite3_errmsg(*d)]?:@""]);return r;}
+          static int P(sqlite3*d,const char*s,int n,sqlite3_stmt**t,const char**tail){int r=oldPrep(d,s,n,t,tail);if(r)Log([NSString stringWithFormat:@"SQLITE PREPARE rc=%d ext=%d detail=%@",r,d?sqlite3_extended_errcode(d):r,d?[NSString stringWithUTF8String:sqlite3_errmsg(d)]:@"no-db"]);return r;}
+          static int S(sqlite3_stmt*t){int r=oldStep(t);if(r!=SQLITE_ROW&&r!=SQLITE_DONE&&r!=SQLITE_OK){sqlite3*d=sqlite3_db_handle(t);Log([NSString stringWithFormat:@"SQLITE STEP rc=%d ext=%d detail=%@",r,d?sqlite3_extended_errcode(d):r,d?[NSString stringWithUTF8String:sqlite3_errmsg(d)]:@"no-db"]);}return r;}
+          typedef id (^CB)(NSData*,NSURLResponse*,NSError*);
+          typedef id(*Task)(id,SEL,NSURLRequest*,id);static Task oldTask;
+          static id T(id self,SEL cmd,NSURLRequest*r,id cb){id j=r.HTTPBody?[NSJSONSerialization JSONObjectWithData:r.HTTPBody options:0 error:nil]:nil;if([j isKindOfClass:NSDictionary.class]){id fid=j[@"feldsparId"];if(j[@"appSubscriptionsConfigRequest"]&&[fid isKindOfClass:NSString.class]&&[fid length]==36)subID=[fid copy];if(j[@"logicProConfigRequest"]&&[fid isKindOfClass:NSString.class]&&[fid length]!=36&&subID){NSMutableDictionary*m=[j mutableCopy];m[@"feldsparId"]=subID;NSMutableDictionary*d=[m[@"deviceInfo"] mutableCopy];if(d){d[@"deviceClass"]=@"ipad";m[@"deviceInfo"]=d;}NSMutableURLRequest*q=[r mutableCopy];q.HTTPBody=[NSJSONSerialization dataWithJSONObject:m options:0 error:nil];r=q;Log(@"LOGIC CONFIG REQUEST REWRITTEN FOR IPAD");}}return oldTask(self,cmd,r,cb);}
+          __attribute__((constructor)) static void Start(){if(![NSBundle.mainBundle.bundleIdentifier isEqual:@"com.apple.mobilelogic"])return;Q=dispatch_queue_create("rea.trace",DISPATCH_QUEUE_SERIAL);L=[NSMutableArray new];void(*hook)(void*,void*,void**)=dlsym(RTLD_DEFAULT,"MSHookFunction");void*lib=dlopen("/usr/lib/libsqlite3.dylib",RTLD_NOW);if(hook&&lib){oldOpen=(Open)dlsym(lib,"sqlite3_open_v2");if(oldOpen){hook((void*)oldOpen,(void*)O,(void**)&oldOpen);Log(@"SQLITE OPEN HOOK READY");}oldPrep=(Prep)dlsym(lib,"sqlite3_prepare_v2");if(oldPrep){hook((void*)oldPrep,(void*)P,(void**)&oldPrep);Log(@"SQLITE PREPARE HOOK READY");}oldStep=(Step)dlsym(lib,"sqlite3_step");if(oldStep){hook((void*)oldStep,(void*)S,(void**)&oldStep);Log(@"SQLITE STEP HOOK READY");}}else Log(@"SQLITE HOOK UNAVAILABLE");Class c=objc_getClass("NSURLSession");SEL sel=@selector(dataTaskWithRequest:completionHandler:);Method m=class_getInstanceMethod(c,sel);if(m){oldTask=(Task)method_getImplementation(m);method_setImplementation(m,(IMP)T);}Log(@"REA TRACE LOADED: DB OPEN/QUERY ERRORS + IPAD CONFIG PATCH");}
+          OBJC
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -framework Foundation -framework UIKit -o LogicStartupREA.dylib Fix.m
+          file LogicStartupREA.dylib
+      - uses: actions/upload-artifact@v4
+        with:
+          name: logic-startup-rea-v25-dylib
+          path: LogicStartupREA.dylib
+          retention-days: 30
