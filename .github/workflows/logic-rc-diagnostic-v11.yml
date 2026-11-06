@@ -1,0 +1,38 @@
+name: Logic Feldspar ID compatibility check v11
+on:
+  push:
+    branches: [logic-rc-diagnostic]
+    paths: [.github/workflows/logic-rc-diagnostic-v11.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Build v11 response status diagnostic
+        shell: bash
+        run: |
+          cat > Trace.m <<'OBJC'
+          #import <Foundation/Foundation.h>
+          #import <objc/runtime.h>
+          #import <dispatch/dispatch.h>
+          typedef id (*TaskIMP)(id,SEL,NSURLRequest*,id);
+          typedef id (*RespIMP)(id,SEL,NSURL*,NSInteger,NSString*,NSDictionary*);
+          static TaskIMP originalTask; static RespIMP originalResp; static dispatch_queue_t logq; static NSString *logPath; static NSUInteger seq; static NSString *validID;
+          static void Log(NSString*s){if(!logq)logq=dispatch_queue_create("logic.trace.v11",DISPATCH_QUEUE_SERIAL);dispatch_async(logq,^{@autoreleasepool{if(!logPath){NSString*d=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();logPath=[d stringByAppendingPathComponent:@"LogicNetworkTrace-v11.txt"];}NSFileHandle*f=[NSFileHandle fileHandleForWritingAtPath:logPath];NSString*l=[NSString stringWithFormat:@"%@ %@\n",[NSDate date],s];if(f){[f seekToEndOfFile];[f writeData:[l dataUsingEncoding:NSUTF8StringEncoding]];[f closeFile];}else[l writeToFile:logPath atomically:YES encoding:NSUTF8StringEncoding error:nil];}});}
+          static BOOL IsUUID(id x){if(![x isKindOfClass:NSString.class])return NO;NSRegularExpression*r=[NSRegularExpression regularExpressionWithPattern:@"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$" options:0 error:nil];return [r firstMatchInString:x options:0 range:NSMakeRange(0,[x length])]!=nil;}
+          static id RequestHook(id self,SEL cmd,NSURLRequest*r,id completion){NSUInteger n=__atomic_add_fetch(&seq,1,__ATOMIC_RELAXED);NSURLRequest*out=r;NSDictionary*body=r.HTTPBody?[NSJSONSerialization JSONObjectWithData:r.HTTPBody options:NSJSONReadingFragmentsAllowed error:nil]:nil;id candidate=nil;NSString*note=@"unchanged";if([body isKindOfClass:NSDictionary.class]){candidate=body[@"feldsparId"];if(body[@"appSubscriptionsConfigRequest"]&&IsUUID(candidate)){@synchronized([NSURLSession class]){validID=[candidate copy];}note=@"captured-valid-subscriptions-id";}else if(body[@"logicProConfigRequest"]){NSString*replacement=nil;@synchronized([NSURLSession class]){replacement=[validID copy];}if(IsUUID(replacement)){NSMutableDictionary*d=[body mutableCopy];d[@"feldsparId"]=replacement;NSData*data=[NSJSONSerialization dataWithJSONObject:d options:0 error:nil];if(data){NSMutableURLRequest*m=[r mutableCopy];m.HTTPBody=data;out=m;note=@"logic-id-replaced-with-session-uuid";}else note=@"replacement-serialization-failed";}else note=@"no-valid-session-uuid-available";}}Log([NSString stringWithFormat:@"request #%lu %@ %@ body_bytes=%lu action=%@ original_id_length=%lu original_id_uuid=%@",(unsigned long)n,r.HTTPMethod?:@"GET",r.URL.path?:@"/",(unsigned long)r.HTTPBody.length,note,(unsigned long)([candidate isKindOfClass:NSString.class]?[candidate length]:0),IsUUID(candidate)?@"yes":@"no"]);return originalTask(self,cmd,out,completion);}
+          static id ResponseHook(id self,SEL cmd,NSURL*u,NSInteger status,NSString*v,NSDictionary*h){id result=originalResp(self,cmd,u,status,v,h);NSString*host=u.host?:@"";if([host isEqualToString:@"generic-edge.infoapps.apple.com"]||[host isEqualToString:@"audiocontentdownload.apple.com"])Log([NSString stringWithFormat:@"HTTP response host=%@ path=%@ status=%ld",host,u.path?:@"/",(long)status]);return result;}
+          __attribute__((constructor))static void Start(void){if(![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"])return;Log(@"v11 response status trace loaded; request completion handler passed through unchanged");Method m=class_getInstanceMethod(objc_getClass("NSURLSession"),@selector(dataTaskWithRequest:completionHandler:));if(m){originalTask=(TaskIMP)method_getImplementation(m);method_setImplementation(m,(IMP)RequestHook);Log(@"NSURLSession request hook installed");}Method q=class_getInstanceMethod(objc_getClass("NSHTTPURLResponse"),@selector(initWithURL:statusCode:HTTPVersion:headerFields:));if(q){originalResp=(RespIMP)method_getImplementation(q);method_setImplementation(q,(IMP)ResponseHook);Log(@"HTTP response initializer hook installed");}else Log(@"HTTP response initializer hook unavailable");}
+          OBJC
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicNetworkTrace.dylib -framework Foundation -o LogicNetworkTrace.dylib Trace.m
+          file LogicNetworkTrace.dylib
+      - name: Upload v11 dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: logic-feldspar-id-check-v11-dylib
+          path: LogicNetworkTrace.dylib
+          retention-days: 30
+          if-no-files-found: error
