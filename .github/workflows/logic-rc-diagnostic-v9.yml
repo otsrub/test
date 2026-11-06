@@ -1,0 +1,38 @@
+name: Logic request values trace v9
+on:
+  push:
+    branches: [logic-rc-diagnostic]
+    paths: [.github/workflows/logic-rc-diagnostic-v9.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Build v9 local value diagnostic dylib
+        shell: bash
+        run: |
+          cat > Trace.m <<'OBJC'
+          #import <Foundation/Foundation.h>
+          #import <objc/runtime.h>
+          #import <dispatch/dispatch.h>
+          typedef id (*TaskIMP)(id,SEL,NSURLRequest*,id);
+          static TaskIMP originalTask; static dispatch_queue_t q; static NSString *path; static NSUInteger seq;
+          static void Log(NSString*s){if(!q)q=dispatch_queue_create("logic.trace.v9",DISPATCH_QUEUE_SERIAL);dispatch_async(q,^{@autoreleasepool{if(!path){NSString*d=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();path=[d stringByAppendingPathComponent:@"LogicNetworkTrace-v9.txt"];}NSFileHandle*f=[NSFileHandle fileHandleForWritingAtPath:path];NSString*l=[NSString stringWithFormat:@"%@ %@\n",[NSDate date],s];if(f){[f seekToEndOfFile];[f writeData:[l dataUsingEncoding:NSUTF8StringEncoding]];[f closeFile];}else[l writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];}});}
+          static NSString*Safe(id x){return [x isKindOfClass:NSString.class]?x:@"<absent-or-nonstring>";}
+          static NSString*UUIDShape(id x){if(![x isKindOfClass:NSString.class])return @"not-string";NSString*s=x;NSRegularExpression*r=[NSRegularExpression regularExpressionWithPattern:@"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$" options:0 error:nil];return [NSString stringWithFormat:@"length=%lu uuid_format=%@",(unsigned long)s.length,[r firstMatchInString:s options:0 range:NSMakeRange(0,s.length)]?@"yes":@"no"];}
+          static void Field(NSMutableArray*a,NSDictionary*d,NSString*k){id v=d[k];if([v isKindOfClass:NSString.class])[a addObject:[NSString stringWithFormat:@"%@=%@",k,v]];else if([v isKindOfClass:NSNumber.class])[a addObject:[NSString stringWithFormat:@"%@=%@",k,v]];else if([v isKindOfClass:NSArray.class])[a addObject:[NSString stringWithFormat:@"%@=[%@]",k,[v componentsJoinedByString:@","]]];else[a addObject:[NSString stringWithFormat:@"%@=<absent-or-other>",k]];}
+          static id Hook(id self,SEL cmd,NSURLRequest*r,id completion){NSUInteger n=__atomic_add_fetch(&seq,1,__ATOMIC_RELAXED);id j=r.HTTPBody?[NSJSONSerialization JSONObjectWithData:r.HTTPBody options:NSJSONReadingFragmentsAllowed error:nil]:nil;NSMutableArray*a=[NSMutableArray array];if([j isKindOfClass:NSDictionary.class]){NSDictionary*d=j;Field(a,d,@"bundleId");Field(a,d,@"storefrontId");NSDictionary*dev=[d[@"deviceInfo"] isKindOfClass:NSDictionary.class]?d[@"deviceInfo"]:@{};for(NSString*k in @[@"appVersion",@"buildNumber",@"countryCode",@"deviceClass",@"deviceType",@"osVersion",@"preferredLanguages",@"utcOffsetSecs",@"dstOffsetSecs"])Field(a,dev,k);id fid=d[@"feldsparId"];[a addObject:[NSString stringWithFormat:@"feldsparId_%@",UUIDShape(fid)]];for(NSString*k in @[@"appSubscriptionsConfigRequest",@"logicProConfigRequest"])if(d[k])[a addObject:[NSString stringWithFormat:@"%@=present",k]];}Log([NSString stringWithFormat:@"request #%lu %@ %@ fields={%@}",(unsigned long)n,r.HTTPMethod?:@"GET",r.URL.path?:@"/",[a componentsJoinedByString:@"; "]]);return originalTask(self,cmd,r,completion);}
+          __attribute__((constructor))static void Start(void){if(![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"])return;Log(@"v9 local request-value trace loaded; completion handler passed through unchanged");Method m=class_getInstanceMethod(objc_getClass("NSURLSession"),@selector(dataTaskWithRequest:completionHandler:));if(m){originalTask=(TaskIMP)method_getImplementation(m);method_setImplementation(m,(IMP)Hook);Log(@"NSURLSession request hook installed");}}
+          OBJC
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicNetworkTrace.dylib -framework Foundation -o LogicNetworkTrace.dylib Trace.m
+          file LogicNetworkTrace.dylib
+      - name: Upload v9 dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: logic-request-values-trace-v9-dylib
+          path: LogicNetworkTrace.dylib
+          retention-days: 30
+          if-no-files-found: error
