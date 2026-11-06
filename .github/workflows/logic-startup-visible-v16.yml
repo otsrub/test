@@ -19,9 +19,9 @@ jobs:
           #import <objc/runtime.h>
           typedef void (^Completion)(NSData*,NSURLResponse*,NSError*);
           typedef id (*TaskIMP)(id,SEL,NSURLRequest*,Completion);
-typedef void (^DownloadCompletion)(NSURL*,NSURLResponse*,NSError*);
-typedef id (*DownloadTaskIMP)(id,SEL,NSURLRequest*,DownloadCompletion);
-static DownloadTaskIMP originalDownloadTask;
+          typedef void (^DownloadCompletion)(NSURL*,NSURLResponse*,NSError*);
+          typedef id (*DownloadTaskIMP)(id,SEL,NSURLRequest*,DownloadCompletion);
+          static DownloadTaskIMP originalDownloadTask;
           static TaskIMP originalTask; static void Log(NSString *s); typedef void (*ResumeIMP)(id,SEL); static ResumeIMP originalResume; static char progressKey; typedef BOOL (*MoveURLIMP)(id,SEL,NSURL*,NSURL*,NSError**); typedef BOOL (*MovePathIMP)(id,SEL,NSString*,NSString*,NSError**); static MoveURLIMP originalMoveURL; static MovePathIMP originalMovePath;          typedef BOOL (*CopyURLIMP)(id,SEL,NSURL*,NSURL*,NSError**); typedef BOOL (*CopyPathIMP)(id,SEL,NSString*,NSString*,NSError**); static CopyURLIMP originalCopyURL; static CopyPathIMP originalCopyPath;
           static void PollTask(NSURLSessionTask *task, NSString *path, NSUInteger sample) {
             NSInteger state=task.state, code=0;
