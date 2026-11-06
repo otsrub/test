@@ -1,4 +1,4 @@
-name: Logic remote-config diagnostic tweak
+name: Logic remote-config diagnostic tweak v2
 on:
   push:
     branches: [logic-rc-diagnostic]
@@ -24,6 +24,7 @@ jobs:
           static BOOL hookInstalled;
           static dispatch_queue_t logQueue;
           static NSString *logPath;
+          static int requestSequence;
 
           static void Log(NSString *message) {
             if (!logQueue) logQueue = dispatch_queue_create("com.logic.rcdiagnostic.log", DISPATCH_QUEUE_SERIAL);
@@ -31,9 +32,9 @@ jobs:
               @autoreleasepool {
                 if (!logPath) {
                   NSString *dir = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject ?: NSTemporaryDirectory();
-                  logPath = [dir stringByAppendingPathComponent:@"LogicRemoteConfigDiagnostic.txt"];
+                  logPath = [dir stringByAppendingPathComponent:@"LogicRemoteConfigDiagnostic-v2.txt"];
                   if (![[NSFileManager defaultManager] fileExistsAtPath:logPath])
-                    [[NSString stringWithFormat:@"Logic remote-config diagnostic %@\n", [NSDate date]] writeToFile:logPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+                    [[NSString stringWithFormat:@"Logic remote-config diagnostic v2 %@\n", [NSDate date]] writeToFile:logPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
                 }
                 NSString *line = [NSString stringWithFormat:@"%@ %@\n", [NSDate date], message];
                 NSFileHandle *f = [NSFileHandle fileHandleForWritingAtPath:logPath];
@@ -43,12 +44,28 @@ jobs:
             });
           }
 
+          static NSString *SafeKeys(NSDictionary *dict) {
+            if (![dict isKindOfClass:[NSDictionary class]] || !dict.count) return @"none";
+            NSMutableArray *keys = [NSMutableArray array];
+            for (id key in dict.allKeys) if ([key isKindOfClass:[NSString class]]) [keys addObject:key];
+            [keys sortUsingSelector:@selector(compare:)];
+            return keys.count ? [keys componentsJoinedByString:@","] : @"none";
+          }
+
           static NSString *ErrorSummary(NSError *error) {
             NSMutableArray *parts = [NSMutableArray array];
             NSError *e = error;
             for (int i = 0; e && i < 4; i++, e = e.userInfo[NSUnderlyingErrorKey])
-              [parts addObject:[NSString stringWithFormat:@"%@/%ld", e.domain ?: @"?", (long)e.code]];
+              [parts addObject:[NSString stringWithFormat:@"%@/%ld keys={%@}", e.domain ?: @"?", (long)e.code, SafeKeys(e.userInfo)]];
             return parts.count ? [parts componentsJoinedByString:@" <- "] : @"none";
+          }
+
+          static NSString *SettingsSummary(id settings) {
+            if (!settings) return @"nil";
+            NSString *className = NSStringFromClass([settings class]) ?: @"unknown";
+            if ([settings isKindOfClass:[NSDictionary class]])
+              return [NSString stringWithFormat:@"%@ keys={%@}", className, SafeKeys(settings)];
+            return className;
           }
 
           static BOOL ShouldRetry(NSError *error) {
@@ -60,15 +77,17 @@ jobs:
           static void HookedFetch(id self, SEL cmd, id settings, dispatch_queue_t queue, id completionObject) {
             void (^completion)(id, id, id, NSError *) = completionObject;
             if (!completion || !originalFetch) { if (originalFetch) originalFetch(self, cmd, settings, queue, completionObject); return; }
-            Log(@"remote-config attempt=1 started");
+            int request = __sync_add_and_fetch(&requestSequence, 1);
+            Log([NSString stringWithFormat:@"request=%d settings=%@ callstack=%@", request, SettingsSummary(settings), [[NSThread callStackSymbols] componentsJoinedByString:@" | "]]);
+            Log([NSString stringWithFormat:@"request=%d attempt=1 started", request]);
             void (^first)(id, id, id, NSError *) = ^(id data, id treatmentIDs, id segmentIDs, NSError *error) {
-              if (!error) { Log(@"remote-config attempt=1 result=success"); completion(data, treatmentIDs, segmentIDs, nil); return; }
+              if (!error) { Log([NSString stringWithFormat:@"request=%d attempt=1 result=success", request]); completion(data, treatmentIDs, segmentIDs, nil); return; }
               BOOL retry = ShouldRetry(error);
-              Log([NSString stringWithFormat:@"remote-config attempt=1 result=error details=%@ retry=%@", ErrorSummary(error), retry ? @"yes" : @"no"]);
+              Log([NSString stringWithFormat:@"request=%d attempt=1 result=error details=%@ retry=%@", request, ErrorSummary(error), retry ? @"yes" : @"no"]);
               if (!retry) { completion(nil, nil, nil, error); return; }
-              Log(@"remote-config attempt=2 started");
+              Log([NSString stringWithFormat:@"request=%d attempt=2 started", request]);
               void (^second)(id, id, id, NSError *) = ^(id retryData, id retryTreatmentIDs, id retrySegmentIDs, NSError *retryError) {
-                Log(retryError ? [NSString stringWithFormat:@"remote-config attempt=2 result=error details=%@", ErrorSummary(retryError)] : @"remote-config attempt=2 result=success");
+                Log(retryError ? [NSString stringWithFormat:@"request=%d attempt=2 result=error details=%@", request, ErrorSummary(retryError)] : [NSString stringWithFormat:@"request=%d attempt=2 result=success", request]);
                 completion(retryData, retryTreatmentIDs, retrySegmentIDs, retryError);
               };
               originalFetch(self, cmd, settings, queue, [second copy]);
@@ -92,7 +111,7 @@ jobs:
           static void ImageAdded(const struct mach_header *mh, intptr_t slide) { (void)mh; (void)slide; TryInstall(); }
           __attribute__((constructor)) static void StartDiagnostic(void) {
             if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"]) return;
-            Log(@"tweak loaded for Logic");
+            Log(@"tweak v2 loaded for Logic");
             TryInstall();
             _dyld_register_func_for_add_image(ImageAdded);
             for (int i = 1; i <= 60; i++) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)i * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ TryInstall(); });
@@ -105,7 +124,7 @@ jobs:
       - name: Retain tweak artifact
         uses: actions/upload-artifact@v4
         with:
-          name: logic-rc-diagnostic-dylib
+          name: logic-rc-diagnostic-v2-dylib
           path: LogicRCDiagnostic.dylib
           retention-days: 30
           if-no-files-found: error
