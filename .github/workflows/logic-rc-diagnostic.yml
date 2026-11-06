@@ -1,4 +1,4 @@
-name: Logic remote-config diagnostic tweak v4
+name: Logic network trace v5
 on:
   push:
     branches: [logic-rc-diagnostic]
@@ -10,32 +10,27 @@ jobs:
   build:
     runs-on: macos-15
     steps:
-      - name: Build arm64 diagnostic dylib
+      - name: Build network trace dylib
         shell: bash
         run: |
-          cat > LogicRCDiagnostic.m <<'OBJC'
+          cat > Trace.m <<'OBJC'
           #import <Foundation/Foundation.h>
           #import <objc/runtime.h>
           #import <dispatch/dispatch.h>
           #import <mach-o/dyld.h>
-          typedef void (*FetchIMP)(id,SEL,id,dispatch_queue_t,id);
-          static FetchIMP originalFetch; static BOOL installed; static dispatch_queue_t q; static NSString *path; static int seq;
-          static void Log(NSString *s){if(!q)q=dispatch_queue_create("logic.rcdiag.log",DISPATCH_QUEUE_SERIAL);dispatch_async(q,^{@autoreleasepool{if(!path){NSString*d=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();path=[d stringByAppendingPathComponent:@"LogicRemoteConfigDiagnostic-v4.txt"];if(![[NSFileManager defaultManager]fileExistsAtPath:path])[[NSString stringWithFormat:@"Logic RC diagnostic v4 %@\n",[NSDate date]]writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];}NSFileHandle*f=[NSFileHandle fileHandleForWritingAtPath:path];NSString*l=[NSString stringWithFormat:@"%@ %@\n",[NSDate date],s];if(f){[f seekToEndOfFile];[f writeData:[l dataUsingEncoding:NSUTF8StringEncoding]];[f closeFile];}else[l writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];}});}
-          static NSString *Body(NSError*e){NSDictionary*u=e.userInfo;for(NSString*k in u){NSString*n=[k lowercaseString];if([n containsString:@"body"]||[n containsString:@"responsedata"]||[n containsString:@"responsecontent"]){id v=u[k];NSData*d=[v isKindOfClass:[NSData class]]?v:([v isKindOfClass:[NSString class]]?[v dataUsingEncoding:NSUTF8StringEncoding]:nil);if(d&&d.length<=512){NSString*s=[[NSString alloc]initWithData:d encoding:NSUTF8StringEncoding];if(s)return[s stringByReplacingOccurrencesOfString:@"\n" withString:@" "];}}}return @"unavailable";}
-          static NSString *HTTP(NSError*e){NSDictionary*u=e.userInfo;id st=u[@"RCErrorHTTPStatusCode"];id raw=u[@"RCErrorHTTPURL"];NSURL*url=[raw isKindOfClass:[NSURL class]]?raw:([raw isKindOfClass:[NSString class]]?[NSURL URLWithString:raw]:nil);id h=u[@"RCErrorHTTPResponseHeaders"];NSMutableArray*hs=[NSMutableArray array];if([h isKindOfClass:[NSDictionary class]])for(NSString*k in @[@"Content-Type",@"Content-Length",@"Retry-After",@"Server",@"Via"]){id v=h[k]?:h[k.lowercaseString];if(v)[hs addObject:([k isEqualToString:@"Server"]||[k isEqualToString:@"Via"]?[k stringByAppendingString:@"=present"]:[NSString stringWithFormat:@"%@=%@",k,v])];}return[NSString stringWithFormat:@"http_status=%@ host=%@ headers={%@} body=%@",st?:@"none",url.host?:@"none",hs.count?[hs componentsJoinedByString:@","]:@"none",Body(e)];}
-          static void Hook(id self,SEL cmd,id settings,dispatch_queue_t queue,id object){void(^done)(id,id,id,NSError*)=object;if(!done||!originalFetch){if(originalFetch)originalFetch(self,cmd,settings,queue,object);return;}int n=__sync_add_and_fetch(&seq,1);Log([NSString stringWithFormat:@"request=%d stack=%@",n,[[NSThread callStackSymbols]componentsJoinedByString:@" | "]]);void(^cb)(id,id,id,NSError*)=^(id a,id b,id c,NSError*e){Log(e?[NSString stringWithFormat:@"request=%d result=error domain=%@ code=%ld %@",n,e.domain,(long)e.code,HTTP(e)]:[NSString stringWithFormat:@"request=%d result=success",n]);done(a,b,c,e);};originalFetch(self,cmd,settings,queue,[cb copy]);}
-          static void Try(void){if(installed)return;Class c=objc_getClass("RCEConfigurationManager");SEL s=sel_registerName("fetchSingleConfigurationWithSettings:completionQueue:completion:");Method m=c?class_getInstanceMethod(c,s):NULL;if(m){originalFetch=(FetchIMP)method_getImplementation(m);method_setImplementation(m,(IMP)Hook);installed=YES;Log(@"hook installed");}}
-          static void Added(const struct mach_header*h,intptr_t s){(void)h;(void)s;Try();}
-          __attribute__((constructor))static void Start(void){if(![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"])return;Log(@"tweak v4 loaded");Try();_dyld_register_func_for_add_image(Added);for(int i=1;i<=60;i++)dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)i*NSEC_PER_SEC),dispatch_get_main_queue(),^{Try();});}
+          typedef id (*TaskIMP)(id,SEL,id,id);
+          static TaskIMP orig; static dispatch_queue_t q; static NSString *p;
+          static void L(NSString*s){if(!q)q=dispatch_queue_create("logic.nettrace",DISPATCH_QUEUE_SERIAL);dispatch_async(q,^{@autoreleasepool{if(!p){NSString*d=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();p=[d stringByAppendingPathComponent:@"LogicNetworkTrace-v5.txt"];}NSFileHandle*f=[NSFileHandle fileHandleForWritingAtPath:p];NSString*l=[NSString stringWithFormat:@"%@ %@\n",[NSDate date],s];if(f){[f seekToEndOfFile];[f writeData:[l dataUsingEncoding:NSUTF8StringEncoding]];[f closeFile];}else[l writeToFile:p atomically:YES encoding:NSUTF8StringEncoding error:nil];}});}
+          static id H(id self,SEL cmd,NSURLRequest*r,id block){NSString*host=r.URL.host?:@"none";NSString*method=r.HTTPMethod?:@"GET";NSString*type=[r valueForHTTPHeaderField:@"Content-Type"]?:@"none";NSUInteger len=r.HTTPBody.length;L([NSString stringWithFormat:@"request method=%@ host=%@ content_type=%@ body_bytes=%lu",method,host,type,(unsigned long)len]);void(^wrapped)(NSData*,NSURLResponse*,NSError*)=^(NSData*d,NSURLResponse*resp,NSError*e){NSHTTPURLResponse*h=[resp isKindOfClass:[NSHTTPURLResponse class]]?(id)resp:nil;NSString*b=@"none";if(d.length&&d.length<=512){NSString*s=[[NSString alloc]initWithData:d encoding:NSUTF8StringEncoding];if(s)b=[s stringByReplacingOccurrencesOfString:@"\n" withString:@" "];}L([NSString stringWithFormat:@"response host=%@ status=%ld bytes=%lu body=%@ error=%@/%ld",host,(long)h.statusCode,(unsigned long)d.length,b,e.domain?:@"none",(long)e.code]);((void(^)(NSData*,NSURLResponse*,NSError*))block)(d,resp,e);};return orig(self,cmd,r,[wrapped copy]);}
+          __attribute__((constructor))static void Start(void){if(![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"])return;L(@"network trace v5 loaded");Class c=objc_getClass("NSURLSession");SEL s=@selector(dataTaskWithRequest:completionHandler:);Method m=class_getInstanceMethod(c,s);if(m){orig=(TaskIMP)method_getImplementation(m);method_setImplementation(m,(IMP)H);L(@"NSURLSession completion hook installed");}}
           OBJC
           SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
-          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicRCDiagnostic.dylib -framework Foundation -framework UIKit -o LogicRCDiagnostic.dylib LogicRCDiagnostic.m
-          file LogicRCDiagnostic.dylib
-          shasum -a 256 LogicRCDiagnostic.dylib
-      - name: Retain tweak artifact
+          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicNetworkTrace.dylib -framework Foundation -o LogicNetworkTrace.dylib Trace.m
+          file LogicNetworkTrace.dylib
+      - name: Upload trace dylib
         uses: actions/upload-artifact@v4
         with:
-          name: logic-rc-diagnostic-v4-dylib
-          path: LogicRCDiagnostic.dylib
+          name: logic-network-trace-v5-dylib
+          path: LogicNetworkTrace.dylib
           retention-days: 30
           if-no-files-found: error
