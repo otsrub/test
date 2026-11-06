@@ -93,7 +93,7 @@ jobs:
           start=run.index("cat > package.py <<'SOURCE'\n")+len("cat > package.py <<'SOURCE'\n")
           end=run.index("\nSOURCE\n",start)
           script=run[start:end]
-          script=script.replace("out/MobileLogic-diagnostics-v2.ipa", "out/MobileLogic-launch-gate-v26.ipa")
+          script=script.replace("MobileLogic-diagnostics-v2.ipa", "MobileLogic-launch-gate-v26.ipa")
           script=script.replace("'purpose': 'Diagnostic startup logging; no loading-screen fix is claimed'", "'purpose': 'REA-targeted launch dismissal gate override; device behavior remains unverified'")
           script=script.replace("'log_path': 'Documents/MobileLogic-startup.log'", "'log_path': 'Documents/LogicLaunchGate-v26.txt'")
           script=script.replace('This IPA is a diagnostic copy, not a confirmed fix. Re-sign it using your existing signing method. After launching and waiting up to two minutes, open Files > On My iPhone > the Logic app folder and share MobileLogic-startup.log. The library records method names and launch milestones, not account values or callback arguments. Native code and resources remain unchanged; the executable header loads the logging library. No device runtime test has been performed.', 'This is a separate launch-gate patch build. It calls the original launch workflow callback, then sets shouldDismissLaunchViewController to YES only for a non-cancelled launch. It logs the original and patched decision to Documents/LogicLaunchGate-v26.txt and shows a large scrollable overlay. This is an REA-derived hypothesis, not a device-confirmed fix. Re-sign this IPA in KSign with your certificate before installing. The original release archive is unchanged.')
