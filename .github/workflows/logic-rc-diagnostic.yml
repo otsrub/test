@@ -1,4 +1,4 @@
-name: Logic network trace v5
+name: Logic request schema trace v6
 on:
   push:
     branches: [logic-rc-diagnostic]
@@ -10,27 +10,28 @@ jobs:
   build:
     runs-on: macos-15
     steps:
-      - name: Build network trace dylib
+      - name: Build request schema trace dylib
         shell: bash
         run: |
           cat > Trace.m <<'OBJC'
           #import <Foundation/Foundation.h>
           #import <objc/runtime.h>
           #import <dispatch/dispatch.h>
-          #import <mach-o/dyld.h>
+          #import <CoreFoundation/CoreFoundation.h>
           typedef id (*TaskIMP)(id,SEL,id,id);
-          static TaskIMP orig; static dispatch_queue_t q; static NSString *p;
-          static void L(NSString*s){if(!q)q=dispatch_queue_create("logic.nettrace",DISPATCH_QUEUE_SERIAL);dispatch_async(q,^{@autoreleasepool{if(!p){NSString*d=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();p=[d stringByAppendingPathComponent:@"LogicNetworkTrace-v5.txt"];}NSFileHandle*f=[NSFileHandle fileHandleForWritingAtPath:p];NSString*l=[NSString stringWithFormat:@"%@ %@\n",[NSDate date],s];if(f){[f seekToEndOfFile];[f writeData:[l dataUsingEncoding:NSUTF8StringEncoding]];[f closeFile];}else[l writeToFile:p atomically:YES encoding:NSUTF8StringEncoding error:nil];}});}
-          static id H(id self,SEL cmd,NSURLRequest*r,id block){NSString*host=r.URL.host?:@"none";NSString*method=r.HTTPMethod?:@"GET";NSString*type=[r valueForHTTPHeaderField:@"Content-Type"]?:@"none";NSUInteger len=r.HTTPBody.length;L([NSString stringWithFormat:@"request method=%@ host=%@ content_type=%@ body_bytes=%lu",method,host,type,(unsigned long)len]);void(^wrapped)(NSData*,NSURLResponse*,NSError*)=^(NSData*d,NSURLResponse*resp,NSError*e){NSHTTPURLResponse*h=[resp isKindOfClass:[NSHTTPURLResponse class]]?(id)resp:nil;NSString*b=@"none";if(d.length&&d.length<=512){NSString*s=[[NSString alloc]initWithData:d encoding:NSUTF8StringEncoding];if(s)b=[s stringByReplacingOccurrencesOfString:@"\n" withString:@" "];}L([NSString stringWithFormat:@"response host=%@ status=%ld bytes=%lu body=%@ error=%@/%ld",host,(long)h.statusCode,(unsigned long)d.length,b,e.domain?:@"none",(long)e.code]);((void(^)(NSData*,NSURLResponse*,NSError*))block)(d,resp,e);};return orig(self,cmd,r,[wrapped copy]);}
-          __attribute__((constructor))static void Start(void){if(![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"])return;L(@"network trace v5 loaded");Class c=objc_getClass("NSURLSession");SEL s=@selector(dataTaskWithRequest:completionHandler:);Method m=class_getInstanceMethod(c,s);if(m){orig=(TaskIMP)method_getImplementation(m);method_setImplementation(m,(IMP)H);L(@"NSURLSession completion hook installed");}}
+          static TaskIMP orig; static dispatch_queue_t q; static NSString *p; static NSUInteger seq;
+          static void L(NSString*s){if(!q)q=dispatch_queue_create("logic.trace.v6",DISPATCH_QUEUE_SERIAL);dispatch_async(q,^{@autoreleasepool{if(!p){NSString*d=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();p=[d stringByAppendingPathComponent:@"LogicNetworkTrace-v6.txt"];}NSFileHandle*f=[NSFileHandle fileHandleForWritingAtPath:p];NSString*l=[NSString stringWithFormat:@"%@ %@\n",[NSDate date],s];if(f){[f seekToEndOfFile];[f writeData:[l dataUsingEncoding:NSUTF8StringEncoding]];[f closeFile];}else[l writeToFile:p atomically:YES encoding:NSUTF8StringEncoding error:nil];}});}
+          static void Shape(id v,NSString*path,NSMutableArray*out,NSUInteger depth,NSUInteger*count){if((*count)++>=128){if(*count==129)[out addObject:@"<limit>"];return;}if(depth>5){[out addObject:[NSString stringWithFormat:@"%@=<depth-limit>",path]];return;}if(!v||v==[NSNull null]){[out addObject:[NSString stringWithFormat:@"%@=null",path]];return;}if([v isKindOfClass:[NSDictionary class]]){[out addObject:[NSString stringWithFormat:@"%@=object",path]];NSArray*keys=[[(NSDictionary*)v allKeys] sortedArrayUsingComparator:^NSComparisonResult(id a,id b){return [[a description] compare:[b description]];}];for(id k in keys)if([k isKindOfClass:[NSString class]])Shape(v[k],[NSString stringWithFormat:@"%@.%@",path,k],out,depth+1,count);return;}if([v isKindOfClass:[NSArray class]]){NSArray*a=v;[out addObject:[NSString stringWithFormat:@"%@=array(%lu)",path,(unsigned long)a.count]];NSUInteger n=MIN(a.count,3);for(NSUInteger i=0;i<n;i++)Shape(a[i],[path stringByAppendingString:@"[]"],out,depth+1,count);return;}if([v isKindOfClass:[NSString class]]){[out addObject:[NSString stringWithFormat:@"%@=string(len:%lu)",path,(unsigned long)[(NSString*)v length]]];return;}if([v isKindOfClass:[NSNumber class]]){BOOL b=CFGetTypeID((__bridge CFTypeRef)v)==CFBooleanGetTypeID();[out addObject:[NSString stringWithFormat:@"%@=%@",path,b?@"bool":@"number"]];return;}[out addObject:[NSString stringWithFormat:@"%@=%@",path,NSStringFromClass([v class])]];}
+          static id H(id self,SEL cmd,NSURLRequest*r,id block){NSUInteger n=__atomic_add_fetch(&seq,1,__ATOMIC_RELAXED);NSString*host=r.URL.host?:@"none";NSString*method=r.HTTPMethod?:@"GET";NSString*type=[r valueForHTTPHeaderField:@"Content-Type"]?:@"none";NSData*body=r.HTTPBody;NSMutableArray*fields=[NSMutableArray array];NSString*schema=@"none";if(body.length){id obj=[NSJSONSerialization JSONObjectWithData:body options:NSJSONReadingFragmentsAllowed error:nil];if(obj){NSUInteger count=0;Shape(obj,@"$",fields,0,&count);schema=[fields componentsJoinedByString:@";"];}else schema=@"invalid-json";}L([NSString stringWithFormat:@"request #%lu method=%@ host=%@ content_type=%@ body_bytes=%lu json_schema=%@",(unsigned long)n,method,host,type,(unsigned long)body.length,schema]);void(^wrapped)(NSData*,NSURLResponse*,NSError*)=^(NSData*d,NSURLResponse*resp,NSError*e){NSHTTPURLResponse*h=[resp isKindOfClass:[NSHTTPURLResponse class]]?(id)resp:nil;NSString*b=@"redacted";L([NSString stringWithFormat:@"response #%lu host=%@ status=%ld bytes=%lu body=%@ error=%@/%ld",(unsigned long)n,host,(long)h.statusCode,(unsigned long)d.length,b,e.domain?:@"none",(long)e.code]);((void(^)(NSData*,NSURLResponse*,NSError*))block)(d,resp,e);};return orig(self,cmd,r,[wrapped copy]);}
+          __attribute__((constructor))static void Start(void){if(![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"])return;L(@"network trace v6 loaded");Class c=objc_getClass("NSURLSession");SEL s=@selector(dataTaskWithRequest:completionHandler:);Method m=class_getInstanceMethod(c,s);if(m){orig=(TaskIMP)method_getImplementation(m);method_setImplementation(m,(IMP)H);L(@"NSURLSession completion hook installed");}}
           OBJC
           SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
-          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicNetworkTrace.dylib -framework Foundation -o LogicNetworkTrace.dylib Trace.m
+          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicNetworkTrace.dylib -framework Foundation -framework CoreFoundation -o LogicNetworkTrace.dylib Trace.m
           file LogicNetworkTrace.dylib
       - name: Upload trace dylib
         uses: actions/upload-artifact@v4
         with:
-          name: logic-network-trace-v5-dylib
+          name: logic-request-schema-trace-v6-dylib
           path: LogicNetworkTrace.dylib
           retention-days: 30
           if-no-files-found: error
