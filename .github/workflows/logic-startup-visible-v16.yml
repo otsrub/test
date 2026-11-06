@@ -1,0 +1,112 @@
+name: Logic visible startup status v16
+on:
+  push:
+    branches: [logic-startup-visible-v16]
+    paths: [.github/workflows/logic-startup-visible-v16.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Build visible status and request fix dylib
+        shell: bash
+        run: |
+          cat > Fix.m <<'OBJC'
+          #import <Foundation/Foundation.h>
+          #import <UIKit/UIKit.h>
+          #import <objc/runtime.h>
+          typedef void (^Completion)(NSData*,NSURLResponse*,NSError*);
+          typedef id (*TaskIMP)(id,SEL,NSURLRequest*,Completion);
+          static TaskIMP originalTask;
+          static NSString *subscriptionID;
+          static dispatch_queue_t logQueue;
+          static NSMutableArray *lines;
+          static UILabel *label;
+          static BOOL UUID(id v) {
+            if (![v isKindOfClass:NSString.class]) return NO;
+            NSRegularExpression *r=[NSRegularExpression regularExpressionWithPattern:@"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$" options:0 error:nil];
+            return [r firstMatchInString:v options:0 range:NSMakeRange(0,[v length])]!=nil;
+          }
+          static void Show(NSString *s) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+              UIWindow *w=nil;
+              for (UIWindow *x in UIApplication.sharedApplication.windows) if (x.isKeyWindow) { w=x; break; }
+              if (!w) w=UIApplication.sharedApplication.windows.firstObject;
+              if (!w) return;
+              if (!label || label.superview!=w) {
+                label=[[UILabel alloc] initWithFrame:CGRectZero];
+                label.backgroundColor=[UIColor colorWithWhite:0 alpha:0.85];
+                label.textColor=UIColor.whiteColor;
+                label.font=[UIFont systemFontOfSize:12 weight:UIFontWeightMedium];
+                label.numberOfLines=6; label.layer.cornerRadius=10; label.clipsToBounds=YES;
+                label.userInteractionEnabled=NO; [w addSubview:label];
+              }
+              label.frame=CGRectMake(10,MAX(w.safeAreaInsets.top,24)+6,w.bounds.size.width-20,112);
+              label.text=[@"  " stringByAppendingString:s]; [w bringSubviewToFront:label];
+            });
+          }
+          static void Log(NSString *s) {
+            if (!logQueue) return;
+            dispatch_async(logQueue, ^{
+              NSDateFormatter *f=[NSDateFormatter new]; f.dateFormat=@"HH:mm:ss";
+              NSString *line=[NSString stringWithFormat:@"%@ %@",[f stringFromDate:[NSDate date]],s];
+              NSString *dir=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject?:NSTemporaryDirectory();
+              NSString *path=[dir stringByAppendingPathComponent:@"LogicStartupFix-v16.txt"];
+              NSFileHandle *h=[NSFileHandle fileHandleForWritingAtPath:path];
+              NSData *d=[line dataUsingEncoding:NSUTF8StringEncoding]; NSMutableData *md=[NSMutableData dataWithData:d]; uint8_t nl=10; [md appendBytes:&nl length:1]; d=md;
+              if (h) { [h seekToEndOfFile]; [h writeData:d]; [h closeFile]; } else [d writeToFile:path atomically:YES];
+              [lines addObject:line]; while (lines.count>6) [lines removeObjectAtIndex:0];
+              Show([lines componentsJoinedByString:@" | "]);
+            });
+          }
+          static id Hook(id self,SEL cmd,NSURLRequest *req,Completion cb) {
+            NSURLRequest *out=req; NSString *kind=@"NETWORK";
+            id json=req.HTTPBody?[NSJSONSerialization JSONObjectWithData:req.HTTPBody options:NSJSONReadingFragmentsAllowed error:nil]:nil;
+            if ([json isKindOfClass:NSDictionary.class]) {
+              id fid=json[@"feldsparId"];
+              if (json[@"appSubscriptionsConfigRequest"]) {
+                kind=@"SUBSCRIPTIONS CONFIG";
+                if (UUID(fid)) { @synchronized([NSURLSession class]) { subscriptionID=[fid copy]; } Log(@"SUBSCRIPTIONS UUID CAPTURED"); }
+              } else if (json[@"logicProConfigRequest"]) {
+                kind=@"LOGIC CONFIG"; NSString *replacement=nil;
+                @synchronized([NSURLSession class]) { replacement=[subscriptionID copy]; }
+                if (!UUID(fid) && UUID(replacement)) {
+                  NSMutableDictionary *m=[json mutableCopy]; m[@"feldsparId"]=replacement;
+                  NSData *b=[NSJSONSerialization dataWithJSONObject:m options:0 error:nil];
+                  if (b) { NSMutableURLRequest *r=[req mutableCopy]; r.HTTPBody=b; out=r; Log(@"LOGIC REQUEST REWRITTEN"); }
+                  else Log(@"LOGIC REQUEST REWRITE FAILED");
+                } else if (!UUID(fid)) Log(@"LOGIC REQUEST NOT REWRITTEN: NO UUID");
+                else Log(@"LOGIC REQUEST HAS UUID");
+              }
+            }
+            NSString *path=req.URL.path?:@"/";
+            Completion wrapped=cb?^(NSData *data,NSURLResponse *resp,NSError *err) {
+              NSInteger code=[resp isKindOfClass:NSHTTPURLResponse.class]?((NSHTTPURLResponse*)resp).statusCode:0;
+              if ([path isEqual:@"/v1/configs"]) Log([NSString stringWithFormat:@"%@ HTTP %ld",kind,(long)code]);
+              else if ([path containsString:@"contentDB_"]) Log([NSString stringWithFormat:@"%@ HTTP %ld (%lu bytes)",path.lastPathComponent,(long)code,(unsigned long)data.length]);
+              else if ([path containsString:@"contentversion"]) Log([NSString stringWithFormat:@"CONTENT VERSION HTTP %ld",(long)code]);
+              if (err) Log([NSString stringWithFormat:@"ERROR %@/%ld",err.domain,(long)err.code]);
+              cb(data,resp,err);
+            }:nil;
+            return originalTask(self,cmd,out,wrapped);
+          }
+          __attribute__((constructor)) static void Start(void) {
+            if (![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.mobilelogic"]) return;
+            logQueue=dispatch_queue_create("logic.visible.status.v16",DISPATCH_QUEUE_SERIAL); lines=[NSMutableArray new];
+            Log(@"PATCH LOADED; WAITING FOR CONFIG");
+            Method m=class_getInstanceMethod(objc_getClass("NSURLSession"),@selector(dataTaskWithRequest:completionHandler:));
+            if (m) { originalTask=(TaskIMP)method_getImplementation(m); method_setImplementation(m,(IMP)Hook); }
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW,2*NSEC_PER_SEC),dispatch_get_main_queue(),^{ Log(@"APP ACTIVE; STATUS OVERLAY READY"); });
+          }
+          OBJC
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc -isysroot "$SDK" -miphoneos-version-min=15.0 -install_name @rpath/LogicStartupVisible.dylib -framework Foundation -framework UIKit -o LogicStartupVisible.dylib Fix.m
+          file LogicStartupVisible.dylib
+      - name: Upload visible startup status tweak
+        uses: actions/upload-artifact@v4
+        with:
+          name: logic-startup-visible-v16-dylib
+          path: LogicStartupVisible.dylib
+          retention-days: 30
